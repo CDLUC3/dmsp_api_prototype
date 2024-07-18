@@ -66,5 +66,5 @@ landing_page/node_modules/
 landing_page/build/
 
 # Ignore Swagger node_modules and swagger-ui
-lambdas/api/swagger/node_modules/
-lambdas/api/swagger/swagger-ui-*/
+swagger/node_modules/
+swagger/swagger-ui-5.17.14/dist/

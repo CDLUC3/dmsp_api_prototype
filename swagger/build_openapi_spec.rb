@@ -4,7 +4,7 @@ require 'aws-sdk-resourcegroups'
 require 'aws-sdk-ssm'
 require 'aws-sdk-s3'
 
-require_relative '../sam/gems/uc3-dmp-id/lib/uc3-dmp-id/schemas/author.rb'
+require_relative '../gems/uc3-dmp-id/lib/uc3-dmp-id/schemas/author.rb'
 
 DEFAULT_REGION = 'us-west-2'
 GLOBAL_REGION = 'us-east-1'
@@ -84,6 +84,7 @@ if ARGV.length == 2
       openapi_spec['components']['schemas']['Dmp'] = dmp_component
 
       # Add the files to the Swagger UI distribution
+      FileUtils.mkdir("#{swagger_dir}/dist") unless Dir.exists?("#{swagger_dir}/dist")
       FileUtils.mkdir("#{swagger_dir}/dist/docs") unless Dir.exists?("#{swagger_dir}/dist/docs")
 
       FileUtils.cp('v0-api-docs.json', "#{swagger_dir}/dist/docs-list.json")
