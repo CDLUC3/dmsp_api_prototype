@@ -1,3 +1,6 @@
+
+
+
 # frozen_string_literal: true
 
 # ------------------------------------------------------------------------------------------------------------
@@ -36,7 +39,7 @@ if ARGV.length >= 3
   # UPDATE ME!
   #
   # IF YOU ARE COPY/PASTING this script into a new folder you will likely only need to update this section
-  @function_name = 'HarvestableDmps'
+  @function_name = 'Citer'
 
   # If :use_docker is true, your AWS SAM template must have a `Metadata` section and the dir should have a
   # Dockerfile. This will cause SAM to build and deploy the image to our ECR. If set to false, the directory
@@ -45,21 +48,24 @@ if ARGV.length >= 3
 
   # Define any Paramaters here that are required by your template and are not available in SSM or as
   # CloudFormation stack outputs
-  @native_params = { Env: @env, DebugLevel: @log_level, LogRetentionDays: 14 }
+  @native_params = {
+    Env: @env,
+    DebugLevel: @log_level,
+    DomainName: "dmphub.uc3#{@env}.cdlib.net",
+    LogRetentionDays: 14
+  }
 
   # List the names of all other parameters whose values should be available as exported CloudFormation stack
   # outputs. The env prefix will be appended to each name your provide.
   #    For example if the name of the parameter is 'DomainName' this script will look for 'dev-DomainName'
-  @cf_params = %w[IndexerRoleArn S3PrivateBucketId BaselineLayerId DynamoIndexTableName EventBusArn
-                  DeadLetterQueueArn]
-  # @cf_params = %w[IndexerRoleArn S3PrivateBucketId LambdaSecurityGroupId OpenSearchSecurityGroupId
-  #                 OpenSearchDomainEndpoint BaselineLayerId EventBusArn DeadLetterQueueArn]
+  @cf_params = %w[IndexerRoleArn S3PrivateBucketId BaselineLayerId DynamoTableName
+                  EventBusArn SnsTopicEmailArn DeadLetterQueueArn]
 
   # List the names of all other parameters whose values should be available as SSM parameters. The name must
   # match the final part of the SSM key name. This script will append the prefix automatically.
   #    For example if the parameter is 'DomainName' this script will look for '/uc3/dmp/hub/dev/DomainName'
   # @ssm_params = %w[SubnetA SubnetB SubnetC DomainName]
-  @ssm_params = %w[DomainName]
+  @ssm_params = []
   #
   #
   # DON'T FORGET TO: Add an entry to the Sceptre config for lambda-iam.yaml and lambda-vpc.yaml for this Lambda!
@@ -84,6 +90,7 @@ if ARGV.length >= 3
       next if key.nil?
 
       val = fetch_cf_output(name: key)
+      val = fetch_cf_output(name: "#{@env}-#{key}") if val.nil?
       puts "Unable to find an 'exported' CloudFormation stack output for '#{key}'!" if val.nil?
       next if val.nil?
 
@@ -148,14 +155,6 @@ if ARGV.length >= 3
 
   @stack_exports = fetch_cf_stack_exports
 
-  # Add the CF Role if this is not development
-  if @env != 'dev'
-    cf_roles = @stack_exports.select do |export|
-      export.exporting_stack_id.include?('uc3-ops-aws-prd-iam') && export.name == 'uc3-prd-ops-cfn-service-role'
-    end
-    @assumed_role = "--role-arn #{cf_roles.first&.value}"
-  end
-
   if @run_build || @run_deploy
     @ssm_client = Aws::SSM::Client.new(region: DEFAULT_REGION)
 
@@ -184,7 +183,14 @@ if ARGV.length >= 3
         '--disable-rollback false',
         "--tags #{sam_tags}"
       ]
-      args << @assumed_role unless @assumed_role.nil?
+
+      # Add the CF Role if this is not development
+      if @env != 'dev'
+        cf_roles = @stack_exports.select do |export|
+          export.exporting_stack_id.include?('uc3-ops-aws-prd-iam') && export.name == 'uc3-prd-ops-cfn-service-role'
+        end
+        args << "--role-arn #{cf_roles.first&.value}"
+      end
 
       # Add the S3 or ECR details depending on what we're working with
       if @use_docker
@@ -206,7 +212,6 @@ if ARGV.length >= 3
 
   else
     args = ["--stack-name #{@stack_name}"]
-    args << '--profile prd-cfn-role' unless @assumed_role.nil?
 
     puts "NOTE: This Lambda is deployed within the VPC. It can take in excess of 45 minutes for the associated ENIs to be deleted!"
     puts "Deleting SAM CloudFormation stack #{@stack_name} ..."

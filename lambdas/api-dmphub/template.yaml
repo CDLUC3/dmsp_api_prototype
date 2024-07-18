@@ -31,6 +31,9 @@ Parameters:
       - 'info'
       - 'debug'
 
+  ApiLayerId:
+    Type: 'String'
+
   CertificateArn:
     Type: 'String'
 
@@ -271,97 +274,21 @@ Resources:
       Value: !Sub "https://api.${DomainName}"
 
   # ----------------------------------------------------
-  # Lambda Layers
-  #   See: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-layerversion.html
-  # ----------------------------------------------------
-  LambdaLayer:
-    Type: 'AWS::Serverless::LayerVersion'
-    Properties:
-      LayerName: !Sub '${AWS::StackName}-lambda-layer'
-      Description: !Sub 'Core Lambda Layer for DMPHub ${Env}'
-      ContentUri: !Sub 'layers'
-        # Bucket: !Ref S3PrivateBucketId
-        # Key: !Sub 'lambdas/uc3-dmp-hub-${Env}-sam-resources-lambda-layer.zip'
-      CompatibleRuntimes:
-        - 'ruby3.2'
-      RetentionPolicy: 'Delete'
-    Metadata:
-      BuildMethod: 'makefile'
-      BuildArchitecture: 'x86_64'
-
-  # ----------------------------------------------------
   # API Lambdas
   #  See: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-api.html
   # ----------------------------------------------------
-  TmpAsserterFunction:
-    Type: 'AWS::Serverless::Function'
-    Properties:
-      CodeUri: 'functions/tmp_asserter/'
-      Handler: 'app.Functions::TmpAsserter.process'
-      Runtime: 'ruby3.2'
-      Timeout: 5
-      Architectures:
-        - 'x86_64'
-      Layers:
-        - !Ref LambdaLayer
-      Policies:
-        - 'arn:aws:iam::aws:policy/AmazonSSMFullAccess'
-        - 'arn:aws:iam::aws:policy/AmazonSNSFullAccess'
-        - 'arn:aws:iam::aws:policy/AmazonSQSFullAccess'
-        - !Ref DmpHubDynamoTableWritePolicy
-        - !Ref EventBusPolicy
-        - !Ref CognitoPolicy
-      DeadLetterQueue:
-        Type: 'SQS'
-        TargetArn: !Ref DeadLetterQueueArn
-      Environment:
-        Variables:
-          LAMBDA_ENV: !Ref Env
-          LOG_LEVEL: 'debug'
-          DOMAIN: !Ref DomainName
-          DMP_ID_BASE_URL: 'doi.org'
-          SNS_FATAL_ERROR_TOPIC: !Ref SnsEmailTopicArn
-          EVENT_BUS_NAME: !Ref EventBusArn
-          COGNITO_USER_POOL_ID: !Ref CognitoUserPoolArn
-          DYNAMO_TABLE: !Ref DynamoTableName
-          CORS_ORIGIN: !If
-            - IsDev
-            - "*"
-            - !Sub "https://${DomainName}"
-      Events:
-        TmpAsserterEvent:
-          # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
-          Type: 'Api'
-          Properties:
-            RestApiId: !Ref DmpHubRestApi
-            Path: '/tmp/{dmp_id+}/'
-            Method: 'put'
-            RequestParameters:
-              - 'method.request.header.Authorization'
-            Auth:
-              Authorizer: 'DmpHubCognitoAuthorizer'
-              AuthorizationScopes:
-                - !Sub 'https://auth.${DomainName}/${Env}.write'
-
-  TmpAsserterLogGroup:
-    Type: 'AWS::Logs::LogGroup'
-    Properties:
-      LogGroupName: !Sub "/aws/lambda/${TmpAsserterFunction}"
-      # Explicit retention time
-      RetentionInDays: !Ref LogRetentionDays
-
   # Tombstone a DMP
   DeleteDmpFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: 'functions/api/delete_dmp/'
+      CodeUri: 'delete_dmp/'
       Handler: 'app.Functions::DeleteDmp.process'
       Runtime: 'ruby3.2'
       Timeout: 15
       Architectures:
         - 'x86_64'
       Layers:
-        - !Ref LambdaLayer
+        - !Ref ApiLayerId
       Policies:
         - 'arn:aws:iam::aws:policy/AmazonSSMFullAccess'
         - 'arn:aws:iam::aws:policy/AmazonSNSFullAccess'
@@ -412,14 +339,14 @@ Resources:
   GetAwardsCrossrefApiFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: 'functions/api/get_awards_crossref/'
+      CodeUri: 'get_awards_crossref/'
       Handler: 'app.Functions::GetAwardsCrossref.process'
       Runtime: 'ruby3.2'
       Timeout: 30
       Architectures:
         - 'x86_64'
       Layers:
-        - !Ref LambdaLayer
+        - !Ref ApiLayerId
       Policies:
         - 'arn:aws:iam::aws:policy/AmazonSSMFullAccess'
         - 'arn:aws:iam::aws:policy/AmazonSNSFullAccess'
@@ -460,14 +387,14 @@ Resources:
   GetAwardsNihApiFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: 'functions/api/get_awards_nih/'
+      CodeUri: 'get_awards_nih/'
       Handler: 'app.Functions::GetAwardsNih.process'
       Runtime: 'ruby3.2'
       Timeout: 5
       Architectures:
         - 'x86_64'
       Layers:
-        - !Ref LambdaLayer
+        - !Ref ApiLayerId
       Policies:
         - 'arn:aws:iam::aws:policy/AmazonSSMFullAccess'
         - 'arn:aws:iam::aws:policy/AmazonSNSFullAccess'
@@ -508,14 +435,14 @@ Resources:
   GetAwardsNsfApiFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: 'functions/api/get_awards_nsf/'
+      CodeUri: 'get_awards_nsf/'
       Handler: 'app.Functions::GetAwardsNsf.process'
       Runtime: 'ruby3.2'
       Timeout: 5
       Architectures:
         - 'x86_64'
       Layers:
-        - !Ref LambdaLayer
+        - !Ref ApiLayerId
       Policies:
         - 'arn:aws:iam::aws:policy/AmazonSSMFullAccess'
         - 'arn:aws:iam::aws:policy/AmazonSNSFullAccess'
@@ -556,14 +483,14 @@ Resources:
   GetDmpsFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: 'functions/api/get_dmps'
+      CodeUri: 'get_dmps'
       Handler: 'app.Functions::GetDmps.process'
       Runtime: 'ruby3.2'
       Timeout: 5
       Architectures:
         - 'x86_64'
       Layers:
-        - !Ref LambdaLayer
+        - !Ref ApiLayerId
       Policies:
         - 'arn:aws:iam::aws:policy/AmazonSSMFullAccess'
         - 'arn:aws:iam::aws:policy/AmazonSNSFullAccess'
@@ -607,14 +534,14 @@ Resources:
   GetDmpFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: 'functions/api/get_dmp/'
+      CodeUri: 'get_dmp/'
       Handler: 'app.Functions::GetDmp.process'
       Runtime: 'ruby3.2'
       Timeout: 5
       Architectures:
         - 'x86_64'
       Layers:
-        - !Ref LambdaLayer
+        - !Ref ApiLayerId
       Policies:
         - 'arn:aws:iam::aws:policy/AmazonSSMFullAccess'
         - !Ref DmpHubDynamoTableReadPolicy
@@ -655,14 +582,14 @@ Resources:
   PostCitationsFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: 'functions/api/post_citations/'
+      CodeUri: 'post_citations/'
       Handler: 'app.Functions::PostCitations.process'
       Runtime: 'ruby3.2'
       Timeout: 60
       Architectures:
         - 'x86_64'
       Layers:
-        - !Ref LambdaLayer
+        - !Ref ApiLayerId
       Policies:
         - 'arn:aws:iam::aws:policy/AmazonSNSFullAccess'
         - 'arn:aws:iam::aws:policy/AmazonSQSFullAccess'
@@ -705,14 +632,14 @@ Resources:
   PostDmpsFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: 'functions/api/post_dmps/'
+      CodeUri: 'post_dmps/'
       Handler: 'app.Functions::PostDmps.process'
       Runtime: 'ruby3.2'
       Timeout: 15
       Architectures:
         - 'x86_64'
       Layers:
-        - !Ref LambdaLayer
+        - !Ref ApiLayerId
       Policies:
         - 'arn:aws:iam::aws:policy/AmazonSSMFullAccess'
         - 'arn:aws:iam::aws:policy/AmazonSNSFullAccess'
@@ -762,14 +689,14 @@ Resources:
   PostNarrativesFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: 'functions/api/post_narratives/'
+      CodeUri: 'post_narratives/'
       Handler: 'app.Functions::PostNarratives.process'
       Runtime: 'ruby3.2'
       Timeout: 15
       Architectures:
         - 'x86_64'
       Layers:
-        - !Ref LambdaLayer
+        - !Ref ApiLayerId
       Policies:
         - 'arn:aws:iam::aws:policy/AmazonSSMFullAccess'
         - 'arn:aws:iam::aws:policy/AmazonSNSFullAccess'
@@ -816,14 +743,14 @@ Resources:
   PutDmpFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: 'functions/api/put_dmp/'
+      CodeUri: 'put_dmp/'
       Handler: 'app.Functions::PutDmp.process'
       Runtime: 'ruby3.2'
       Timeout: 30
       Architectures:
         - 'x86_64'
       Layers:
-        - !Ref LambdaLayer
+        - !Ref ApiLayerId
       Policies:
         - 'arn:aws:iam::aws:policy/AmazonSSMFullAccess'
         - 'arn:aws:iam::aws:policy/AmazonSNSFullAccess'
@@ -873,14 +800,14 @@ Resources:
   ValidateDmpFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: 'functions/api/validate_dmp/'
+      CodeUri: 'validate_dmp/'
       Handler: 'app.Functions::ValidateDmp.process'
       Runtime: 'ruby3.2'
       Timeout: 5
       Architectures:
         - 'x86_64'
       Layers:
-        - !Ref LambdaLayer
+        - !Ref ApiLayerId
       Policies:
         - 'arn:aws:iam::aws:policy/AmazonSSMFullAccess'
       DeadLetterQueue:
@@ -917,138 +844,6 @@ Resources:
   # Triggered Lambdas
   #   See: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-sns.html
   # ----------------------------------------------------
-  # Lambda responsible for fetching BibTex citations
-  CiterFunction:
-    Type: 'AWS::Serverless::Function'
-    Properties:
-      CodeUri: 'functions/triggered/citer/'
-      Handler: 'app.Functions::Citer.process'
-      Runtime: 'ruby3.2'
-      # Depending on the DMP ID, there may be a lot of citations so we timeout after 5 minutes
-      Timeout: 300
-      Architectures:
-        - 'x86_64'
-      Layers:
-        - !Ref LambdaLayer
-      Policies:
-        - 'arn:aws:iam::aws:policy/AmazonSSMFullAccess'
-        - 'arn:aws:iam::aws:policy/AmazonSNSFullAccess'
-        - 'arn:aws:iam::aws:policy/AmazonSQSFullAccess'
-        - 'arn:aws:iam::aws:policy/CloudWatchLogsFullAccess'
-        - !Ref DmpHubDynamoTableWritePolicy
-        - !Ref EventBusPolicy
-      Environment:
-        Variables:
-          LAMBDA_ENV: !Ref Env
-          LOG_LEVEL: !Ref DebugLevel # 'debug'
-          DOMAIN: !Ref DomainName
-          DMP_ID_BASE_URL: 'doi.org'
-          API_BASE_URL: !Sub 'https://api.${DomainName}'
-          SNS_FATAL_ERROR_TOPIC: !Ref SnsEmailTopicArn
-          EVENT_BUS_NAME: !Ref EventBusArn
-          DYNAMO_TABLE: !Ref DynamoTableName
-      Events:
-        CiterEvent:
-          Type: 'EventBridgeRule'
-          Properties:
-            DeadLetterConfig:
-              Arn: !Ref DeadLetterQueueArn
-            EventBusName: !Ref EventBusArn
-            Pattern: !Sub >
-              {
-                "source": ["${DomainName}:lambda:event_publisher"],
-                "detail-type": ["Citation Fetch"],
-                "detail": {
-                  "SK": ["VERSION#latest"]
-                }
-              }
-            RetryPolicy:
-              MaximumEventAgeInSeconds: 180
-              MaximumRetryAttempts: 3
-            State: 'ENABLED'  # 'DISABLED'
-
-  CiterPermission:
-    Type: 'AWS::Lambda::Permission'
-    Properties:
-      FunctionName: !Ref CiterFunction
-      Action: 'lambda:InvokeFunction'
-      Principal: 'events.amazonaws.com'
-      # SourceArn: !GetAtt CiterEventRule.Arn
-
-  # Annoyingly, SAM does not auto-generate LogGroup for a non-API tiggered lambda
-  CiterFunctionLogGroup:
-    Type: 'AWS::Logs::LogGroup'
-    DependsOn:
-      - CiterFunction
-    Properties:
-      LogGroupName: !Sub "/aws/lambda/${CiterFunction}"
-      RetentionInDays: !Ref LogRetentionDays
-
-  # Lambda responsible for communications with EZID
-  EzidPublisherFunction:
-    Type: 'AWS::Serverless::Function'
-    Properties:
-      CodeUri: 'functions/triggered/ezid_publisher/'
-      Handler: 'app.Functions::EzidPublisher.process'
-      Runtime: 'ruby3.2'
-      Timeout: 30
-      Architectures:
-        - 'x86_64'
-      Layers:
-        - !Ref LambdaLayer
-      Policies:
-        - 'arn:aws:iam::aws:policy/AmazonSSMFullAccess'
-        - 'arn:aws:iam::aws:policy/AmazonSNSFullAccess'
-        - 'arn:aws:iam::aws:policy/AmazonSQSFullAccess'
-        - 'arn:aws:iam::aws:policy/CloudWatchLogsFullAccess'
-        - !Ref DmpHubDynamoTableWritePolicy
-        - !Ref EventBusPolicy
-      Environment:
-        Variables:
-          LAMBDA_ENV: !Ref Env
-          LOG_LEVEL: !Ref DebugLevel # 'debug'
-          DOMAIN: !Ref DomainName
-          DMP_ID_BASE_URL: 'doi.org'
-          API_BASE_URL: !Sub 'https://api.${DomainName}'
-          SNS_FATAL_ERROR_TOPIC: !Ref SnsEmailTopicArn
-          EVENT_BUS_NAME: !Ref EventBusArn
-          DYNAMO_TABLE: !Ref DynamoTableName
-      Events:
-        EzidPublishEvent:
-          Type: 'EventBridgeRule'
-          Properties:
-            DeadLetterConfig:
-              Arn: !Ref DeadLetterQueueArn
-            EventBusName: !Ref EventBusArn
-            Pattern: !Sub >
-              {
-                "source": ["${DomainName}:lambda:event_publisher"],
-                "detail-type": ["EZID update"],
-                "detail": {
-                  "SK": ["VERSION#latest"]
-                }
-              }
-            RetryPolicy:
-              MaximumEventAgeInSeconds: 180
-              MaximumRetryAttempts: 3
-            State: 'ENABLED'  # 'DISABLED'
-
-  EzidPublisherPermission:
-    Type: 'AWS::Lambda::Permission'
-    Properties:
-      FunctionName: !Ref EzidPublisherFunction
-      Action: 'lambda:InvokeFunction'
-      Principal: 'events.amazonaws.com'
-      # SourceArn: !GetAtt EzidPublisherEventRule.Arn
-
-  # Annoyingly, SAM does not auto-generate LogGroup for a non-API tiggered lambda
-  EzidPublisherFunctionLogGroup:
-    Type: 'AWS::Logs::LogGroup'
-    DependsOn:
-      - EzidPublisherFunction
-    Properties:
-      LogGroupName: !Sub "/aws/lambda/${EzidPublisherFunction}"
-      RetentionInDays: !Ref LogRetentionDays
 
   # Lambda responsible for communications with EZID
   # ExplorerRorFunction:
@@ -1064,7 +859,7 @@ Resources:
   #     Architectures:
   #       - 'x86_64'
   #     Layers:
-  #       - !Ref LambdaLayer
+  #       - !Ref ApiLayerId
   #     Policies:
   #       - 'arn:aws:iam::aws:policy/AmazonS3FullAccess'
   #       - 'arn:aws:iam::aws:policy/AmazonSNSFullAccess'
@@ -1188,38 +983,28 @@ Outputs:
 
   DeleteDmpFunctionArn:
     Value: !GetAtt DeleteDmpFunction.Arn
+  GetDmpFunctionArn:
+    Value: !GetAtt GetDmpFunction.Arn
+  GetDmpsFunctionArn:
+    Value: !GetAtt GetDmpsFunction.Arn
+  PostDmpsFunctionArn:
+    Value: !GetAtt PostDmpsFunction.Arn
+  PutDmpFunctionArn:
+    Value: !GetAtt PutDmpFunction.Arn
+  ValidateDmpFunctionArn:
+    Value: !GetAtt ValidateDmpFunction.Arn
+
   GetAwardsCrossrefFunctionArn:
     Value: !GetAtt GetAwardsCrossrefApiFunction.Arn
   GetAwardsNihunctionArn:
     Value: !GetAtt GetAwardsNihApiFunction.Arn
   GetAwardsNsfFunctionArn:
     Value: !GetAtt GetAwardsNsfApiFunction.Arn
-  PostDmpsFunctionArn:
-    Value: !GetAtt PostDmpsFunction.Arn
+
+  PostCitationsFunctionArn:
+    Value: !GetAtt PostCitationsFunction.Arn
   PostNarrativeFunctionArn:
     Value: !GetAtt PostNarrativesFunction.Arn
-  PutDmpFunctionArn:
-    Value: !GetAtt PutDmpFunction.Arn
-  ValidateDmpFunctionArn:
-    Value: !GetAtt ValidateDmpFunction.Arn
-  EzidPublisherFunctionArn:
-    Value: !GetAtt EzidPublisherFunction.Arn
-
-  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
-  # Find out more about other implicit resources you can reference within SAM
-  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  SwaggerUiEndpoint:
-    Value: !Sub "GET https://${DmpHubRestApi}.execute-api.${AWS::Region}.amazonaws.com/v0/api-docs/"
-  DeleteDmpEndpoint:
-    Value: !Sub "DELETE https://${DmpHubRestApi}.execute-api.${AWS::Region}.amazonaws.com/v0/dmps/{dmp_id+}"
-  GetDmpEndpoint:
-    Value: !Sub "GET https://${DmpHubRestApi}.execute-api.${AWS::Region}.amazonaws.com/v0/dmps/{dmp_id+}"
-  PostDmpsEndpoint:
-    Value: !Sub "POST https://${DmpHubRestApi}.execute-api.${AWS::Region}.amazonaws.com/v0/dmps"
-  PutDmpEndpoint:
-    Value: !Sub "PUT https://${DmpHubRestApi}.execute-api.${AWS::Region}.amazonaws.com/v0/dmps/{dmp_id+}"
-  ValidateDmpEndpoint:
-    Value: !Sub "POST https://${DmpHubRestApi}.execute-api.${AWS::Region}.amazonaws.com/v0/dmps/validate"
 
   ApiBaseUrl:
     Value: !Sub "https://${DmpHubRestApi}.execute-api.${AWS::Region}.amazonaws.com/v0/"

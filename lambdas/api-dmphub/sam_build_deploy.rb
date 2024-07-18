@@ -177,7 +177,8 @@ if ARGV.length >= 3
       { template_param_name: 'HostedZoneId', lookup_name: "#{@cf_export_prefix}HostedZoneId" },
       { template_param_name: 'S3PrivateBucketId', lookup_name: "#{@cf_export_prefix}S3PrivateBucketId" },
       { template_param_name: 'S3CloudFrontBucketArn', lookup_name: "#{@cf_export_prefix}S3CloudFrontBucketArn" },
-      { template_param_name: 'SnsEmailTopicArn', lookup_name: "#{@cf_export_prefix}SnsTopicEmailArn" }
+      { template_param_name: 'SnsEmailTopicArn', lookup_name: "#{@cf_export_prefix}SnsTopicEmailArn" },
+      { template_param_name: 'ApiLayerId', lookup_name: "#{@cf_export_prefix}ApiLayerId" }
     ]
   end
 
