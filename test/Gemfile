@@ -1,0 +1,10 @@
+source 'https://rubygems.org'
+
+# Makes http fun again! Wrapper to simplify the native Net::HTTP libraries
+gem 'httparty'
+
+# Allows us to change the color of output
+gem 'rainbow'
+
+gem 'aws-sdk-dynamodb'
+gem 'aws-sdk-cloudformation'

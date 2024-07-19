@@ -254,8 +254,8 @@ module Uc3DmpId
 
         # Set the :modified timestamps
         now = Time.now.utc
-        version['modified'] = now.iso8601
-        version['dmphub_modification_day'] = now.strftime('%Y-%m-%d')
+        payload['modified'] = now.iso8601
+        payload['dmphub_modification_day'] = now.strftime('%Y-%m-%d')
 
         # Retain all the other attributes on the original version unless they are
         # in the list of exclusions OR the incoming payload already has a value for it
