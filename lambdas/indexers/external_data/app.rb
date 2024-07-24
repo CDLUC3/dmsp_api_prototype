@@ -172,8 +172,8 @@ module Functions
 
         status = hash.fetch('status', JSON.parse({ S: 'active' }.to_json))['S']&.downcase
         if status == 'active'
-          aliases = hash.fetch('aliases', []).map { |val| _name_for_search(val:) }
-          aliases += hash.fetch('acronyms', []).map { |val| _name_for_search(val:) }
+          aliases = hash.fetch('aliases', {}).fetch('L', []).map { |val| _name_for_search(val:) }
+          aliases += hash.fetch('acronyms', []).fetch('L', []).map { |val| _name_for_search(val:) }
           links = hash['domain'].nil? ? [] : [hash.fetch('domain', {})['S']]
           links += hash.fetch('links', []).map do |link|
             next unless link.is_a?(Hash) && !link['S'].nil?
@@ -182,16 +182,26 @@ module Functions
           end
           country = hash.fetch('country', {}).fetch('M', {})
 
+          sk = _name_for_search(val: hash['name'])
+          fundref = hash.fetch('external_ids', {}).fetch('M', {}).fetch('FundRef', {})['M']
+          fundref_id = fundref.fetch('preferred', {})['S'] unless fundref.nil?
+          fundref_id = fundref.fetch('all', {}).fetch('L', []).first&.fetch('S', '') if !fundref.nil? && fundref_id.nil?
+
           # Generate the new Indexed metadata
           rec = {
             PK: 'AFFILIATION',
-            SK: _name_for_search(val: hash['name']),
-            name: hash['name']['S']
+            SK: sk,
+            name: hash['name']['S'],
+            searchName: sk,
+            ror_url: hash['ID']['S'],
+            ror_id: hash['ID']['S'].gsub(/https?:\/\/ror.org\//, '')
           }
           rec[:aliases] = aliases.flatten.compact.uniq if aliases.reject { |a| a.blank? }.any?
           rec[:links] = links.flatten.compact.uniq if links.reject { |a| a.blank? }.any?
           rec[:country_name] = _name_for_search(val: country['country_name']),
           rec[:country_code] = _name_for_search(val: country['country_code'])
+          rec[:fundref_url] = "https://api.crossref.org/funders/#{fundref_id}" unless fundref_id.nil?
+          rec[:fundref_id] = fundref_id unless fundref_id.nil?
           logger&.debug(message: "Updating index for ROR #{hash['id']} - #{hash['name']}", details: rec)
 
           # Update/Add the metadata for the DMP
@@ -201,252 +211,9 @@ module Functions
           # It's not active, so delete the index entry
           client.delete_item(
             table_name: table,
-            key: { PK: 'AFFILIATION', SK: _name_for_search(val: hash['name']) }
+            key: { PK: 'AFFILIATION', SK: sk }
           )
         end
-      end
-
-      def _sync_index(client:, table:, idx_pk:, dmp:, original_ids:, new_ids:, logger: nil)
-        logger&.debug(message: 'Syncing indices', details: { new_ids:, original_ids:, dmp: })
-        # Loop through each of the new ids we want to index
-        new_ids.difference(original_ids).each do |id|
-          item = _dynamo_index_get(client:, table:, key: { PK: idx_pk, SK: id }, logger:)
-          logger&.debug(message: 'Adding DMP PK on index', details: item)
-
-          # Add the DMP payload to the index (removing the old entry if it exists)
-          item['dmps'] = [] if item['dmps'].nil?
-          item['dmps'].delete_if { |entry| entry.is_a?(String) || entry['pk'] == dmp[:pk] }
-          item['dmps'] << dmp
-          _dynamo_index_put(client:, table:, item:, logger:)
-        end
-
-        # Loop through all of the original ids that no longer appear in the new ids
-        original_ids.difference(new_ids).each do |id|
-          item = _dynamo_index_get(client:, table:, key: { PK: idx_pk, SK: id }, logger:)
-          next if item.fetch('dmps', []).empty?
-
-          # Remove the DMP Payload from that index
-          logger&.debug(message: 'Removing DMP PK from index', details: item)
-          item['dmps'] = item['dmps'].reject { |og| og['pk'] == dmp['pk'] }
-          _dynamo_index_put(client:, table:, item:, logger:)
-        end
-      end
-
-      # Fetch the index record from the DB
-      def _dynamo_index_get(client:, table:, key:, logger: nil)
-        resp = client.get_item({
-          table_name: table,
-          key:,
-          consistent_read: false,
-          return_consumed_capacity: logger&.level == 'debug' ? 'TOTAL' : 'NONE'
-        })
-
-        logger.debug(message: "#{SOURCE} fetched INDEX ID: #{key}") if logger.respond_to?(:debug)
-        item = resp[:item].is_a?(Array) ? resp[:item].first : resp[:item]
-        item.nil? ? JSON.parse(key.to_json) : item
-      end
-
-      # Add/update an index record
-      def _dynamo_index_put(client:, table:, item:, logger: nil)
-        resp = client.put_item({
-          table_name: table,
-          item:,
-          return_consumed_capacity: logger&.level == 'debug' ? 'TOTAL' : 'NONE'
-        })
-        resp
-      end
-
-      # Extract all of the important information from the DMP to create our OpenSearch Doc
-      def _dmp_to_os_doc(hash:, logger:)
-        people = _extract_people(hash:, logger:)
-        pk = Uc3DmpId::Helper.remove_pk_prefix(p_key: hash.fetch('PK', {})['S'])
-        visibility = hash.fetch('dmproadmap_privacy', {})['S']&.downcase&.strip == 'public' ? 'public' : 'private'
-
-        project = hash.fetch('project', {}).fetch('L', [{}]).first['M']
-        project = {} if project.nil?
-        # Set the project start date equal to the date specified or the DMP creation date
-        proj_start = project.fetch('start', hash.fetch('created', {}))['S']
-        # Set the project end date equal to the specified end OR 5 years after the start
-        proj_end = project.fetch('end', {})['S']
-        proj_end = (Date.parse(proj_start.to_s) + 1825).to_s if proj_end.nil? && !proj_start.nil?
-
-        funding = project.fetch('funding', {}).fetch('L', [{}]).first.fetch('M', {})
-        doc = people.merge(_extract_funding(hash: funding, logger:))
-        doc = doc.merge(_repos_to_os_doc_parts(datasets: hash.fetch('dataset', {}).fetch('L', [])))
-        doc = doc.merge({
-          dmp_id: Uc3DmpId::Helper.remove_pk_prefix(p_key: pk),
-          title: hash.fetch('title', {})['S']&.downcase,
-          visibility: visibility,
-          featured: hash.fetch('dmproadmap_featured', {})['S']&.downcase&.strip == '1' ? 1 : 0,
-          description: hash.fetch('description', {})['S']&.downcase,
-          project_start: proj_start&.to_s&.split('T')&.first,
-          project_end: proj_end&.to_s&.split('T')&.first,
-          created: hash.fetch('created', {})['S']&.to_s&.split('T')&.first,
-          modified: hash.fetch('modified', {})['S']&.to_s&.split('T')&.first,
-          registered: hash.fetch('registered', {})['S']&.to_s&.split('T')&.first
-        })
-        logger.debug(message: 'New OpenSearch Document', details: { document: doc }) unless visibility == 'public'
-        return doc unless visibility == 'public'
-
-        # Attach the narrative PDF if the plan is public
-        works = hash.fetch('dmproadmap_related_identifiers', hash.fetch('dmproadmap_related_identifier', {})).fetch('L', [])
-        doc[:narrative_url] = _extract_narrative(works:, logger:)
-        logger.debug(message: 'New OpenSearch Document', details: { document: doc })
-        doc
-      end
-
-      # Extract the important funding info
-      def _extract_funding(hash:, logger:)
-        return {} unless hash.is_a?(Hash)
-
-        id = hash.fetch('funder_id', {}).fetch('M', {}).fetch('identifier', {})['S']
-        {
-          funder_ids: [id].compact.uniq,
-          funders: [hash.fetch('name', {})['S']&.downcase&.strip].compact.uniq,
-          funder_opportunity_ids: [
-            hash.fetch('dmproadmap_funding_opportunity_id', {})['S']&.downcase&.strip,
-            hash.fetch('dmproadmap_project_number', {})['S']&.downcase&.strip
-          ].compact.uniq,
-          grant_ids: [hash.fetch('grant_id', {}).fetch('M', {}).fetch('identifier', {})['S']].compact.uniq,
-          funding_status: hash.fetch('funding_status', {}).fetch('S', 'planned')
-        }
-      end
-
-      # Extarct the latest link to the narrative PDF
-      def _extract_narrative(works:, logger:)
-        pdfs = works.map { |entry| entry.fetch('M', {}) }.select do |work|
-          work.fetch('descriptor', {})['S'] == 'is_metadata_for' &&
-            work.fetch('work_type', {})['S'] == 'output_management_plan'
-        end
-        return nil if pdfs.empty? || pdfs.first.nil?
-
-        pdfs.last.fetch('identifier', {})['S']
-      end
-
-      # Extract the important information from each contact and contributor
-      def _extract_people(hash:, logger:)
-        return {} unless hash.is_a?(Hash)
-
-        # Fetch the important parts from each person
-        people = hash.fetch('contributor', {})['L']&.map { |contrib| _process_person(hash: contrib) }
-        people = [] if people.nil?
-        people << _process_person(hash: hash['contact'])
-        logger.debug(message: "Extracted the people from the DMP", details: { people: people })
-
-        # Distill the individual people
-        parts = _people_to_os_doc_parts(people:)
-        # Dedeplicate and remove any nils
-        parts = parts.each_key { |key| parts[key] = parts[key]&.compact&.uniq }
-        parts
-      end
-
-      # Combine all of the people metadata into arrays for our OpenSearch Doc
-      def _people_to_os_doc_parts(people:)
-        parts = { people: [], people_ids: [], affiliations: [], affiliation_ids: [] }
-
-        # Add each person's info to the appropriate part or the OpenSearch doc
-        people.each do |person|
-          parts[:people] << person[:name] unless person[:name].nil?
-          parts[:people] << person[:email] unless person[:email].nil?
-          parts[:people_ids] << person[:id] unless person[:id].nil?
-          parts[:affiliations] << person[:affiliation] unless person[:affiliation].nil?
-          parts[:affiliation_ids] << person[:affiliation_id] unless person[:affiliation_id].nil?
-        end
-        parts
-      end
-
-      # Retreive all of the repositories defined for the research outputs
-      def _repos_to_os_doc_parts(datasets:)
-        parts = { repos: [], repo_ids: [] }
-        return parts unless datasets.is_a?(Array) && datasets.any?
-
-        outputs = datasets.map { |dataset| dataset.fetch('M', {}) }
-
-        outputs.each do |output|
-          hosts = output.fetch('distribution', {}).fetch('L', []).map { |d| d.fetch('M', {}).fetch('host', {})['M'] }
-          next unless hosts.is_a?(Array) && hosts.any?
-
-          hosts.each do |host|
-            next if host.nil?
-
-            parts[:repos] << host.fetch('title', {})['S']
-            parts[:repo_ids] << host.fetch('url', {})['S']
-            parts[:repo_ids] << host.fetch('dmproadmap_host_id', {}).fetch('M', {}).fetch('identifier', {})['S']
-          end
-        end
-        parts[:repo_ids] = parts[:repo_ids].compact.uniq
-        parts[:repos] = parts[:repos].compact.uniq
-        parts
-      end
-
-      # Extract the important patrts of the contact/contributor from the DynamoStream image
-      #   "M": {
-      #     "name": { "S": "DMPTool Researcher" },
-      #     "dmproadmap_affiliation": {
-      #       "M": {
-      #         "name": { "S": "University of California, Office of the President (UCOP)" },
-      #         "affiliation_id": {
-      #           "M": {
-      #             "identifier": { "S": "https://ror.org/00pjdza24" },
-      #             "type": { "S": "ror" }
-      #           }
-      #         }
-      #       }
-      #     },
-      #     "contact_id|contributor_id": {
-      #       "M": {
-      #         "identifier": { "S": "https://orcid.org/0000-0002-5491-6036" },
-      #         "type": { "S": "orcid" }
-      #       }
-      #     },
-      #     "mbox": { "S": "dmptool.researcher@gmail.com" }
-      #     "role": {
-      #       "L": [{ "S": "http://credit.niso.org/contributor-roles/investigation" }]
-      #     }
-      #   }
-      def _process_person(hash:)
-        return {} unless hash.is_a?(Hash) && !hash['M'].nil?
-
-        id_type = hash['M']['contact_id'].nil? ? 'contributor_id' : 'contact_id'
-        affiliation = _process_affiliation(hash: hash['M'].fetch('dmproadmap_affiliation', {}))
-
-        {
-          name: hash['M'].fetch('name', {})['S']&.downcase,
-          email: hash['M'].fetch('mbox', {})['S']&.downcase,
-          id: _process_id(hash: hash['M'].fetch(id_type, {})),
-          affiliation: affiliation[:name],
-          affiliation_id: affiliation[:id]
-        }
-      end
-
-      # Extract the important patrts of the affiliation from the DynamoStream image
-      #
-      #  "M": {
-      #    "name": { "S": "University of California, Office of the President (UCOP)" },
-      #    "affiliation_id": {
-      #      "M": {
-      #        "identifier": { "S": "https://ror.org/00pjdza24" },
-      #        "type": { "S": "ror" }
-      #      }
-      #    }
-      #  }
-      def _process_affiliation(hash:)
-        return {} unless hash.is_a?(Hash) && !hash['M'].nil?
-
-        {
-          name: hash['M'].fetch('name', {})['S']&.downcase,
-          id: _process_id(hash: hash['M'].fetch('affiliation_id', {}))
-        }
-      end
-
-      # Extract the important patrts of the identifier from the DynamoStream image
-      #
-      #    "M": {
-      #      "identifier": { "S": "https://ror.org/00987cb86" },
-      #      "type": { "S": "ror" }
-      #    }
-      def _process_id(hash:)
-        hash.is_a?(Hash) ? hash.fetch('M', {}).fetch('identifier', {})['S']&.downcase : nil
       end
     end
   end
