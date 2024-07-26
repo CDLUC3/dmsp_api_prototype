@@ -25,7 +25,7 @@ Parameters:
   # SubnetC:
   #   Type: 'AWS::EC2::Subnet::Id'
 
-  IndexerRoleArn:
+  HarvesterLambdaRoleArn:
     Type: 'String'
 
   # LambdaSecurityGroupId:
@@ -62,7 +62,7 @@ Resources:
         - 'x86_64'
       Layers:
         - !Ref BaselineLayerId
-      Role: !Ref IndexerRoleArn
+      Role: !Ref HarvesterLambdaRoleArn
       Environment:
         Variables:
           LAMBDA_ENV: !Ref Env
