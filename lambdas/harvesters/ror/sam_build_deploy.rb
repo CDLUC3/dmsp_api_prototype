@@ -30,14 +30,6 @@ if ARGV.length >= 3
   @run_deploy = ARGV[2].to_s.downcase.strip == 'true'
   @log_level = ARGV[3].nil? ? 'error' : ARGV[3]
 
-  @program = 'uc3'
-  @service = 'dmp'
-  @subservice = 'hub'
-  @git_repo = 'https://github.com/CDLUC3/dmsp_api_prototype'
-  @auto_confirm_changeset = false
-  @prefix = [@program, @service, @subservice].join('-')
-  @ssm_prefix = "/#{[@program, @service].join('/')}/"
-
   # =======================================================================================================
   # =======================================================================================================
   #
@@ -59,13 +51,13 @@ if ARGV.length >= 3
   # List the names of all other parameters whose values should be available as exported CloudFormation stack
   # outputs. The env prefix will be appended to each name your provide.
   #    For example if the name of the parameter is 'DomainName' this script will look for 'dev-DomainName'
-  @cf_params = %w[HarvesterLambdaRoleArn S3BucketId BaselineLayerId EventBusArn
+  @cf_params = %w[HarvesterRoleArn S3PrivateBucketArn BaselineLayerId EventBusArn
                   ExternalDataDynamoTableName DeadLetterQueueArn]
 
   # List the names of all other parameters whose values should be available as SSM parameters. The name must
   # match the final part of the SSM key name. This script will append the prefix automatically.
   #    For example if the parameter is 'DomainName' this script will look for '/uc3/dmp/hub/dev/DomainName'
-  @ssm_params = ["#{@ssm_prefix}tool/#{@env}/DomainName"]
+  @ssm_params = %w[DomainName]
   #
   #
   # DON'T FORGET TO: Add an entry to the Sceptre config for lambda-iam.yaml and lambda-vpc.yaml for this Lambda!
@@ -101,9 +93,7 @@ if ARGV.length >= 3
   def fetch_cf_output(name:)
     vals = @stack_exports.select do |exp|
       (name&.downcase&.strip == 'lambdasecuritygroupid' && exp.name.downcase.strip == 'lambdasecuritygroupid') ||
-      (exp.exporting_stack_id.include?("#{@prefix}-dmptool-#{@env}") && exp.name.downcase.strip.end_with?(name.downcase.strip)) ||
-      ((exp.exporting_stack_id.include?("#{@prefix}-#{@env}") ||
-          exp.exporting_stack_id.include?("#{@program}-#{@env}") ) &&
+      ((exp.exporting_stack_id.include?(@prefix) || exp.exporting_stack_id.include?("#{@program}-#{@env}") ) &&
         "#{@env}-#{name&.downcase&.strip}" == exp.name.downcase.strip)
     end
     vals&.first&.value
@@ -114,7 +104,7 @@ if ARGV.length >= 3
     @ssm_params.map do |key|
       next if key.nil?
 
-      val = fetch_ssm_value(name: key.start_with?(@ssm_prefix) ? key : "#{@ssm_prefix}hub/#{@env}/#{key}")
+      val = fetch_ssm_value(name: key.start_with?(@ssm_prefix) ? key : "#{@ssm_prefix}#{key}")
       puts "Unable to find an SSM parameter for '#{key}'!" if val.nil?
       next if val.nil?
 
@@ -134,7 +124,7 @@ if ARGV.length >= 3
   def sam_param(key:, value:)
     return '' if key.nil? || value.nil?
 
-    "ParameterKey=#{key.to_s.gsub('/uc3/dmp/tool/dev/', '')},ParameterValue=#{value}"
+    "ParameterKey=#{key},ParameterValue=#{value}"
   end
 
   # Build the SAM tags
@@ -145,8 +135,24 @@ if ARGV.length >= 3
     tags.join(' ')
   end
 
-  @stack_name = "#{@prefix}-tool-#{@function_name}"
+  @program = 'uc3'
+  @service = 'dmp'
+  @subservice = 'hub'
+  @git_repo = 'https://github.com/CDLUC3/dmsp_api_prototype'
+  @auto_confirm_changeset = false
+  @prefix = [@program, @service, @subservice, @env].join('-')
+  @ssm_prefix = "/#{[@program, @service, @subservice, @env].join('/')}/"
+  @stack_name = "#{@prefix}-#{@function_name}"
+
   @stack_exports = fetch_cf_stack_exports
+
+  # Add the CF Role if this is not development
+  if @env != 'dev'
+    cf_roles = @stack_exports.select do |export|
+      export.exporting_stack_id.include?('uc3-ops-aws-prd-iam') && export.name == 'uc3-prd-ops-cfn-service-role'
+    end
+    @assumed_role = "--role-arn #{cf_roles.first&.value}"
+  end
 
   if @run_build || @run_deploy
     @ssm_client = Aws::SSM::Client.new(region: DEFAULT_REGION)
@@ -167,7 +173,7 @@ if ARGV.length >= 3
 
     # If we want to deploy the API and Lambda resources
     if @run_deploy
-      @admin_email = fetch_ssm_value(name: "#{@ssm_prefix}hub/#{@env}/AdminEmail")
+      @admin_email = fetch_ssm_value(name: "#{@ssm_prefix}AdminEmail")
 
       args = [
         "--stack-name #{@stack_name}",
@@ -176,14 +182,7 @@ if ARGV.length >= 3
         '--disable-rollback false',
         "--tags #{sam_tags}"
       ]
-
-      # Add the CF Role if this is not development
-      if @env != 'dev'
-        cf_roles = @stack_exports.select do |export|
-          export.exporting_stack_id.include?('uc3-ops-aws-prd-iam') && export.name == 'uc3-prd-ops-cfn-service-role'
-        end
-        args << "--role-arn #{cf_roles.first&.value}"
-      end
+      args << @assumed_role unless @assumed_role.nil?
 
       # Add the S3 or ECR details depending on what we're working with
       if @use_docker
@@ -205,6 +204,7 @@ if ARGV.length >= 3
 
   else
     args = ["--stack-name #{@stack_name}"]
+    args << '--profile prd-cfn-role' unless @assumed_role.nil?
 
     puts "NOTE: This Lambda is deployed within the VPC. It can take in excess of 45 minutes for the associated ENIs to be deleted!"
     puts "Deleting SAM CloudFormation stack #{@stack_name} ..."

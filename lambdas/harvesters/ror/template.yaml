@@ -26,10 +26,10 @@ Parameters:
   BaselineLayerId:
     Type: 'String'
 
-  HarvesterLambdaRoleArn:
+  HarvesterRoleArn:
     Type: 'String'
 
-  S3BucketId:
+  S3PrivateBucketArn:
     Type: 'String'
 
   EventBusArn:
@@ -60,13 +60,13 @@ Resources:
         - 'x86_64'
       Layers:
         - !Ref BaselineLayerId
-      Role: !Ref HarvesterLambdaRoleArn
+      Role: !Ref HarvesterRoleArn
       Environment:
         Variables:
           LAMBDA_ENV: !Ref Env
           LOG_LEVEL: !Ref DebugLevel # 'debug'
           DOMAIN: !Ref DomainName
-          S3_BUCKET: !Ref S3BucketId
+          S3_BUCKET: !Ref S3PrivateBucketArn
           DYNAMO_TABLE: !Ref ExternalDataDynamoTableName
           EVENT_BUS_NAME: !Ref EventBusArn
           PROCESSOR_RECORD_COUNT: !Ref MaxRecordsPerProcessor
@@ -101,12 +101,12 @@ Resources:
         - 'x86_64'
       Layers:
         - !Ref BaselineLayerId
-      Role: !Ref HarvesterLambdaRoleArn
+      Role: !Ref HarvesterRoleArn
       Environment:
         Variables:
           LAMBDA_ENV: !Ref Env
           LOG_LEVEL: !Ref DebugLevel # 'debug'
-          S3_BUCKET: !Ref S3BucketId
+          S3_BUCKET: !Ref S3PrivateBucketArn
           DYNAMO_TABLE: !Ref ExternalDataDynamoTableName
       Events:
         RorHarvesterProcessorEvent:
