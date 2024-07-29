@@ -282,8 +282,8 @@ Resources:
   GetAffiliationsFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: 'get_affiliations'
-      Handler: 'app.handler'
+      CodeUri: 'get_affiliations/dist/index/'
+      Handler: 'index.handler'
       Runtime: 'nodejs20.x'
       Timeout: 5
       Architectures:
@@ -325,8 +325,8 @@ Resources:
   GetAffiliationFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: 'get_affiliation/'
-      Handler: 'app.handler'
+      CodeUri: 'get_affiliation/dist/index/'
+      Handler: 'index.handler'
       Runtime: 'nodejs20.x'
       Timeout: 5
       Architectures:
@@ -354,7 +354,7 @@ Resources:
           Type: 'Api'
           Properties:
             RestApiId: !Ref DmpHubRestApi
-            Path: '/affiliations/{dmp_id+}'
+            Path: '/affiliations/{affiliation_id+}'
             Method: 'get'
             Auth:
               Authorizer: 'NONE'
