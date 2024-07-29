@@ -18,12 +18,9 @@ function responder(status, message) {
 };
 
 export const handler = async (event) => {
-  // Extracting the affiliation_id from the path parameters
-
-  console.log(event.queryStringParameters);
-
+  // Extracting the search term and funderOnly flag from the path parameters
   let searchTerm = event.queryStringParameters && event.queryStringParameters.search;
-  const funderOnly = event.queryStringParameters && event.queryStringParameters.funderOnly || false;
+  const funderOnly = event.queryStringParameters && event.queryStringParameters.funderOnly;
 
   if (!searchTerm || searchTerm.length < 3) {
     return responder(400, { error: 'search term must be greater than 3 characters' });
@@ -32,9 +29,9 @@ export const handler = async (event) => {
   // Transform the searchTerm into lowercase and only alpha numeric
   searchTerm = searchTerm.toLowerCase().trim().replace(/[^a-zA-Z0-9]/g, '');
 
-  let filterExpression = 'contains (searchName, :term)';
-  if (funderOnly) {
-    filterExpression = 'contains (searchName, :term) and attribute_exists(fundref_url)';
+  let filterExpression = 'contains(searchName, :term)';
+  if (funderOnly && funderOnly.toString().toLowerCase().trim() === 'true') {
+    filterExpression = 'contains(searchName, :term) and attribute_exists(fundref_url)';
   }
 
   const params = {
@@ -48,7 +45,7 @@ export const handler = async (event) => {
   };
 
   try {
-    console.log(`Searching for affiliations matching: '${searchTerm}'`);
+    console.log(`Searching for affiliations matching: '${searchTerm}' - (funderOnly? ${funderOnly})`);
     // Fetch the Affiliation from the ExternalData Dynamo Table
     const data = await dynamo.query(params).promise();
     if (data.Items) {
