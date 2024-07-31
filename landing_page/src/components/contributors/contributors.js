@@ -34,11 +34,11 @@ function OrgLink(props) {
   if (org !== null) {
     if (org?.affiliation_id) {
       return (
-        <Link href={org.affiliation_id?.identifier} label={org.name.replace(nameUrlRegex, '')} remote='true' index={idx + 'aid'} />
+        <Link href={org.affiliation_id?.identifier} label={org?.name.replace(nameUrlRegex, '')} remote='true' index={idx + 'aid'} />
       );
     } else {
       return (
-        <>{' '}{org.name}</>
+        <>{' '}{org?.name}</>
       )
     }
   }
