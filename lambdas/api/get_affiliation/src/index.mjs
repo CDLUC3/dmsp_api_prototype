@@ -3,7 +3,6 @@ import DynamoDB from "aws-sdk/clients/dynamodb"
 const dynamo = new DynamoDB.DocumentClient();
 const tableName = process.env.DYNAMO_EXTERNAL_DATA_TABLE;
 const resourceType = 'AFFILIATION';
-const rorBaseURL = 'https://ror.org/';
 const logLevel = process.env?.LOG_LEVEL || 'debug';
 
 function responder(status, message) {
@@ -27,7 +26,7 @@ export const handler = async (event) => {
 
   const params = {
     TableName: tableName,
-    Key: { RESOURCE_TYPE: resourceType, ID: `${rorBaseURL}${affiliationId}` },
+    Key: { RESOURCE_TYPE: resourceType, ID: `https://${affiliationId}` },
   };
 
   try {

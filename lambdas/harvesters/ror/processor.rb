@@ -172,6 +172,7 @@ module Functions
         funder = !fundref['preferred'].nil? || fundref.fetch('all', []).any?
         names = [hash['name']&.downcase&.strip, domain&.downcase&.strip]
         names = names + hash['aliases'] + hash['acronyms']
+        names = names + hash.fetch('labels', []).map { |lbl| lbl['label'] }
         kids = hash.fetch('relationships', []).select { |e| e['type']&.downcase == 'child' }.map { |c| c['id'] }
         parents = hash.fetch('relationships', []).select { |e| e['type']&.downcase == 'parent' }.map { |p| p['id'] }
         related = hash.fetch('relationships', []).select { |e| e['type']&.downcase == 'related' }.map { |p| p['id'] }
@@ -198,6 +199,7 @@ module Functions
         out[:addresses] = hash['addresses'] if hash['addresses'].is_a?(Array)
         out[:relationships] = hash['relationships'] if hash['relationships'].is_a?(Array)
         out[:links] = hash['links'] if hash['links'].is_a?(Array)
+        out[:lables] = hash['labels'] if hash['labels'].is_a?(Array)
         out[:aliases] = hash['aliases'] if hash['aliases'].is_a?(Array)
         out[:acronyms] = hash['acronyms'] if hash['acronyms'].is_a?(Array)
         out[:country] = hash['country'] if hash['country'].is_a?(Hash)

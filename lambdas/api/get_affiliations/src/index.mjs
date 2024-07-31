@@ -27,7 +27,7 @@ export const handler = async (event) => {
   }
 
   // Transform the searchTerm into lowercase and only alpha numeric
-  searchTerm = searchTerm.toLowerCase().trim().replace(/[^a-zA-Z0-9]/g, '');
+  searchTerm = searchTerm.toLowerCase().trim().replace(/\s/g, '');
 
   let filterExpression = 'contains(searchName, :term)';
   if (funderOnly && funderOnly.toString().toLowerCase().trim() === 'true') {

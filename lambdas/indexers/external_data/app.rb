@@ -163,7 +163,7 @@ module Functions
         str = val.is_a?(Hash) ? val['S'] : val
         return '' unless str.is_a?(String) && !str.blank?
 
-        str.to_s.downcase.gsub(/[^a-zA-Z0-9]/, '').strip
+        str.to_s.downcase.strip.gsub(' ', '')
       end
 
       # Convert the ROR entry into an index record
@@ -172,40 +172,71 @@ module Functions
 
         status = hash.fetch('status', JSON.parse({ S: 'active' }.to_json))['S']&.downcase
         if status == 'active'
-          aliases = hash.fetch('aliases', {}).fetch('L', []).map { |val| _name_for_search(val:) }
-          aliases += hash.fetch('acronyms', []).fetch('L', []).map { |val| _name_for_search(val:) }
+          acronyms = hash.fetch('acronyms', {}).fetch('L', []).map { |ac| ac['S'] }
+          aliases = hash.fetch('aliases', {}).fetch('L', []).map { |al| al['S'] }
+          locales = hash.fetch('lables', {}).fetch('L', []).map { |lbl| lbl.fetch('M', {}).fetch('label', {})['S'] }
+          domain = hash.fetch('domain', {})['S']
+
+          names = hash.fetch('searchable_names', {}).fetch('L', []).map { |nm| nm['S'] }
+          names = names + aliases + locales
+          names = names.flatten.compact.uniq
+
+          # append any acronyms to the end of each name since they by themselves are not unique enough
+          unless acronyms.empty?
+            names = names.map do |val|
+              val == domain || acronyms.include?(val) ? val : [val, acronyms].flatten.join(' ')
+            end
+          end
+          names = names.map { |val| val == domain ? val : _name_for_search(val:) }
+          # names under 6 characters
+          names = names.map { |val| val.length <= 6 ? "#{val}(#{domain})" : val }
+
           links = hash['domain'].nil? ? [] : [hash.fetch('domain', {})['S']]
           links += hash.fetch('links', []).map do |link|
             next unless link.is_a?(Hash) && !link['S'].nil?
 
             link['S'].downcase.gsub(/https?:\/\//, '').gsub('www.', '')
           end
-          country = hash.fetch('country', {}).fetch('M', {})
 
-          sk = _name_for_search(val: hash['name'])
           fundref = hash.fetch('external_ids', {}).fetch('M', {}).fetch('FundRef', {})['M']
           fundref_id = fundref.fetch('preferred', {})['S'] unless fundref.nil?
           fundref_id = fundref.fetch('all', {}).fetch('L', []).first&.fetch('S', '') if !fundref.nil? && fundref_id.nil?
+          country = hash.fetch('country', {}).fetch('M', {})
 
-          # Generate the new Indexed metadata
-          rec = {
-            PK: 'AFFILIATION',
-            SK: sk,
-            name: hash['name']['S'],
-            searchName: sk,
-            ror_url: hash['ID']['S'],
-            ror_id: hash['ID']['S'].gsub(/https?:\/\/ror.org\//, '')
-          }
-          rec[:aliases] = aliases.flatten.compact.uniq if aliases.reject { |a| a.blank? }.any?
-          rec[:links] = links.flatten.compact.uniq if links.reject { |a| a.blank? }.any?
-          rec[:country_name] = _name_for_search(val: country['country_name']),
-          rec[:country_code] = _name_for_search(val: country['country_code'])
-          rec[:fundref_url] = "https://api.crossref.org/funders/#{fundref_id}" unless fundref_id.nil?
-          rec[:fundref_id] = fundref_id unless fundref_id.nil?
-          logger&.debug(message: "Updating index for ROR #{hash['id']} - #{hash['name']}", details: rec)
+          logger&.debug(message: 'Adding/updating index records for the following names.', details: names)
+          # Add an entry for each of the
+          names.flatten.compact.uniq.each do |name|
+            suffix = domain.nil? ? country['country_name'] : domain
+            sk = suffix.nil? || name.include?(suffix) ? name : "#{name} (#{suffix})"
 
-          # Update/Add the metadata for the DMP
-          client.put_item(item: rec, table_name: table)
+            # Generate the new Indexed metadata
+            rec = {
+              PK: 'AFFILIATION',
+              SK: sk,
+              name: hash['name']['S'],
+              searchName: sk,
+              domain: domain,
+              ror_url: hash['ID']['S'],
+              ror_id: hash['ID']['S'].gsub(/https?:\/\/ror.org\//, '')
+            }
+            locs = hash.fetch('lables', {}).fetch('L', []).map do |lbl|
+              hash = lbl.fetch('M', {})
+              label = hash.fetch('label', {})['S']
+              {
+                label: label.nil? ? label : "#{label} (#{suffix})",
+                locale: hash.fetch('iso639', {})['S']
+              }
+            end
+            rec[:locales] = locs.reject { |lbl| lbl[:label].nil? }
+            rec[:countryName] = country.fetch('country_name', {})['S']
+            rec[:countryCode] = _name_for_search(val: country['country_code'])
+            rec[:fundrefUrl] = "https://api.crossref.org/funders/#{fundref_id}" unless fundref_id.nil?
+            rec[:fundrefId] = fundref_id unless fundref_id.nil?
+            logger&.debug(message: "Updating index for ROR #{hash['id']} - #{hash['name']}", details: rec)
+
+            # Update/Add the metadata for the DMP
+            client.put_item(item: rec, table_name: table)
+          end
         else
           logger&.info(message: "ROR #{hash['id']} is no longer active. Removing index")
           # It's not active, so delete the index entry
