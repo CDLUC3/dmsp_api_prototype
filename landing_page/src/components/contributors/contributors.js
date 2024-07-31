@@ -32,7 +32,7 @@ function OrgLink(props) {
   let nameUrlRegex = /\s+\(.*\)\s?/i;
 
   if (org !== null) {
-    if (org.affiliation_id) {
+    if (org?.affiliation_id) {
       return (
         <Link href={org.affiliation_id?.identifier} label={org.name.replace(nameUrlRegex, '')} remote='true' index={idx + 'aid'} />
       );
