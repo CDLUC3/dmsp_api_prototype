@@ -205,6 +205,10 @@ module Functions
         out[:country] = hash['country'] if hash['country'].is_a?(Hash)
         out[:external_ids] = hash['external_ids'] if hash['external_ids'].is_a?(Hash)
 
+        # TODO: Remove this once we have OpenSearch up and running. We limit here to make the size of
+        #       DB small so it doesn't take forever to query
+        return false unless %w[US GB IE SE ZA CA].include?(hash.fetch('country', {})['country_code'])
+
         resp = client.put_item({ table_name: table, item: out,
                                  return_consumed_capacity: logger&.level == 'debug' ? 'TOTAL' : 'NONE' })
         logger.debug(message: "Added/Updated #{out[:SK]}", details: out) if logger.respond_to?(:debug)
