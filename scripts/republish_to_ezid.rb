@@ -1,6 +1,13 @@
 require 'aws-sdk-cloudformation'
 require 'aws-sdk-eventbridge'
 
+# Republish To EZID
+# ---------------------------------------------------------------------------------------
+# Use this scipt to manually trigger the EzidPublisher function for the specified DMP ID
+#
+# Note that the DMP ID should be specified in the [shoulder][id] format (e.g. 11.9999/A1B2C3)
+# ---------------------------------------------------------------------------------------
+
 def fetch_cf_stack_exports
   cf_client = Aws::CloudFormation::Client.new(region: 'us-west-2')
   @exports = cf_client.list_exports.exports
