@@ -163,13 +163,16 @@ if ARGV.length >= 3
     ]
 
     @fetchable_params = [
-      { template_param_name: 'CertificateArn', lookup_name: "#{@cf_export_prefix}CertificateArn" },
+      # { template_param_name: 'CertificateArn', lookup_name: "#{@cf_export_prefix}CertificateArn" },
+      { template_param_name: 'CertificateArn', lookup_name: "uc3-dmp-hub-dev-global-cert-CertificateArn" },
       { template_param_name: 'CognitoUserPoolArn', lookup_name: "#{@cf_export_prefix}CognitoUserPoolArn" },
       { template_param_name: 'DeadLetterQueueArn', lookup_name: "#{@cf_export_prefix}DeadLetterQueueArn" },
       { template_param_name: 'DomainName', lookup_name: "#{@cf_export_prefix}DomainName" },
       { template_param_name: 'DynamoTableArn', lookup_name: "#{@cf_export_prefix}DynamoTableArn" },
       { template_param_name: 'DynamoTableName', lookup_name: "#{@cf_export_prefix}DynamoTableName" },
       { template_param_name: 'DynamoIndexTableName', lookup_name: "#{@cf_export_prefix}DynamoIndexTableName" },
+      { template_param_name: 'DynamoExternalDataTableName', lookup_name: "#{@cf_export_prefix}ExternalDataDynamoTableName" },
+      { template_param_name: 'ApiRoleArn', lookup_name: "#{@cf_export_prefix}ApiRoleArn" },
       { template_param_name: 'DynamoPolicyArn', lookup_name: "#{ARGV[0]}-DynamoPolicyArn" },
       # { template_param_name: 'ResourcesDynamoTableArn', lookup_name: "#{@cf_export_prefix}ResourcesDynamoTableArn" },
       # { template_param_name: 'ResourcesDynamoTableName', lookup_name: "#{@cf_export_prefix}ResourcesDynamoTableName" },

@@ -52,14 +52,14 @@ Parameters:
   DynamoIndexTableName:
     Type: 'String'
 
-  DynamoPolicyArn:
+  DynamoExternalDataTableName:
     Type: 'String'
 
-  # ResourcesDynamoTableArn:
-  #   Type: 'String'
+  ApiRoleArn:
+    Type: 'String'
 
-  # ResourcesDynamoTableName:
-  #   Type: 'String'
+  DynamoPolicyArn:
+    Type: 'String'
 
   S3CloudFrontBucketArn:
     Type: 'String'
@@ -277,6 +277,96 @@ Resources:
   # API Lambdas
   #  See: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-api.html
   # ----------------------------------------------------
+
+  # TEMPORARY LAMBDAS THAT WILL BE REPLACED BY DIRECT CALLS TO OPENSEARCH
+  GetAffiliationsFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: 'get_affiliations/dist/index/'
+      Handler: 'index.handler'
+      Runtime: 'nodejs20.x'
+      Timeout: 5
+      Architectures:
+        - 'x86_64'
+      Role: !Ref ApiRoleArn
+      DeadLetterQueue:
+        Type: 'SQS'
+        TargetArn: !Ref DeadLetterQueueArn
+      Environment:
+        Variables:
+          LAMBDA_ENV: !Ref Env
+          LOG_LEVEL: !Ref DebugLevel # 'debug'
+          SNS_FATAL_ERROR_TOPIC: !Ref SnsEmailTopicArn
+          COGNITO_USER_POOL_ID: !Ref CognitoUserPoolArn
+          DYNAMO_INDEX_TABLE: !Ref DynamoIndexTableName
+          CORS_ORIGIN: !If
+            - IsDev
+            - "*"
+            - !Sub "https://${DomainName}"
+      Events:
+        GetAffiliations:
+          Type: 'Api'
+          Properties:
+            RestApiId: !Ref DmpHubRestApi
+            Path: '/affiliations'
+            Method: 'get'
+            Auth:
+              Authorizer: 'DmpHubCognitoAuthorizer'
+              AuthorizationScopes:
+                - !Sub 'https://auth.${DomainName}/${Env}.read'
+
+  GetAffiliationsLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${GetAffiliationsFunction}"
+      # Explicit retention time
+      RetentionInDays: !Ref LogRetentionDays
+
+  GetAffiliationFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: 'get_affiliation/dist/index/'
+      Handler: 'index.handler'
+      Runtime: 'nodejs20.x'
+      Timeout: 5
+      Architectures:
+        - 'x86_64'
+      Layers:
+        - !Ref ApiLayerId
+      Role: !Ref ApiRoleArn
+      DeadLetterQueue:
+        Type: 'SQS'
+        TargetArn: !Ref DeadLetterQueueArn
+      Environment:
+        Variables:
+          LAMBDA_ENV: !Ref Env
+          LOG_LEVEL: !Ref DebugLevel # 'debug'
+          DMP_ID_BASE_URL: 'doi.org'
+          DYNAMO_EXTERNAL_DATA_TABLE: !Ref DynamoExternalDataTableName
+          SNS_FATAL_ERROR_TOPIC: !Ref SnsEmailTopicArn
+          CORS_ORIGIN: !If
+            - IsDev
+            - "*"
+            - !Sub "https://${DomainName}"
+      Events:
+        GetAffiliation:
+          # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Type: 'Api'
+          Properties:
+            RestApiId: !Ref DmpHubRestApi
+            Path: '/affiliations/{affiliation_id+}'
+            Method: 'get'
+            Auth:
+              Authorizer: 'NONE'
+
+  GetAffiliationLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${GetAffiliationFunction}"
+      # Explicit retention time
+      RetentionInDays: !Ref LogRetentionDays
+
+
   # Tombstone a DMP
   DeleteDmpFunction:
     Type: 'AWS::Serverless::Function'
@@ -839,75 +929,6 @@ Resources:
       LogGroupName: !Sub "/aws/lambda/${ValidateDmpFunction}"
       # Explicit retention time
       RetentionInDays: !Ref LogRetentionDays
-
-  # ----------------------------------------------------
-  # Triggered Lambdas
-  #   See: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-sns.html
-  # ----------------------------------------------------
-
-  # Lambda responsible for communications with EZID
-  # ExplorerRorFunction:
-  #   Type: 'AWS::Serverless::Function'
-  #   Properties:
-  #     CodeUri: 'functions/triggered/explorer_ror/'
-  #     Handler: 'app.Functions::ExplorerRor.process'
-  #     Runtime: 'ruby3.2'
-  #     # Extended timeout to 15 minutes and nbump the memory to .5GB here since we download the complete
-  #     # ROR file and it is a large ZIP archive
-  #     Timeout: 900
-  #     MemorySize: 512
-  #     Architectures:
-  #       - 'x86_64'
-  #     Layers:
-  #       - !Ref ApiLayerId
-  #     Policies:
-  #       - 'arn:aws:iam::aws:policy/AmazonS3FullAccess'
-  #       - 'arn:aws:iam::aws:policy/AmazonSNSFullAccess'
-  #       - 'arn:aws:iam::aws:policy/AmazonSQSFullAccess'
-  #       - 'arn:aws:iam::aws:policy/AmazonSSMFullAccess'
-  #       - 'arn:aws:iam::aws:policy/CloudWatchLogsFullAccess'
-  #       - !Ref ResourcesDynamoTableWritePolicy
-  #       - !Ref EventBusPolicy
-  #     Environment:
-  #       Variables:
-  #         LAMBDA_ENV: !Ref Env
-  #         LOG_LEVEL: !Ref DebugLevel # 'debug'
-  #         DOMAIN: !Ref DomainName
-  #         SNS_FATAL_ERROR_TOPIC: !Ref SnsEmailTopicArn
-  #         DYNAMO_TABLE: !Ref ResourcesDynamoTableName
-  #         S3_BUCKET: !Ref S3PrivateBucketId
-  #     Events:
-  #       ExplorerRorEvent:
-  #         Type: 'EventBridgeRule'
-  #         Properties:
-  #           DeadLetterConfig:
-  #             Arn: !Ref DeadLetterQueueArn
-  #           EventBusName: !Ref EventBusArn
-  #           Pattern: !Sub >
-  #             {
-  #               "source": ["${DomainName}:lambda:event_publisher"],
-  #               "detail-type": ["ExploreRor"]
-  #             }
-  #           RetryPolicy:
-  #             MaximumEventAgeInSeconds: 180
-  #             MaximumRetryAttempts: 3
-  #           State: 'ENABLED'  # 'DISABLED'
-
-  # ExplorerRorPermission:
-  #   Type: 'AWS::Lambda::Permission'
-  #   Properties:
-  #     FunctionName: !Ref ExplorerRorFunction
-  #     Action: 'lambda:InvokeFunction'
-  #     Principal: 'events.amazonaws.com'
-
-  # # Annoyingly, SAM does not auto-generate LogGroup for a non-API tiggered lambda
-  # ExplorerRorFunctionLogGroup:
-  #   Type: 'AWS::Logs::LogGroup'
-  #   DependsOn:
-  #     - ExplorerRorFunction
-  #   Properties:
-  #     LogGroupName: !Sub "/aws/lambda/${ExplorerRorFunction}"
-  #     RetentionInDays: !Ref LogRetentionDays
 
   # Scheduled events to keep some of the API lambdas warm
   #   See: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-events-rule.html#cfn-events-rule-scheduleexpression
