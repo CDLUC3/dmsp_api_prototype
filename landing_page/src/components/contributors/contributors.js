@@ -31,14 +31,14 @@ function OrgLink(props) {
   let idx = props?.key || "";
   let nameUrlRegex = /\s+\(.*\)\s?/i;
 
-  if (org !== null) {
-    if (org?.affiliation_id) {
+  if (org !== null && org !== undefined) {
+    if (org.affiliation_id) {
       return (
         <Link href={org.affiliation_id?.identifier} label={org?.name.replace(nameUrlRegex, '')} remote='true' index={idx + 'aid'} />
       );
     } else {
       return (
-        <>{' '}{org?.name}</>
+        <>{' '}{org.name}</>
       )
     }
   }
