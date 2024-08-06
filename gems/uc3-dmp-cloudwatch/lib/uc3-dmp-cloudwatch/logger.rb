@@ -7,7 +7,7 @@ module Uc3DmpCloudwatch
   class Logger
     attr_accessor :source, :event, :request_id, :level
 
-    LOG_LEVELS = %w[none error info debug].freeze
+    LOG_LEVELS = %w[none error warn info debug].freeze
 
     def initialize(**args)
       @level = args.fetch(:level, 'info')&.to_s&.downcase
@@ -24,6 +24,13 @@ module Uc3DmpCloudwatch
       _format_msg(mode: 'error', msg: message)
       _format_msg(mode: 'error', msg: details) if _valid_details(details:)
       _log_event(mode: 'error')
+    end
+
+    def warn(message:, details: {})
+      return false if %w[none error].include?(@level) || message.nil?
+
+      _format_msg(mode: 'warn', msg: message)
+      _format_msg(mode: 'warn', msg: details) if _valid_details(details:)
     end
 
     def info(message:, details: {})
