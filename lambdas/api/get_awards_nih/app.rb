@@ -26,6 +26,7 @@ module Functions
                     title keywords (e.g. keyword=genetic+mRna), /
                     a comma separated list of award years (optional) (e.g. years=2023,2021)'
     MSG_EMPTY_RESPONSE = 'NIH API returned an empty resultset'
+    MSG_EXTERNAL_API_ERROR = 'The NIH API was unable to process the request at this time.'
 
     # rubocop:disable Metrics/AbcSize, Metrics/MethodLength
     # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
@@ -63,10 +64,9 @@ module Functions
       results = _transform_response(response_body: resp)
       _respond(status: 200, items: results.compact.uniq, event:, params:)
     rescue Uc3DmpExternalApi::ExternalApiError => e
-      logger&.error(message: "External API error: #{e.message}", details: e.backtrace)
+      logger&.warn(message: "External API error: #{e.message}", details: e.backtrace)
       deets = { message: "External API error: #{e.message}", query_string: params }
-      Uc3DmpApiCore::Notifier.notify_administrator(source: SOURCE, details: deets, event:)
-      _respond(status: 500, errors: [Uc3DmpApiCore::MSG_SERVER_ERROR], event:)
+      _respond(status: 400, errors: [Uc3DmpApiCore::MSG_EXTERNAL_API_ERROR], event:)
     rescue Aws::Errors::ServiceError => e
       logger&.error(message: e.message, details: e.backtrace)
       deets = { message: e.message, query_string: params }
