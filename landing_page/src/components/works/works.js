@@ -2,12 +2,16 @@ import { SanitizeHTML } from '../../utils';
 import { Link } from '../link/link';
 
 function groupByType(works) {
-  let grouped = {};
+  let grouped = { other: [] };
   works.forEach((work) => {
-    if (!(work.work_type.toString() in grouped)) {
-      grouped[work.work_type.toString()] = [];
+    if (work.work_type !== undefined) {
+      if (!(work.work_type.toString() in grouped)) {
+        grouped[work.work_type.toString()] = [];
+      }
+      grouped[work.work_type].push(work);
+    } else {
+      grouped['other'].push(work);
     }
-    grouped[work.work_type].push(work);
   });
   return grouped;
 }
