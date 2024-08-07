@@ -26,9 +26,10 @@ module Uc3DmpExternalApi
         resp = HTTParty.send(method.to_sym, uri, opts)
 
         if [200, 201].include?(resp.code.to_i)
-          resp.body.nil? || resp.body.empty? ? nil : _process_response(resp:)
+          return resp.body.nil? || resp.body.empty? ? nil : _process_response(resp:)
         else
-          puts "The response code is not 200 or 201"
+          logger&.warn(message: "#{format(MSG_ERROR_FROM_EXTERNAL_API, url:)} - HTTP status code #{resp.code}")
+          return nil
         end
         
       rescue JSON::ParserError
