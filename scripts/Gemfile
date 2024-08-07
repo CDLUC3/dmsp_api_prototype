@@ -6,4 +6,7 @@ ruby '>= 3.2'
 
 gem 'httparty'
 
+gem 'aws-sdk-cloudformation'
 gem 'aws-sdk-dynamodb'
+
+gem 'uc3-dmp-citation'
