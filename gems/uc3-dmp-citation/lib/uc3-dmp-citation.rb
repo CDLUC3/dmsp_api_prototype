@@ -29,8 +29,13 @@ module Uc3DmpCitation
         return nil if uri.nil? || uri.blank?
 
         headers = { Accept: 'application/x-bibtex' }
-        logger.debug(message: "Fetching BibTeX from: #{uri}") if logger.respond_to?(:debug)
-        resp = Uc3DmpExternalApi::Client.call(url: uri, method: :get, additional_headers: headers, logger:)
+        logger&.debug(message: "Fetching BibTeX from: #{uri}")
+        begin
+          resp = Uc3DmpExternalApi::Client.call(url: uri, method: :get, additional_headers: headers, logger:)
+        rescue Uc3DmpExternalApi::ExternalApiError => e
+          logger&.warn(message: "Failure fetching citation for #{uri} - #{e.message}")
+          return nil
+        end
         return nil if resp.nil? || resp.to_s.strip.empty?
 
         bibtex_to_citation(uri: uri, bibtex_as_string: resp)

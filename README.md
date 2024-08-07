@@ -103,7 +103,12 @@ We recommend logging into the AWS console (dev account) and navigating to the La
 
 Once you are happy with the changes, copy the final code from the console and paste it into the file in this repository!
 
+__For JS based Lambdas:__
+You will first need to build the index.js file. To do that navigate to the `lambdas/api/[lambda function]` directory and run `npm run build` (note you may need to run `npm install` if this is the first time)
+
+__For all Lambdas:__
 You should then navigate to the `lambdas/api/` directory and run `ruby sam_build_deploy.rb [env] true true [log_level]`.
+
 
 **Modifying an Indexer, Harvester or Utility Lambda Function**
 We recommend logging into the AWS console (dev account) and navigating to the Lambda function you want to modify. From there you can run tests and make small modifications until you have it working. This speeds up the development process since you are not waiting for the full SAM build/deploy cycle to finish for each minor change you make.
@@ -118,6 +123,8 @@ You will need to update the versions of gems managed by other parties (e.g. aws)
 Navigate to `lambdas/layers/` directory and then in both the `api` and `baseline` directories you will need to do the following:
 - Update the gems: `bundle update`
 - Build and deploy the Layer and all dependent Lambda Functions: `ruby sam_build_deploy.rb [env] true true [log_level]`
+
+For JS based Lambda functions, you will need to navigate to the function directory and run `npm run build` to install all of the dependencies and build a minified `index.js`
 
 **Modifying the DMP Landing page**
 The DMP ID landing page is a static React JS webspage that makes an API call to the API Gateway to fetch the JSON for the DMP ID. The JSON is then used to render the page.
