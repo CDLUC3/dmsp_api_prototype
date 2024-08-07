@@ -23,6 +23,7 @@ module Uc3DmpCitation
 
     class << self
       # rubocop:disable Metrics/AbcSize
+
       def fetch_citation(doi:, work_type: DEFAULT_WORK_TYPE, style: DEFAULT_CITATION_STYLE, logger: nil)
         uri = _doi_to_uri(doi:)
         return nil if uri.nil? || uri.blank?
@@ -38,12 +39,14 @@ module Uc3DmpCitation
         return nil if resp.nil? || resp.to_s.strip.empty?
 
         bibtex_to_citation(uri: uri, bibtex_as_string: resp)
+
       end
       # rubocop:enable Metrics/AbcSize
 
       # Convert the specified BibTex string into a citation
       def bibtex_to_citation(uri:, bibtex_as_string:)
-        return nil unless bibtex_as_string.is_a?(String) && uri.is_a?(String)
+        is_bibtex = looks_like_bibtex(bibtex_as_string)
+        return nil unless bibtex_as_string.is_a?(String) && uri.is_a?(String) && is_bibtex
 
         bibtex = BibTeX.parse(_cleanse_bibtex(text: bibtex_as_string))
         work_type = work_type.nil? ? _determine_work_type(bibtex:) : work_type
@@ -116,6 +119,12 @@ module Uc3DmpCitation
             url
           end
         end
+      end
+
+      def looks_like_bibtex(text)
+        # Check if the text contains an @ followed by a known entry type
+        bibtex_entry_types = %w[article book booklet inbook incollection inproceedings conference manual mastersthesis phdthesis techreport misc unpublished]
+        bibtex_entry_types.any? { |type| text.include?("@#{type}") }
       end
       # rubocop:enable Metrics/AbcSize, Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
     end
