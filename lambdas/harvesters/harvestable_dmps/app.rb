@@ -26,6 +26,7 @@ module Functions
       'doi.org/10.48321/D190AA982F',
 
       # Northwestern University
+      'doi.org/10.48321/D190AA982F',
       'doi.org/10.48321/D10B3E54E4',
       'doi.org/10.48321/D10CA0DB07',
       'doi.org/10.48321/D1143FD15F',
@@ -33,6 +34,7 @@ module Functions
       'doi.org/10.48321/D1841AE523',
       'doi.org/10.48321/D1944C8215',
       'doi.org/10.48321/D1A04A9B1D',
+      'doi.org/10.48321/D1A3A05164',
       'doi.org/10.48321/D1B7947E97',
       'doi.org/10.48321/D1C3553D75',
 
