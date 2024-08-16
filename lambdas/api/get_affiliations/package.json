@@ -1,0 +1,21 @@
+{
+  "name": "get_affiliations",
+  "description": "Temporary Lambda function. This will be replaced by OpenSearch",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CDLUC3/dmsp_api_prototype.git"
+  },
+  "author": "University of California Curation Center (UC3)<dmptool@ucop.edu>",
+  "keywords": [],
+  "license": "MIT",
+  "scripts": {
+    "build": "rm -rf dist && esbuild ./src/* --entry-names=[dir]/[name]/index --bundle --minify --sourcemap --platform=node --target=node22.2 --outdir=dist"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1664.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.23.0"
+  }
+}

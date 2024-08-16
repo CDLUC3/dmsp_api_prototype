@@ -61,6 +61,8 @@ build-iPhoneSimulator/
 # Ignore Lambda bundles
 .bundle/
 
+node_modules/
+
 # Ignore Landing page node_modules and build artifacts
 landing_page/node_modules/
 landing_page/build/
