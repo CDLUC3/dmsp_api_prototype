@@ -70,3 +70,6 @@ landing_page/build/
 # Ignore Swagger node_modules and swagger-ui
 swagger/node_modules/
 swagger/swagger-ui-5.17.14/dist/
+
+# Ignore Dynamo Table dumps
+scripts/DMP-INDEX*.json
