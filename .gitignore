@@ -9,6 +9,7 @@
 /test/tmp/
 /test/version_tmp/
 /tmp/
+/scripts/tmp
 
 # Used by dotenv library to load environment variables.
 .env
@@ -70,3 +71,7 @@ landing_page/build/
 # Ignore Swagger node_modules and swagger-ui
 swagger/node_modules/
 swagger/swagger-ui-5.17.14/dist/
+
+# Ignore OSX files
+.DS_Store
+
