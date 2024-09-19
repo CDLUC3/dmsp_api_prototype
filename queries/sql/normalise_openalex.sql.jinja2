@@ -1,0 +1,113 @@
+CREATE OR REPLACE TABLE `{{ output_table_id }}` AS
+
+WITH funder_index AS (
+  SELECT
+    id,
+    {{ dataset_id }}.extract_ror(ids.ror) AS ror_id,
+    TRIM(ids.crossref) AS fundref_id,
+  FROM `{{ openalex_funders_table_id }}`
+),
+
+min_project_start AS (
+  SELECT MIN(project_start) AS min_project_start
+  FROM {{ dmps_norm_table_id }}
+),
+
+funders AS (
+  SELECT
+    id,
+    ARRAY_AGG(DISTINCT funder_id IGNORE NULLS) AS funder_ids
+  FROM (
+    SELECT
+      works.id AS id,
+      funder_index.ror_id AS funder_id
+    FROM `{{ openalex_works_table_id }}` AS works, UNNEST(grants) AS grant
+    LEFT JOIN funder_index ON funder_index.id = grant.funder
+
+    UNION ALL
+
+    SELECT
+      works.id AS id,
+      funder_index.fundref_id AS funder_id
+    FROM `{{ openalex_works_table_id }}` AS works, UNNEST(grants) AS grant
+    LEFT JOIN funder_index ON funder_index.id = grant.funder
+  )
+  GROUP BY id
+),
+
+-- OpenAlex has duplicate DOIs: group by DOI and combine information from all records with same DOI
+grouped AS (
+  SELECT
+    doi,
+    MAX(publication_date) AS publication_date,
+    MAX(type) AS type, -- Selects non-empty strings over null or ""
+    MAX(title) AS title, -- Selects non-empty strings over null or ""
+    -- MAX(abstract) AS abstract, -- Selects non-empty strings over null or ""
+    ARRAY_CONCAT_AGG(affiliations) AS affiliations,
+    ARRAY_CONCAT_AGG(affiliation_ids) AS affiliation_ids,
+    ARRAY_CONCAT_AGG(funders) AS funders,
+    ARRAY_CONCAT_AGG(funder_ids) AS funder_ids,
+    ARRAY_CONCAT_AGG(grant_ids) AS grant_ids,
+    ARRAY_CONCAT_AGG(people) AS people,
+    ARRAY_CONCAT_AGG(people_ids) AS people_ids,
+  FROM (
+      SELECT
+        {{ dataset_id }}.normalise_doi(works.ids.doi) AS doi,
+        works.publication_date AS publication_date,
+        works.type AS type,
+        {{ dataset_id }}.strip_html(title) as title,
+        -- null AS abstract,
+
+        -- Affiliations
+        (SELECT ARRAY_AGG(DISTINCT {{ dataset_id }}.normalise_name(institution.display_name) IGNORE NULLS) FROM UNNEST(authorships) AS author, UNNEST(author.institutions) AS institution WHERE institution.display_name IS NOT NULL) AS affiliations,
+
+        -- Affiliation IDs
+        (SELECT ARRAY_AGG(DISTINCT {{ dataset_id }}.extract_ror(institution.ror) IGNORE NULLS) FROM UNNEST(authorships) AS author, UNNEST(author.institutions) AS institution WHERE institution.ror IS NOT NULL) AS affiliation_ids,
+
+        -- Funders
+        (SELECT ARRAY_AGG(DISTINCT {{ dataset_id }}.normalise_name(grant.funder_display_name) IGNORE NULLS) FROM UNNEST(grants) AS grant WHERE grant.funder_display_name IS NOT NULL) AS funders,
+
+        -- Funder IDs
+        (SELECT ARRAY_AGG(DISTINCT funder_id IGNORE NULLS) FROM UNNEST(funders.funder_ids) AS funder_id WHERE funder_id IS NOT NULL) AS funder_ids,
+
+        -- ARRAY<STRING>[] AS funder_opportunity_ids,
+
+        -- Grant IDs
+        (SELECT ARRAY_AGG(DISTINCT LOWER(TRIM(grant.award_id)) IGNORE NULLS) FROM UNNEST(grants) AS grant WHERE grant.award_id IS NOT NULL) AS grant_ids,
+
+        -- People
+        (SELECT ARRAY_AGG(DISTINCT {{ dataset_id }}.normalise_person_name(author.author.display_name) IGNORE NULLS) FROM UNNEST(authorships) AS author WHERE author.author.display_name IS NOT NULL) AS people,
+
+        -- People IDs
+        (SELECT ARRAY_AGG(DISTINCT {{ dataset_id }}.extract_orcid(author.author.orcid) IGNORE NULLS) FROM UNNEST(authorships) AS author WHERE author.author.orcid IS NOT NULL) AS people_ids,
+
+        -- ARRAY<STRING>[] AS repos,
+        -- ARRAY<STRING>[] AS repo_ids
+      FROM `{{ openalex_works_table_id }}` as works
+      LEFT JOIN funders ON funders.id = works.id
+      WHERE ids.doi IS NOT NULL AND publication_date IS NOT NULL AND (publication_date BETWEEN (SELECT min_project_start FROM min_project_start).min_project_start AND CURRENT_DATE())
+  )
+  GROUP BY doi
+)
+
+SELECT
+  grouped.doi,
+  grouped.publication_date,
+  grouped.type,
+  grouped.title,
+  COALESCE(
+    NULLIF(TRIM({{ dataset_id }}.strip_html(crossref.abstract)), ''),
+    NULLIF(TRIM({{ dataset_id }}.strip_html(ARRAY_TO_STRING(ARRAY(SELECT d.description FROM UNNEST(datacite.descriptions) AS d), " "))), ''),
+    NULL
+  ) AS abstract, -- Choose abstracts from Crossref first, then DataCite.
+  ARRAY(SELECT DISTINCT value FROM UNNEST(affiliations) AS value ORDER BY value) AS affiliations,
+  ARRAY(SELECT DISTINCT value FROM UNNEST(affiliation_ids) AS value ORDER BY value) AS affiliation_ids,
+  ARRAY(SELECT DISTINCT value FROM UNNEST(funders) AS value ORDER BY value) AS funders,
+  ARRAY(SELECT DISTINCT value FROM UNNEST(funder_ids) AS value ORDER BY value) AS funder_ids,
+  ARRAY(SELECT DISTINCT value FROM UNNEST(grant_ids) AS value ORDER BY value) AS grant_ids,
+  ARRAY(SELECT DISTINCT value FROM UNNEST(people) AS value ORDER BY value) AS people,
+  ARRAY(SELECT DISTINCT value FROM UNNEST(people_ids) AS value ORDER BY value) AS people_ids
+FROM grouped
+LEFT JOIN `{{ crossref_metadata_table_id }}` as crossref ON {{ dataset_id }}.normalise_doi(crossref.doi) = grouped.doi
+LEFT JOIN `{{ datacite_table_id }}` as datacite ON {{ dataset_id }}.normalise_doi(datacite.doi) = grouped.doi
+ORDER BY publication_date DESC, LOWER(title) ASC

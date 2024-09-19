@@ -1,0 +1,299 @@
+CREATE OR REPLACE TABLE `{{ output_table_id }}` AS
+
+WITH min_project_start AS (
+  SELECT MIN(project_start) AS min_project_start
+  FROM `{{ dmps_norm_table_id }}`
+),
+
+ror_index AS (
+  SELECT
+    {{ dataset_id }}.extract_ror(id) AS ror,
+    {{ dataset_id }}.extract_isni(isni) AS isni,
+    {{ dataset_id }}.extract_wikidata(wikidata) AS wikidata,
+    {{ dataset_id }}.extract_grid(external_ids.Grid.all) AS grid,
+  FROM `{{ ror_table_id }}`
+  LEFT JOIN UNNEST(external_ids.ISNI.all) as isni
+  LEFT JOIN UNNEST(external_ids.WikiData.all) as wikidata
+),
+
+-- Convert affiliation IDs to ROR
+affiliation_ids AS (
+  SELECT
+    doi,
+    ARRAY_AGG(DISTINCT affiliation_id IGNORE NULLS) AS affiliation_ids
+  FROM (
+    -- Creator and Contributor affiliations
+    -- ROR
+    SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, {{ dataset_id }}.extract_ror(affiliationIdentifier) AS affiliation_id FROM `{{ datacite_table_id }}`, UNNEST(creators), UNNEST(affiliation)
+    WHERE affiliationIdentifierScheme IN ('ROR', 'RORID', 'https://ror.org')
+
+    UNION ALL
+
+    SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, {{ dataset_id }}.extract_ror(affiliationIdentifier) AS affiliation_id FROM `{{ datacite_table_id }}`, UNNEST(contributors), UNNEST(affiliation)
+    WHERE affiliationIdentifierScheme IN ('ROR', 'RORID', 'https://ror.org')
+
+    UNION ALL
+
+    -- GRID to ROR
+    SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, ror_index.ror AS affiliation_id FROM `{{ datacite_table_id }}`, UNNEST(creators), UNNEST(affiliation)
+    LEFT JOIN ror_index ON ror_index.grid = {{ dataset_id }}.extract_grid(affiliationIdentifier)
+    WHERE affiliationIdentifierScheme = 'GRID'
+
+    UNION ALL
+
+    SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, ror_index.ror AS affiliation_id FROM `{{ datacite_table_id }}`, UNNEST(contributors), UNNEST(affiliation)
+    LEFT JOIN ror_index ON ror_index.grid = {{ dataset_id }}.extract_grid(affiliationIdentifier)
+    WHERE affiliationIdentifierScheme = 'GRID'
+
+    UNION ALL
+
+    -- ISNI to ROR
+    SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, ror_index.ror AS affiliation_id FROM `{{ datacite_table_id }}`, UNNEST(creators), UNNEST(affiliation)
+    LEFT JOIN ror_index ON ror_index.isni = {{ dataset_id }}.extract_isni(affiliationIdentifier)
+    WHERE affiliationIdentifierScheme = 'ISNI'
+
+    UNION ALL
+
+    SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, ror_index.ror AS affiliation_id FROM `{{ datacite_table_id }}`, UNNEST(contributors), UNNEST(affiliation)
+    LEFT JOIN ror_index ON ror_index.isni = {{ dataset_id }}.extract_isni(affiliationIdentifier)
+    WHERE affiliationIdentifierScheme = 'ISNI'
+
+    UNION ALL
+
+    -- Non-person name identifiers
+    -- ROR
+    SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, {{ dataset_id }}.extract_ror(nameIdentifier) AS person_id FROM `{{ datacite_table_id }}`, UNNEST(creators), UNNEST(nameIdentifiers)
+    WHERE nameIdentifierScheme = "ROR"
+
+    UNION ALL
+
+    SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, {{ dataset_id }}.extract_ror(nameIdentifier) AS person_id FROM `{{ datacite_table_id }}`, UNNEST(contributors), UNNEST(nameIdentifiers)
+    WHERE nameIdentifierScheme = "ROR"
+
+    UNION ALL
+
+    -- GRID
+    SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, ror_index.ror AS person_id FROM `{{ datacite_table_id }}`, UNNEST(creators), UNNEST(nameIdentifiers)
+    LEFT JOIN ror_index ON ror_index.grid = {{ dataset_id }}.extract_grid(nameIdentifierScheme)
+    WHERE nameIdentifierScheme = "GRID"
+
+    UNION ALL
+
+    SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, ror_index.ror AS person_id FROM `{{ datacite_table_id }}`, UNNEST(contributors), UNNEST(nameIdentifiers)
+    LEFT JOIN ror_index ON ror_index.grid = {{ dataset_id }}.extract_grid(nameIdentifierScheme)
+    WHERE nameIdentifierScheme = "GRID"
+
+    UNION ALL
+
+    -- ISNI
+    SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, ror_index.ror AS person_id FROM `{{ datacite_table_id }}`, UNNEST(creators), UNNEST(nameIdentifiers)
+    LEFT JOIN ror_index ON ror_index.isni = {{ dataset_id }}.extract_isni(nameIdentifierScheme)
+    WHERE nameIdentifierScheme = "ISNI"
+
+    UNION ALL
+
+    SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, ror_index.ror AS person_id FROM `{{ datacite_table_id }}`, UNNEST(contributors), UNNEST(nameIdentifiers)
+    LEFT JOIN ror_index ON ror_index.isni = {{ dataset_id }}.extract_isni(nameIdentifierScheme)
+    WHERE nameIdentifierScheme = "ISNI"
+  )
+  GROUP BY doi
+),
+
+-- Get ORCIDs from name identifiers
+people_ids AS (
+  SELECT
+    doi,
+    ARRAY_AGG(DISTINCT person_id IGNORE NULLS) AS people_ids
+  FROM (
+    SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, {{ dataset_id }}.extract_orcid(nameIdentifier) AS person_id FROM `{{ datacite_table_id }}`, UNNEST(creators), UNNEST(nameIdentifiers)
+    WHERE LOWER(nameIdentifierScheme) LIKE '%orc%'
+
+    UNION ALL
+
+    SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, {{ dataset_id }}.extract_orcid(nameIdentifier) AS person_id FROM `{{ datacite_table_id }}`, UNNEST(contributors), UNNEST(nameIdentifiers)
+    WHERE LOWER(nameIdentifierScheme) LIKE '%orc%'
+  )
+  GROUP BY doi
+),
+
+-- Get funder IDs
+funder_ids AS (
+  SELECT
+    doi,
+    ARRAY_AGG(DISTINCT funder_id IGNORE NULLS) AS funder_ids
+  FROM (
+    -- Crossref Funder ID
+    SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, {{ dataset_id }}.extract_fundref_id(funderIdentifier) AS funder_id FROM `{{ datacite_table_id }}`, UNNEST(fundingReferences)
+    WHERE funderIdentifier IS NOT NULL AND funderIdentifierType = "Crossref Funder ID"
+
+    UNION ALL
+
+    -- ROR
+    SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, {{ dataset_id }}.extract_ror(funderIdentifier) AS funder_id FROM `{{ datacite_table_id }}`, UNNEST(fundingReferences)
+    WHERE funderIdentifier IS NOT NULL AND funderIdentifierType = "ROR"
+
+    UNION ALL
+
+    -- GRID to ROR
+    SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, ror_index.ror AS funder_id FROM `{{ datacite_table_id }}`, UNNEST(fundingReferences)
+    LEFT JOIN ror_index ON ror_index.grid = {{ dataset_id }}.extract_grid(funderIdentifier)
+    WHERE funderIdentifier IS NOT NULL AND funderIdentifierType = "GRID"
+
+    UNION ALL
+
+    -- ISNI to ROR
+    SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, ror_index.ror AS funder_id FROM `{{ datacite_table_id }}`, UNNEST(fundingReferences)
+    LEFT JOIN ror_index ON ror_index.isni = {{ dataset_id }}.extract_isni(funderIdentifier)
+    WHERE funderIdentifier IS NOT NULL AND funderIdentifierType = "ISNI"
+
+    -- TODO: grab fundref IDs from affiliations?
+  )
+  GROUP BY doi
+),
+
+normalised AS (
+  SELECT
+    {{ dataset_id }}.normalise_doi(datacite.doi) AS doi,
+    DATE(datacite.created) AS publication_date,
+    types.resourceTypeGeneral AS type,
+    {{ dataset_id }}.strip_html(ARRAY_TO_STRING(ARRAY(SELECT t.title FROM UNNEST(titles) AS t), " ")) AS title,
+    {{ dataset_id }}.strip_html(ARRAY_TO_STRING(ARRAY(SELECT d.description FROM UNNEST(descriptions) AS d), " ")) AS abstract,
+
+    -- Affiliations
+    (SELECT ARRAY_AGG(DISTINCT affiliation IGNORE NULLS ORDER BY affiliation)
+      FROM (
+        SELECT {{ dataset_id }}.normalise_name(affiliation.name) AS affiliation
+        FROM UNNEST(creators) AS creator, UNNEST(creator.affiliation) AS affiliation
+
+        UNION ALL
+
+        SELECT {{ dataset_id }}.normalise_name(affiliation.name) AS affiliation
+        FROM UNNEST(contributors) AS contrib, UNNEST(contrib.affiliation) AS affiliation
+
+        UNION ALL
+
+        SELECT {{ dataset_id }}.normalise_name(affiliation) AS affiliation FROM UNNEST(openalex.affiliations) AS affiliation -- Add OpenAlex affiliations
+      )
+    ) AS affiliations,
+
+    -- Affiliation IDs
+    (
+      SELECT ARRAY_AGG(DISTINCT affiliation_id ORDER BY affiliation_id)
+      FROM (
+        SELECT affiliation_id FROM UNNEST(affiliation_ids.affiliation_ids) AS affiliation_id
+
+        UNION ALL
+
+        SELECT affiliation_id FROM UNNEST(openalex.affiliation_ids) AS affiliation_id -- Add OpenAlex affiliation IDs
+      )
+    ) AS affiliation_ids,
+
+    -- Funders
+    (
+      SELECT ARRAY_AGG(DISTINCT funder IGNORE NULLS ORDER BY funder)
+      FROM (
+          SELECT {{ dataset_id }}.normalise_name(funder.funderName) AS funder FROM UNNEST(fundingReferences) AS funder WHERE funder.funderName IS NOT NULL
+
+          UNION ALL
+
+          SELECT {{ dataset_id }}.normalise_name(funder) FROM UNNEST(openalex.funders) AS funder -- Add OpenAlex funders
+      )
+    ) AS funders,
+
+    -- Funder IDs
+    (
+      SELECT ARRAY_AGG(DISTINCT funder_id ORDER BY funder_id)
+      FROM (
+        SELECT funder_id FROM UNNEST(funder_ids.funder_ids) AS funder_id
+
+        UNION ALL
+
+        SELECT funder_id FROM UNNEST(openalex.funder_ids) AS funder_id -- Add OpenAlex funder IDs
+      )
+    ) AS funder_ids,
+
+    -- ARRAY<STRING>[] AS funder_opportunity_ids,
+
+    -- Grant IDs
+    (SELECT ARRAY_AGG(DISTINCT grant_id ORDER BY grant_id)
+      FROM (
+        SELECT LOWER(TRIM(funder.awardNumber)) AS grant_id
+        FROM UNNEST(fundingReferences) AS funder
+        WHERE funder.awardNumber IS NOT NULL
+
+        UNION ALL
+
+        SELECT LOWER(TRIM(funder.awardUri)) AS grant_id
+        FROM UNNEST(fundingReferences) AS funder
+        WHERE funder.awardUri IS NOT NULL
+
+        UNION ALL
+
+        SELECT grant_id FROM UNNEST(openalex.grant_ids) as grant_id -- Add OpenAlex Grant IDs
+      )
+    ) AS grant_ids,
+
+    -- People
+    (SELECT ARRAY_AGG(DISTINCT person IGNORE NULLS ORDER BY person)
+      FROM (
+        SELECT
+          CASE
+            WHEN creator.givenName IS NOT NULL AND creator.familyName IS NOT NULL THEN {{ dataset_id }}.normalise_person_name(CONCAT(creator.givenName, ' ', creator.familyName))
+            ELSE {{ dataset_id }}.normalise_person_name(creator.name)
+          END AS person
+        FROM UNNEST(creators) as creator
+        WHERE creator.name IS NOT NULL OR (creator.givenName IS NOT NULL AND creator.familyName IS NOT NULL)
+
+        UNION ALL
+
+        SELECT
+          CASE
+            WHEN contrib.givenName IS NOT NULL AND contrib.familyName IS NOT NULL THEN {{ dataset_id }}.normalise_person_name(CONCAT(contrib.givenName, ' ', contrib.familyName))
+            ELSE {{ dataset_id }}.normalise_person_name(contrib.name)
+          END AS person
+        FROM UNNEST(contributors) as contrib
+        WHERE contrib.name IS NOT NULL OR (contrib.givenName IS NOT NULL AND contrib.familyName IS NOT NULL)
+
+        UNION ALL
+
+        SELECT {{ dataset_id }}.normalise_person_name(person) FROM UNNEST(openalex.people) AS person -- Add OpenAlex author names
+      )
+    ) AS people,
+
+    -- People IDs
+    (
+      SELECT ARRAY_AGG(DISTINCT person_id ORDER BY person_id)
+      FROM (
+        SELECT person_id FROM UNNEST(people_ids.people_ids) AS person_id
+
+        UNION ALL
+
+        SELECT person_id FROM UNNEST(openalex.people_ids) AS person_id -- Add OpenAlex ORCID IDs
+      )
+    ) AS people_ids
+
+    -- ARRAY<STRING>[] AS repos,
+    -- ARRAY<STRING>[] AS repo_ids,
+  FROM `{{ datacite_table_id }}` as datacite
+  LEFT JOIN affiliation_ids ON affiliation_ids.doi = {{ dataset_id }}.normalise_doi(datacite.doi)
+  LEFT JOIN people_ids ON people_ids.doi = {{ dataset_id }}.normalise_doi(datacite.doi)
+  LEFT JOIN funder_ids ON funder_ids.doi = {{ dataset_id }}.normalise_doi(datacite.doi)
+  LEFT JOIN `{{ openalex_norm_table_id }}` AS openalex ON openalex.doi = {{ dataset_id }}.normalise_doi(datacite.doi) -- Enrich with OpenAlex identifiers
+  WHERE datacite.created IS NOT NULL AND (DATE(datacite.created) BETWEEN (SELECT min_project_start FROM min_project_start).min_project_start AND CURRENT_DATE())
+)
+
+SELECT
+  doi,
+  publication_date,
+  type,
+  title,
+  abstract,
+  affiliations,
+  affiliation_ids,
+  funders,
+  funder_ids,
+  grant_ids,
+  people,
+  people_ids
+FROM normalised
+ORDER BY publication_date DESC, LOWER(title) ASC

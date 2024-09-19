@@ -1,0 +1,4 @@
+CREATE OR REPLACE TABLE `{{ output_table_id }}` AS
+
+SELECT dmps.doi, CONCAT(dmps.title, ' ', dmps.abstract) AS content
+FROM `{{ dmps_norm_table_id }}` AS dmps

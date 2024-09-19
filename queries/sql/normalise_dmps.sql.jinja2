@@ -1,0 +1,162 @@
+CREATE TEMP FUNCTION extract_id(input_string STRING)
+RETURNS STRING
+AS (
+  CASE
+    WHEN REGEXP_CONTAINS(input_string, r'0[a-hj-km-np-tv-z|0-9]{6}[0-9]{2}') THEN REGEXP_EXTRACT(input_string, r'0[a-hj-km-np-tv-z|0-9]{6}[0-9]{2}')
+    WHEN REGEXP_CONTAINS(input_string, r'\d{9,}') THEN REGEXP_EXTRACT(input_string, r'\d{9,}')
+    ELSE input_string
+  END
+);
+
+CREATE TEMP FUNCTION extract_grant_id(input_string STRING)
+RETURNS STRING
+AS (
+  CASE
+    -- NSF Award URL, e.g. https://www.nsf.gov/awardsearch/showAward?AWD_ID=0000000&HistoricalAwards=false
+    WHEN REGEXP_CONTAINS(input_string, r'AWD_ID=([0-9]+)') THEN LOWER(REGEXP_EXTRACT(input_string, r'AWD_ID=([0-9]+)'))
+    -- URL with nsf ID: https://www.nsf.gov/publications/pub_summ.jsp?org=NSF&ods_key=nsf00000
+    WHEN REGEXP_CONTAINS(input_string, r'nsf[0-9\-]+') THEN LOWER(REGEXP_EXTRACT(input_string, r'nsf[0-9\-]+'))
+    -- Some sort of alpha numeric id
+    WHEN REGEXP_CONTAINS(input_string, r'\d{5,}') THEN LOWER(REGEXP_EXTRACT(input_string, r'\d{5,}'))
+    ELSE NULL
+  END
+);
+
+CREATE TEMP FUNCTION clean_author_name(name STRING)
+RETURNS STRING
+LANGUAGE js
+AS  r"""
+  if (name == null){
+    return null;
+  }
+
+  // Replaces instances of one or more space with a single space, e.g. 'joe  bloggs' becomes 'joe bloggs'
+  name = name.replace(/\s+/g, ' ').trim();
+
+  // Remove anything inside brackets, including the brackets
+  name = name.replace(/\s*\(.*?\)\s*/g, '');
+
+  if(name.includes(",")){
+    // Convert last, first to first last
+    const parts = name.split(",").map(x => x.trim().toLowerCase()).filter(x => !x.includes("ph.d")).reverse();
+
+    // Add . to single letter middle names
+    name = parts.join(" ").split(" ").map(x => x.length === 1 ? `${x}.`: x).join(" ");
+  }
+
+  name = name.trim().toLowerCase();
+
+  if (name === "") {
+    return null;
+  }
+  return name;
+""";
+
+
+CREATE TEMP FUNCTION clean_name(name STRING)
+RETURNS STRING
+LANGUAGE js
+AS  r"""
+  if (name == null){
+    return null;
+  }
+
+  // Remove anything inside brackets, including the brackets
+  name = name.replace(/\s*\(.*?\)\s*/g, '').trim().toLowerCase();
+  if (name === "") {
+    return null;
+  }
+  return name;
+""";
+
+
+CREATE OR REPLACE TABLE `{{ output_table_id }}` AS
+
+WITH funder_index AS (
+  SELECT
+    {{ dataset_id }}.extract_ror(id) as ror_id,
+    TRIM(fundref_id) as fundref_id
+  FROM `{{ ror_table_id }}`, UNNEST(external_ids.Fundref.all) as fundref_id
+  WHERE id IS NOT NULL AND fundref_id IS NOT NULL
+),
+
+funders AS (
+  SELECT
+    dmptool_id,
+    ARRAY_AGG(DISTINCT funder_id) AS funder_ids
+  FROM (
+    SELECT dmptool_id, extract_id(funder_id) as funder_id
+    FROM `{{ dmps_raw_table_id }}` as dmps, UNNEST(dmps.funder_ids) AS funder_id
+
+    UNION ALL
+
+    SELECT dmptool_id, funder_index.fundref_id as funder_id
+    FROM `{{ dmps_raw_table_id }}` as dmps, UNNEST(dmps.funder_ids) AS funder_id
+    LEFT JOIN funder_index ON extract_id(funder_id) = funder_index.ror_id
+    WHERE funder_index.fundref_id IS NOT NULL
+
+    UNION ALL
+
+    SELECT dmptool_id, funder_index.ror_id as funder_id
+    FROM `{{ dmps_raw_table_id }}` as dmps, UNNEST(dmps.funder_ids) AS funder_id
+    LEFT JOIN funder_index ON extract_id(funder_id) = funder_index.fundref_id
+    WHERE funder_index.ror_id IS NOT NULL
+  )
+  GROUP BY dmptool_id
+),
+
+normalised AS (
+  SELECT
+    dmps.dmptool_id as doi,
+    {{ dataset_id }}.strip_html(title) AS title,
+    {{ dataset_id }}.strip_html(abstract) AS abstract,
+    project_start,
+    CASE
+      WHEN DATE_DIFF(project_end, project_start, YEAR) < 3 THEN DATE_ADD(project_start, INTERVAL 3 YEAR)
+      ELSE project_end
+    END AS project_end, -- Some DMPs have very small project windows, so extend them in this case
+
+    (SELECT ARRAY_AGG({{ dataset_id }}.normalise_name(clean_name(affiliation)) IGNORE NULLS) FROM UNNEST(dmps.affiliations) AS affiliation) AS affiliations,
+
+    -- All seem to be ROR IDs with a prefix
+    (SELECT ARRAY_AGG({{ dataset_id }}.extract_ror(affiliation_id)) FROM UNNEST(dmps.affiliation_ids) AS affiliation_id) AS affiliation_ids,
+
+    (SELECT ARRAY_AGG({{ dataset_id }}.normalise_name(clean_name(funder)) IGNORE NULLS) FROM UNNEST(dmps.funders) AS funder) AS funders,
+    -- ROR IDs and a link to the Crosssref Funder registry, e.g. https://ror.org/01bj3aw27 and https://api.crossref.org/funders/100000104
+    -- TODO: standardise input for funder IDs? not sure how feasible this is
+    funders.funder_ids,
+
+    (SELECT ARRAY_AGG(TRIM(LOWER(funder_opportunity_id))) FROM UNNEST(dmps.funder_opportunity_ids) AS funder_opportunity_id) AS funder_opportunity_ids,
+    (SELECT ARRAY_AGG(extract_grant_id(grant_id) IGNORE NULLS) FROM UNNEST(dmps.grant_ids) AS grant_id) AS grant_ids,
+
+    -- Contains email addresses and peoples names are a mix of given family and family, given
+    -- TODO: standardise name format (e.g. given + ' ' + family), remove email addresses
+    (SELECT ARRAY_AGG(DISTINCT {{ dataset_id }}.normalise_person_name(clean_author_name(person)) IGNORE NULLS) FROM UNNEST(dmps.people) AS person WHERE NOT {{ dataset_id }}.is_email(person)) AS people,
+
+    -- Contains email addresses and some ORCIDs have a prefix and others don't e.g. https://orcid.org/0000-0000-0000-0000 and 0000-0000-0000-0000
+    -- TODO: standardise ORCID format, remove email addresses
+    (SELECT ARRAY_AGG({{ dataset_id }}.extract_orcid(people_id) IGNORE NULLS) FROM UNNEST(dmps.people_ids) AS people_id WHERE {{ dataset_id }}.is_orcid(people_id)) AS people_ids,
+
+--    repos,
+--    repo_ids,
+  FROM `{{ dmps_raw_table_id }}` as dmps
+  LEFT JOIN funders ON funders.dmptool_id = dmps.dmptool_id
+  WHERE dmps.project_start >= DATE(1990, 1, 1) -- TODO: there seem to be some typos for dates, e.g. project with 0024-01-01 for start date
+)
+
+SELECT
+  doi,
+  title,
+  abstract,
+  project_start,
+  project_end,
+  ARRAY(SELECT value FROM UNNEST(affiliations) AS value ORDER BY value) AS affiliations,
+  affiliation_ids,
+  ARRAY(SELECT value FROM UNNEST(funders) AS value ORDER BY value) AS funders,
+  funder_ids,
+  funder_opportunity_ids,
+  grant_ids,
+  ARRAY(SELECT value FROM UNNEST(people) AS value ORDER BY value) AS people,
+  people_ids
+FROM normalised
+ORDER BY project_start ASC
