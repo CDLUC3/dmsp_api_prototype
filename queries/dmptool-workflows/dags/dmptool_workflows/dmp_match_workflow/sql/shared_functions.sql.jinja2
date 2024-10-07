@@ -1,0 +1,180 @@
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.extract_orcid(input_string STRING)
+RETURNS STRING
+AS (
+  REGEXP_EXTRACT(input_string, r'\d{4}-\d{4}-\d{4}-\d{4}')
+);
+
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.extract_ror(input_string STRING)
+RETURNS STRING
+AS (
+  REGEXP_EXTRACT(input_string, r'0[a-hj-km-np-tv-z|0-9]{6}[0-9]{2}')
+);
+
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.extract_grid(input_string STRING)
+RETURNS STRING
+AS (
+  REGEXP_EXTRACT(input_string, r'(grid\.[0-9]+\.[0-9]+)')
+);
+
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.normalise_doi(input_string STRING)
+RETURNS STRING
+AS (
+  REGEXP_REPLACE(LOWER(TRIM(input_string)), r'^(https?://)?doi\.org/', '')
+);
+
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.extract_isni(input_string STRING)
+RETURNS STRING
+AS (
+  CASE
+    WHEN REGEXP_CONTAINS(input_string, r'\d{4} \d{4} \d{4} \d{3}[0-9X]') THEN REGEXP_REPLACE(REGEXP_EXTRACT(input_string, r'\d{4} \d{4} \d{4} \d{3}[0-9X]'), r'\s', '')
+    WHEN REGEXP_CONTAINS(input_string, r'\d{15}[0-9X]') THEN REGEXP_EXTRACT(input_string, r'\d{15}[0-9X]')
+    ELSE input_string
+  END
+);
+
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.extract_wikidata(input_string STRING)
+RETURNS STRING
+AS (
+  REGEXP_EXTRACT(input_string, r'Q\d+')
+);
+
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.extract_fundref_id(input_string STRING)
+RETURNS STRING
+AS (
+  -- Crossref Funder ID
+  -- Min digits 9, max digits 12
+  -- Data is not clean:
+  -- 10.13039/http://dx.doi.org/10.13039/501100011665
+  -- 10.13039/100000002">national
+  -- 10.13039/501100002222a
+  -- 10.13039/rtg
+  -- 10.13039/http://data.crossref.org/fundingdata/vocabulary/label-1653363
+  -- 10.13039/
+  -- 10.13039/100009298
+
+  REGEXP_EXTRACT(input_string, r'\d{9,}')
+);
+
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.is_email(input_string STRING)
+RETURNS BOOL
+AS (
+  STRPOS(input_string, '@') > 0
+);
+
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.is_orcid(input_string STRING)
+RETURNS BOOL
+AS (
+  REGEXP_CONTAINS(input_string, r'\d{4}-\d{4}-\d{4}-\d{4}')
+);
+
+
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.strip_html(input STRING)
+RETURNS STRING AS (
+  REGEXP_REPLACE(REPLACE(REPLACE(input, '&lt;', '<'), '&gt;', '>'),r'<[^>]*>','')
+);
+
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.normalise_name(input STRING)
+RETURNS STRING
+LANGUAGE js AS """
+  if (input == null) {
+    return null;
+  }
+  input = input.trim().toLowerCase();
+  if(input === ""){
+    return null;
+  }
+  return input;
+""";
+
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.normalise_person_name(input STRING)
+RETURNS STRING
+LANGUAGE js AS """
+  if (input == null) {
+    return null;
+  }
+
+  function cleanName(str) {
+    if (str == null) {
+      return null;
+    }
+
+    // Remove common titles using a regular expression, allowing for an optional period
+    let name = str;
+    const titles = ['mr', 'mrs', 'ms', 'miss', 'dr', 'prof', 'sir', 'madam', 'lady', 'lord', 'rev'];
+    const titlePattern = new RegExp('\\\\b(' + titles.join('|') + ')\\\\.?(\\\\s+|$)', 'gi');
+    name = name.replace(titlePattern, '');
+
+    // Remove special characters like hyphens and apostrophes within words
+    // For instance, Crossref has hyphens between the first two syllables of Chinese and Korean names, wheras OpenAlex does not.
+    name = name.replace(/[-‐‑‒–—―﹣－'’‘ʼ′‵＇´`‛]/g, ''); // Hyphens and apostrophes are removed
+
+    // Split the name into parts
+    let nameParts = name.trim().split(/\\s+/);
+
+    // When there are exactly three parts to the name and the middle name is an initial
+    if (nameParts.length === 3 && /^[a-zA-Z]\\.?$/.test(nameParts[1])) {
+      nameParts = [nameParts[0], nameParts[2]]; // Remove the middle initial
+    }
+
+    // Rebuild the name
+    const cleanedName = nameParts.join(' ').trim().toLowerCase();
+
+    // Return the cleaned name
+    if(cleanedName === ""){
+      return null;
+    }
+    return cleanedName;
+  }
+
+  return cleanName(input);
+""";
+
+-- This makes 1 similar and 0 far
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.min_max_norm(value FLOAT64, min_distance FLOAT64, max_distance FLOAT64)
+RETURNS FLOAT64
+AS (
+  1 - (value - min_distance) / (max_distance - min_distance)
+);
+
+
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.date_parts_to_date(parts ARRAY<INT64>)
+RETURNS DATE
+AS (
+  CASE
+    WHEN ARRAY_LENGTH(parts) = 1 THEN LAST_DAY(SAFE.DATE(parts[SAFE_OFFSET(0)], 12, 1))
+    WHEN ARRAY_LENGTH(parts) = 2 THEN LAST_DAY(SAFE.DATE(parts[SAFE_OFFSET(0)], parts[SAFE_OFFSET(1)], 1))
+    ELSE SAFE.DATE(parts[SAFE_OFFSET(0)], parts[SAFE_OFFSET(1)], parts[SAFE_OFFSET(2)])
+  END
+);
+
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.parts_to_date_string(parts ARRAY<INT64>)
+RETURNS STRING
+LANGUAGE js AS """
+  if (parts.length === 0) {
+    return null;
+  }
+
+  // Pad each part (year to 4 digits, month and day to 2 digits)
+  const padded = parts.map((val, idx) => idx === 0 ? val.toString().padStart(4, '0') : val.toString().padStart(2, '0'));
+
+  // Join the parts with '-' and return
+  return padded.join('-');
+""";
+
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.create_content(title STRING, abstract STRING)
+RETURNS STRING
+LANGUAGE js AS """
+  if (title === null && abstract === null) {
+    return null;
+  }
+
+  if (title === null) {
+    return abstract;
+  }
+
+  if (abstract === null) {
+    return title;
+  }
+
+  return title + ' ' + abstract;
+""";

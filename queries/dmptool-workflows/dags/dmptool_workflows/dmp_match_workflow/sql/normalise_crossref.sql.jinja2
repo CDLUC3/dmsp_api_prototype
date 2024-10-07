@@ -1,0 +1,208 @@
+CREATE TEMP FUNCTION normalise_type(input STRING)
+RETURNS STRING
+LANGUAGE js AS """
+  if (input === null) return null;
+
+  const lookup = {
+    'journal-article': 'article',
+    'proceedings-article': 'article',
+    'posted-content': 'article',
+    'book': 'book',
+    'edited-book': 'book',
+    'reference-book': 'book',
+    'monograph': 'book',
+    'book-chapter': 'book-chapter',
+    'book-section': 'book-chapter',
+    'book-part': 'book-chapter',
+    'dataset': 'dataset',
+    'dissertation': 'dissertation',
+    'peer-review': 'peer-review',
+    'reference-entry': 'reference-entry',
+    'report': 'report',
+    'standard': 'standard',
+    'other': 'other',
+  };
+
+  return lookup[input] || 'other';
+""";
+
+
+CREATE OR REPLACE TABLE `{{ crossref_norm_table_id }}` AS
+
+WITH ror_index AS (
+  SELECT
+    {{ dataset_id }}.extract_ror(id) AS ror_id,
+    {{ dataset_id }}.extract_isni(isni) AS isni,
+    {{ dataset_id }}.extract_wikidata(wikidata) AS wikidata,
+  FROM `{{ ror_table_id }}`
+  LEFT JOIN UNNEST(external_ids.ISNI.all) as isni
+  LEFT JOIN UNNEST(external_ids.WikiData.all) as wikidata
+),
+
+min_project_start AS (
+  SELECT MIN(project_start) AS min_project_start
+  FROM `{{ dmps_norm_table_id }}`
+),
+
+-- Convert ISNI and WikiData to ROR where possible
+affiliations AS (
+  SELECT
+    doi,
+    ARRAY_AGG(DISTINCT affiliation_id IGNORE NULLS) AS affiliation_ids
+  FROM (
+    SELECT {{ dataset_id }}.normalise_doi(cf.doi) AS doi, {{ dataset_id }}.extract_ror(id.id) as affiliation_id
+    FROM `{{ crossref_metadata_table_id }}` as cf, UNNEST(author) AS author, UNNEST(author.affiliation) AS affiliation, UNNEST(affiliation.id) AS id
+    WHERE id.id IS NOT NULL AND id.id_type = 'ROR' AND ARRAY_LENGTH(issued.date_parts) > 0
+
+    UNION ALL
+
+    SELECT {{ dataset_id }}.normalise_doi(cf.doi) AS doi, ror_index.ror_id as affiliation_id
+    FROM `{{ crossref_metadata_table_id }}` as cf, UNNEST(author) AS author, UNNEST(author.affiliation) AS affiliation, UNNEST(affiliation.id) AS id
+    LEFT JOIN ror_index ON ror_index.isni = {{ dataset_id }}.extract_isni(id.id)
+    WHERE id.id IS NOT NULL AND id.id_type = 'ISNI' AND ARRAY_LENGTH(issued.date_parts) > 0
+
+    UNION ALL
+
+    SELECT {{ dataset_id }}.normalise_doi(cf.doi) AS doi, ror_index.ror_id as affiliation_id
+    FROM `{{ crossref_metadata_table_id }}` as cf, UNNEST(author) AS author, UNNEST(author.affiliation) AS affiliation, UNNEST(affiliation.id) AS id
+    LEFT JOIN ror_index ON ror_index.wikidata = {{ dataset_id }}.extract_wikidata(id.id)
+    WHERE id.id IS NOT NULL AND id.id_type = 'wikidata' AND ARRAY_LENGTH(issued.date_parts) > 0
+  )
+  GROUP BY doi
+)
+
+SELECT
+  {{ dataset_id }}.normalise_doi(cf.doi) AS doi,
+
+  -- Data to send back to DMPTool
+  STRUCT(
+    {{ dataset_id }}.strip_html(cf.title[SAFE_OFFSET(0)]) AS title,
+    {{ dataset_id }}.parts_to_date_string(issued.date_parts) AS publication_date,
+    normalise_type(cf.type) AS type,
+    (SELECT ARRAY_AGG(
+      STRUCT(
+        author.given AS given,
+        author.family AS family
+      )
+    ) FROM UNNEST(author) AS author WHERE author.given IS NOT NULL AND author.family IS NOT NULL) AS authors,
+    container_title,
+    volume,
+    issue,
+    page,
+    publisher,
+    publisher_location,
+    NULL AS version
+  ) AS biblio_data,
+
+  -- Data used for matching
+  STRUCT(
+      {{ dataset_id }}.date_parts_to_date(issued.date_parts) AS publication_date,
+      {{ dataset_id }}.create_content(
+        {{ dataset_id }}.strip_html(ARRAY_TO_STRING(ARRAY(SELECT t FROM UNNEST(cf.title) AS t), " ")),
+        {{ dataset_id }}.strip_html(cf.abstract)
+      ) AS content,
+
+      -- Affiliations
+      (
+        SELECT ARRAY_AGG(DISTINCT affiliation IGNORE NULLS)
+        FROM (
+          SELECT {{ dataset_id }}.normalise_name(affiliation.name) AS affiliation FROM UNNEST(author) AS author, UNNEST(author.affiliation) AS affiliation WHERE affiliation.name IS NOT NULL
+
+          UNION ALL
+
+          SELECT {{ dataset_id }}.normalise_name(affiliation) FROM UNNEST(openalex.match_data.affiliations) AS affiliation WHERE affiliation IS NOT NULL -- Add OpenAlex affiliations
+        )
+      ) AS affiliations,
+
+      -- Affiliation IDs
+      (
+        SELECT ARRAY_AGG(DISTINCT affiliation_id)
+        FROM (
+          SELECT affiliation_id FROM UNNEST(affiliations.affiliation_ids) AS affiliation_id
+
+          UNION ALL
+
+          SELECT affiliation_id FROM UNNEST(openalex.match_data.affiliation_ids) AS affiliation_id -- Add OpenAlex affiliation IDs
+        )
+      ) AS affiliation_ids,
+
+      -- Funders
+      (
+        SELECT ARRAY_AGG(DISTINCT funder IGNORE NULLS)
+        FROM (
+            SELECT {{ dataset_id }}.normalise_name(funder.name) AS funder FROM UNNEST(funder) AS funder WHERE funder.name IS NOT NULL
+
+            UNION ALL
+
+            SELECT {{ dataset_id }}.normalise_name(funder) FROM UNNEST(openalex.match_data.funders) AS funder WHERE funder IS NOT NULL -- Add OpenAlex funders
+        )
+      ) AS funders,
+
+      -- Funder IDs
+      (
+        SELECT ARRAY_AGG(DISTINCT funder_id)
+        FROM (
+          SELECT {{ dataset_id }}.extract_fundref_id(funder.DOI) AS funder_id FROM UNNEST(funder) AS funder WHERE {{ dataset_id }}.extract_fundref_id(funder.DOI) IS NOT NULL
+
+          UNION ALL
+
+          SELECT funder_id FROM UNNEST(openalex.match_data.funder_ids) AS funder_id -- Add OpenAlex funder IDs
+        )
+      ) AS funder_ids,
+
+      -- Funder Opportunity IDs
+      -- ARRAY<STRING>[] AS funder_opportunity_ids,
+
+      -- Grant IDs
+      (
+        SELECT ARRAY_AGG(DISTINCT grant_id)
+        FROM (
+          SELECT LOWER(TRIM(award)) AS grant_id FROM UNNEST(funder) AS funder, UNNEST(funder.award) AS award WHERE award IS NOT NULL
+
+          UNION ALL
+
+          SELECT grant_id FROM UNNEST(openalex.match_data.grant_ids) as grant_id -- Add OpenAlex Grant IDs
+        )
+      ) AS grant_ids,
+
+      -- People
+      (SELECT ARRAY_AGG(DISTINCT person IGNORE NULLS)
+        FROM (
+            SELECT
+              CASE
+                WHEN author.given IS NOT NULL AND author.family IS NOT NULL THEN {{ dataset_id }}.normalise_person_name(CONCAT(author.given, ' ', author.family))
+                ELSE {{ dataset_id }}.normalise_person_name(author.name)
+              END AS person
+            FROM UNNEST(author) AS author
+            WHERE (author.name IS NOT NULL) OR (author.given IS NOT NULL AND author.family IS NOT NULL)
+
+            UNION ALL
+
+            SELECT {{ dataset_id }}.normalise_person_name(person) FROM UNNEST(openalex.match_data.people) AS person WHERE person IS NOT NULL -- Add OpenAlex author names
+        )
+      ) as people,
+
+      -- People IDs
+      (
+        SELECT ARRAY_AGG(DISTINCT person_id IGNORE NULLS)
+        FROM (
+          SELECT {{ dataset_id }}.extract_orcid(author.ORCID) AS person_id FROM UNNEST(author) AS author WHERE author.ORCID IS NOT NULL
+
+          UNION ALL
+
+          SELECT person_id FROM UNNEST(openalex.match_data.people_ids) as person_id -- Add OpenAlex ORCID IDs
+        )
+      ) AS people_ids
+
+      -- Repositories
+      -- ARRAY<STRING>[] AS repos,
+
+      -- Repository IDs
+      -- ARRAY<STRING>[] AS repo_ids,
+  ) AS match_data
+FROM `{{ crossref_metadata_table_id }}` as cf
+LEFT JOIN affiliations ON affiliations.doi = cf.doi
+LEFT JOIN `{{ openalex_norm_table_id }}` AS openalex ON openalex.doi = {{ dataset_id }}.normalise_doi(cf.doi) -- Enrich with OpenAlex identifiers
+WHERE ARRAY_LENGTH(issued.date_parts) > 0 AND ({{ dataset_id }}.date_parts_to_date(issued.date_parts) BETWEEN (SELECT min_project_start FROM min_project_start).min_project_start AND CURRENT_DATE())
+AND cf.type NOT IN ("component", "journal-issue", "grant", "proceedings", "journal", "report-component", "database", "report-series", "journal-volume", "book-series", "book-set", "proceedings-series", "book-track")
+ORDER BY match_data.publication_date DESC
