@@ -1,7 +1,0 @@
-CREATE OR REPLACE MODEL {{ embedding_model_id }}
-  REMOTE WITH CONNECTION `us.vertex_ai`
-  OPTIONS (ENDPOINT = '{{ vertex_ai_model_id }}');
-
--- See here for different models: https://cloud.google.com/vertex-ai/generative-ai/docs/embeddings/get-text-embeddings
--- text-embedding-004
--- text-multilingual-embedding-002

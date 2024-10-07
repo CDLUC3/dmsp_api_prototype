@@ -86,7 +86,6 @@ LANGUAGE js AS """
   return input;
 """;
 
--- TODO: should think through how to normalise names better
 CREATE OR REPLACE FUNCTION {{ dataset_id }}.normalise_person_name(input STRING)
 RETURNS STRING
 LANGUAGE js AS """
@@ -136,3 +135,46 @@ RETURNS FLOAT64
 AS (
   1 - (value - min_distance) / (max_distance - min_distance)
 );
+
+
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.date_parts_to_date(parts ARRAY<INT64>)
+RETURNS DATE
+AS (
+  CASE
+    WHEN ARRAY_LENGTH(parts) = 1 THEN LAST_DAY(SAFE.DATE(parts[SAFE_OFFSET(0)], 12, 1))
+    WHEN ARRAY_LENGTH(parts) = 2 THEN LAST_DAY(SAFE.DATE(parts[SAFE_OFFSET(0)], parts[SAFE_OFFSET(1)], 1))
+    ELSE SAFE.DATE(parts[SAFE_OFFSET(0)], parts[SAFE_OFFSET(1)], parts[SAFE_OFFSET(2)])
+  END
+);
+
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.parts_to_date_string(parts ARRAY<INT64>)
+RETURNS STRING
+LANGUAGE js AS """
+  if (parts.length === 0) {
+    return null;
+  }
+
+  // Pad each part (year to 4 digits, month and day to 2 digits)
+  const padded = parts.map((val, idx) => idx === 0 ? val.toString().padStart(4, '0') : val.toString().padStart(2, '0'));
+
+  // Join the parts with '-' and return
+  return padded.join('-');
+""";
+
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.create_content(title STRING, abstract STRING)
+RETURNS STRING
+LANGUAGE js AS """
+  if (title === null && abstract === null) {
+    return null;
+  }
+
+  if (title === null) {
+    return abstract;
+  }
+
+  if (abstract === null) {
+    return title;
+  }
+
+  return title + ' ' + abstract;
+""";

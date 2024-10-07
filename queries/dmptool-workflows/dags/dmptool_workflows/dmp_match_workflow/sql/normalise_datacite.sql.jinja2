@@ -1,4 +1,101 @@
-CREATE OR REPLACE TABLE `{{ output_table_id }}` AS
+CREATE TEMP FUNCTION normalise_type(input STRING)
+RETURNS STRING
+LANGUAGE js AS """
+  if (input === null) return null;
+
+  const lookup = {
+    'JournalArticle': 'article',
+    'ConferencePaper': 'article',
+    'Audiovisual': 'audio-visual',
+    'Film': 'audio-visual',
+    'Book': 'book',
+    'BookChapter': 'book-chapter',
+    'Collection': 'collection',
+    'DataPaper': 'data-paper',
+    'Dataset': 'dataset',
+    'Dissertation': 'dissertation',
+    'Event': 'event',
+    'Image': 'image',
+    'InteractiveResource': 'interactive-resource',
+    'Model': 'model',
+    'OutputManagementPlan': 'output-management-plan',
+    'PeerReview': 'peer-review',
+    'PhysicalObject': 'physical-object',
+    'Instrument': 'physical-object',
+    'Preprint': 'preprint',
+    'Report': 'report',
+    'Service': 'service',
+    'Software': 'software',
+    'ComputationalNotebook': 'software',
+    'Sound': 'sound',
+    'Standard': 'standard',
+    'Text': 'text',
+    'Workflow': 'workflow',
+    'Other': 'other'
+  };
+
+  return lookup[input] || 'other';
+""";
+
+-- Issued, Created, Available
+CREATE TEMP FUNCTION parse_datacite_date(dates ARRAY<STRUCT<date STRING, dateInformation STRING, dateType STRING>>, fallbackDate TIMESTAMP)
+RETURNS ARRAY<INT64>
+LANGUAGE js AS """
+  function parseDateString(dateString) {
+    if (!dateString || typeof dateString !== 'string') return null;
+
+    // Trim the input string
+    const trimmed = dateString.trim();
+
+    // Regular expression patterns for matching different formats
+    const yearMonthDayPattern = /^\\d{4}[-\\/]\\d{1,2}[-\\/]\\d{1,2}/;  // Allows both - and /
+    const yearMonthPattern = /^\\d{4}[-\\/]\\d{1,2}$/;                  // Allows both - and /
+    const yearPattern = /^\\d{4}$/;
+    const duplicateYearPattern = /^(\\d{4})\\/\\1$/;                   // pattern for year/year (e.g., 2012/2012)
+
+    // Check for invalid strings
+    if (trimmed === 'null' || trimmed === '' || !trimmed.match(/^\\d/)) {
+      return null;
+    }
+
+    // Handle year/month/day format (allows - or / separators)
+    if (yearMonthDayPattern.test(trimmed)) {
+      const [year, month, day] = trimmed.split(/[-\\/T :]/).map(Number);
+      return [year, month, day];
+    }
+
+    // Handle year/month format (allows - or / separators)
+    if (yearMonthPattern.test(trimmed)) {
+      const [year, month] = trimmed.split(/[-\\/]/).map(Number);
+      return [year, month];
+    }
+
+    // Handle year format
+    if (yearPattern.test(trimmed)) {
+      return [parseInt(trimmed)];
+    }
+
+    // Handle duplicate year format (e.g., 2012/2012)
+    if (duplicateYearPattern.test(trimmed)) {
+      const year = parseInt(trimmed.split('/')[0]);
+      return [year];
+    }
+
+    // If nothing matched, return empty array
+    return null;
+  }
+
+  dates = dates.find(d => d.dateType === "Issued") || null;
+  let issued = parseDateString(dates?.date);
+
+  if(!issued && fallbackDate){
+    issued = [fallbackDate.getFullYear(), fallbackDate.getMonth() + 1, fallbackDate.getDate()]
+  }
+
+  return issued || []
+""";
+
+CREATE OR REPLACE TABLE `{{ datacite_norm_table_id }}` AS
 
 WITH min_project_start AS (
   SELECT MIN(project_start) AS min_project_start
@@ -61,6 +158,7 @@ affiliation_ids AS (
     UNION ALL
 
     -- Non-person name identifiers
+    -- Name identifiers contain IDs for organisations as well as people
     -- ROR
     SELECT {{ dataset_id }}.normalise_doi(doi) AS doi, {{ dataset_id }}.extract_ror(nameIdentifier) AS person_id FROM `{{ datacite_table_id }}`, UNNEST(creators), UNNEST(nameIdentifiers)
     WHERE nameIdentifierScheme = "ROR"
@@ -149,18 +247,41 @@ funder_ids AS (
     -- TODO: grab fundref IDs from affiliations?
   )
   GROUP BY doi
-),
+)
 
-normalised AS (
-  SELECT
-    {{ dataset_id }}.normalise_doi(datacite.doi) AS doi,
-    DATE(datacite.created) AS publication_date,
-    types.resourceTypeGeneral AS type,
-    {{ dataset_id }}.strip_html(ARRAY_TO_STRING(ARRAY(SELECT t.title FROM UNNEST(titles) AS t), " ")) AS title,
-    {{ dataset_id }}.strip_html(ARRAY_TO_STRING(ARRAY(SELECT d.description FROM UNNEST(descriptions) AS d), " ")) AS abstract,
+SELECT
+  {{ dataset_id }}.normalise_doi(datacite.doi) AS doi,
+
+  -- Data to send back to DMP tool
+  STRUCT(
+    {{ dataset_id }}.strip_html(titles[SAFE_OFFSET(0)].title) AS title,
+    {{ dataset_id }}.parts_to_date_string(parse_datacite_date(dates, created)) AS publication_date,
+    normalise_type(types.resourceTypeGeneral) AS type,
+    (SELECT ARRAY_AGG(
+      STRUCT(
+        author.givenName AS given,
+        author.familyName AS family
+      )
+    ) FROM UNNEST(creators) AS author WHERE author.givenName IS NOT NULL AND author.familyName IS NOT NULL) AS authors,
+    container.title AS container_title,
+    container.volume AS volume,
+    container.issue AS issue,
+    IF(container.firstPage IS NULL OR container.lastPage IS NULL, NULL, CONCAT(container.firstPage, '-', container.lastPage)) AS page,
+    publisher,
+    NULL AS publisher_location,
+    version AS version
+  ) AS biblio_data,
+
+  -- Data used for matching
+  STRUCT(
+    {{ dataset_id }}.date_parts_to_date(parse_datacite_date(dates, datacite.created)) AS publication_date,
+    {{ dataset_id }}.create_content(
+      {{ dataset_id }}.strip_html(ARRAY_TO_STRING(ARRAY(SELECT t.title FROM UNNEST(titles) AS t), " ")),
+      {{ dataset_id }}.strip_html(ARRAY_TO_STRING(ARRAY(SELECT d.description FROM UNNEST(descriptions) AS d), " "))
+    ) AS content,
 
     -- Affiliations
-    (SELECT ARRAY_AGG(DISTINCT affiliation IGNORE NULLS ORDER BY affiliation)
+    (SELECT ARRAY_AGG(DISTINCT affiliation IGNORE NULLS)
       FROM (
         SELECT {{ dataset_id }}.normalise_name(affiliation.name) AS affiliation
         FROM UNNEST(creators) AS creator, UNNEST(creator.affiliation) AS affiliation
@@ -172,50 +293,50 @@ normalised AS (
 
         UNION ALL
 
-        SELECT {{ dataset_id }}.normalise_name(affiliation) AS affiliation FROM UNNEST(openalex.affiliations) AS affiliation -- Add OpenAlex affiliations
+        SELECT {{ dataset_id }}.normalise_name(affiliation) AS affiliation FROM UNNEST(openalex.match_data.affiliations) AS affiliation -- Add OpenAlex affiliations
       )
     ) AS affiliations,
 
     -- Affiliation IDs
     (
-      SELECT ARRAY_AGG(DISTINCT affiliation_id ORDER BY affiliation_id)
+      SELECT ARRAY_AGG(DISTINCT affiliation_id)
       FROM (
         SELECT affiliation_id FROM UNNEST(affiliation_ids.affiliation_ids) AS affiliation_id
 
         UNION ALL
 
-        SELECT affiliation_id FROM UNNEST(openalex.affiliation_ids) AS affiliation_id -- Add OpenAlex affiliation IDs
+        SELECT affiliation_id FROM UNNEST(openalex.match_data.affiliation_ids) AS affiliation_id -- Add OpenAlex affiliation IDs
       )
     ) AS affiliation_ids,
 
     -- Funders
     (
-      SELECT ARRAY_AGG(DISTINCT funder IGNORE NULLS ORDER BY funder)
+      SELECT ARRAY_AGG(DISTINCT funder IGNORE NULLS)
       FROM (
           SELECT {{ dataset_id }}.normalise_name(funder.funderName) AS funder FROM UNNEST(fundingReferences) AS funder WHERE funder.funderName IS NOT NULL
 
           UNION ALL
 
-          SELECT {{ dataset_id }}.normalise_name(funder) FROM UNNEST(openalex.funders) AS funder -- Add OpenAlex funders
+          SELECT {{ dataset_id }}.normalise_name(funder) FROM UNNEST(openalex.match_data.funders) AS funder -- Add OpenAlex funders
       )
     ) AS funders,
 
     -- Funder IDs
     (
-      SELECT ARRAY_AGG(DISTINCT funder_id ORDER BY funder_id)
+      SELECT ARRAY_AGG(DISTINCT funder_id)
       FROM (
         SELECT funder_id FROM UNNEST(funder_ids.funder_ids) AS funder_id
 
         UNION ALL
 
-        SELECT funder_id FROM UNNEST(openalex.funder_ids) AS funder_id -- Add OpenAlex funder IDs
+        SELECT funder_id FROM UNNEST(openalex.match_data.funder_ids) AS funder_id -- Add OpenAlex funder IDs
       )
     ) AS funder_ids,
 
     -- ARRAY<STRING>[] AS funder_opportunity_ids,
 
     -- Grant IDs
-    (SELECT ARRAY_AGG(DISTINCT grant_id ORDER BY grant_id)
+    (SELECT ARRAY_AGG(DISTINCT grant_id)
       FROM (
         SELECT LOWER(TRIM(funder.awardNumber)) AS grant_id
         FROM UNNEST(fundingReferences) AS funder
@@ -229,12 +350,12 @@ normalised AS (
 
         UNION ALL
 
-        SELECT grant_id FROM UNNEST(openalex.grant_ids) as grant_id -- Add OpenAlex Grant IDs
+        SELECT grant_id FROM UNNEST(openalex.match_data.grant_ids) as grant_id -- Add OpenAlex Grant IDs
       )
     ) AS grant_ids,
 
     -- People
-    (SELECT ARRAY_AGG(DISTINCT person IGNORE NULLS ORDER BY person)
+    (SELECT ARRAY_AGG(DISTINCT person IGNORE NULLS)
       FROM (
         SELECT
           CASE
@@ -256,44 +377,30 @@ normalised AS (
 
         UNION ALL
 
-        SELECT {{ dataset_id }}.normalise_person_name(person) FROM UNNEST(openalex.people) AS person -- Add OpenAlex author names
+        SELECT {{ dataset_id }}.normalise_person_name(person) FROM UNNEST(openalex.match_data.people) AS person -- Add OpenAlex author names
       )
     ) AS people,
 
     -- People IDs
     (
-      SELECT ARRAY_AGG(DISTINCT person_id ORDER BY person_id)
+      SELECT ARRAY_AGG(DISTINCT person_id)
       FROM (
         SELECT person_id FROM UNNEST(people_ids.people_ids) AS person_id
 
         UNION ALL
 
-        SELECT person_id FROM UNNEST(openalex.people_ids) AS person_id -- Add OpenAlex ORCID IDs
+        SELECT person_id FROM UNNEST(openalex.match_data.people_ids) AS person_id -- Add OpenAlex ORCID IDs
       )
     ) AS people_ids
 
     -- ARRAY<STRING>[] AS repos,
     -- ARRAY<STRING>[] AS repo_ids,
-  FROM `{{ datacite_table_id }}` as datacite
-  LEFT JOIN affiliation_ids ON affiliation_ids.doi = {{ dataset_id }}.normalise_doi(datacite.doi)
-  LEFT JOIN people_ids ON people_ids.doi = {{ dataset_id }}.normalise_doi(datacite.doi)
-  LEFT JOIN funder_ids ON funder_ids.doi = {{ dataset_id }}.normalise_doi(datacite.doi)
-  LEFT JOIN `{{ openalex_norm_table_id }}` AS openalex ON openalex.doi = {{ dataset_id }}.normalise_doi(datacite.doi) -- Enrich with OpenAlex identifiers
-  WHERE datacite.created IS NOT NULL AND (DATE(datacite.created) BETWEEN (SELECT min_project_start FROM min_project_start).min_project_start AND CURRENT_DATE())
-)
-
-SELECT
-  doi,
-  publication_date,
-  type,
-  title,
-  abstract,
-  affiliations,
-  affiliation_ids,
-  funders,
-  funder_ids,
-  grant_ids,
-  people,
-  people_ids
-FROM normalised
-ORDER BY publication_date DESC, LOWER(title) ASC
+) AS match_data
+FROM `{{ datacite_table_id }}` as datacite
+LEFT JOIN affiliation_ids ON affiliation_ids.doi = {{ dataset_id }}.normalise_doi(datacite.doi)
+LEFT JOIN people_ids ON people_ids.doi = {{ dataset_id }}.normalise_doi(datacite.doi)
+LEFT JOIN funder_ids ON funder_ids.doi = {{ dataset_id }}.normalise_doi(datacite.doi)
+LEFT JOIN `{{ openalex_norm_table_id }}` AS openalex ON openalex.doi = {{ dataset_id }}.normalise_doi(datacite.doi) -- Enrich with OpenAlex identifiers
+WHERE datacite.created IS NOT NULL AND ({{ dataset_id }}.date_parts_to_date(parse_datacite_date(dates, datacite.created)) BETWEEN (SELECT min_project_start FROM min_project_start).min_project_start AND CURRENT_DATE())
+AND types.resourceTypeGeneral NOT IN ("Journal", "ConferenceProceeding")
+ORDER BY match_data.publication_date DESC

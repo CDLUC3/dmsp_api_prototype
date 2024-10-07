@@ -16,7 +16,7 @@
 -- The name of the source table
 DECLARE source_table DEFAULT '{{ content_table_id }}';
 -- The name of the target table
-DECLARE target_table DEFAULT '{{ output_table_id }}';
+DECLARE target_table DEFAULT '{{ embeddings_table_id }}';
 -- The name of the ML model to use for the ML operation
 DECLARE ml_model DEFAULT '{{ embedding_model_id }}';
 -- The unique key columns from the source table. These columns are used to identify new rows present
