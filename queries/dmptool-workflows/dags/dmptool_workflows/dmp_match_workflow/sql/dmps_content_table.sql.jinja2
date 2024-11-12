@@ -1,0 +1,5 @@
+CREATE OR REPLACE TABLE `{{ dmps_content_table_id }}` AS
+
+SELECT dmps.doi, dmps.content
+FROM `{{ dmps_norm_table_id }}` AS dmps
+WHERE dmps.content IS NOT NULL
