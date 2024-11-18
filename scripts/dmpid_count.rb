@@ -37,17 +37,27 @@ if ARGV.length >= 2
   puts "    Public: #{pub}, Private: #{priv}"
 
   years = {}
+  funders = {}
+
   items.each do |item|
-    year = item['created'][0..3]
+    year = item['created'].nil? ? '1900' : item['created'][0..3]
     years[year] = 0 if years[year].nil?
 
-    years[year] += 1    
+    years[year] += 1
+
+    funder = item['funder_ids'].nil? || item['funder_ids'].empty? ? 'undefined' : item['funder_ids'].first
+    funders[funder] = 0 if funders[funder].nil?
+    funders[funder] += 1
   end
 
+  puts "-------------------------------------------"
   puts "Breakdown by year"
   pp years
+
+  puts "-------------------------------------------"
+  puts "Breakdown by funder"
+  pp funders.sort_by { |k, v| -v }
 
 else
   puts "Expected 2 arguments, the environment and the Dynamo Index Table name!"
 end
-
