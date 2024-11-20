@@ -9,9 +9,13 @@
 /test/tmp/
 /test/version_tmp/
 /tmp/
+/scripts/tmp
 
 # Used by dotenv library to load environment variables.
 .env
+
+# OSX files
+.DS_Store
 
 # Ignore Byebug command history file.
 .byebug_history

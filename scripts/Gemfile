@@ -10,3 +10,5 @@ gem 'aws-sdk-cloudformation'
 gem 'aws-sdk-dynamodb'
 
 gem 'uc3-dmp-citation'
+
+gem 'jsonl'
