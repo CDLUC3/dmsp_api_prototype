@@ -11,6 +11,10 @@
 /tmp/
 /scripts/tmp
 
+# JS artifacts
+coverage
+dist
+
 # Used by dotenv library to load environment variables.
 .env
 
