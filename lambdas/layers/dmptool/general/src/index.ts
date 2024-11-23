@@ -1,4 +1,3 @@
-
 // Function to return the current date as "YYYY-MM-DD"
 export const currentDateAsString = () => {
   const now = new Date();

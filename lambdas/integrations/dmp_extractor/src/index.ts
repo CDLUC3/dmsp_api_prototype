@@ -1,6 +1,7 @@
-import { Handler, ScheduledEvent } from 'aws-lambda';
+import { Context, Handler, ScheduledEvent } from 'aws-lambda';
 import { gzip } from "zlib";
 import { promisify } from "util";
+import { lambdaRequestTracker } from 'pino-lambda';
 
 // Note that the AWS env already has the @aws-sdk installed, so if you are importing those
 // libraries, you should install them as devDependencies so that the build artifact does not include them!
@@ -10,10 +11,12 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 // Import modules from ../../layers/nodeJS. These should also be included as devDependencies!
 import { currentDateAsString } from 'dmptool-general';
 import { deserializeDynamoItem, DMPDynamoItem } from 'dmptool-database';
+import { initializeLogger, LogLevel } from 'dmptool-logger';
 
 const gzipPromise = promisify(gzip);
 
 // Environment variables
+const LOG_LEVEL = process.env.LOG_LEVEL?.toLowerCase() || 'info';
 const TABLE_NAME = process.env.TABLE_NAME;
 const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME;
 const FILE_PREFIX = process.env.FILE_PREFIX || "dmps";
@@ -26,31 +29,40 @@ const s3Client = new S3Client({});
 const MAX_FILE_SIZE_MB = 10;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
+// Initialize the logger
+const logger = initializeLogger('DmpExtractorLambda', LogLevel[LOG_LEVEL]);
+
+// Setup the LambdaRequestTracker for the logger
+const withRequest = lambdaRequestTracker();
+
 // Lambda Handler - triggered by a scheduled EventBridge event
-export const handler: Handler = async (event: ScheduledEvent) => {
+export const handler: Handler = async (event: ScheduledEvent, context: Context) => {
   try {
-    console.log('EVENT: \n' + JSON.stringify(event, null, 2));
+    // Initialize the logger by setting up automatic request tracing.
+    withRequest(event, context);
 
+    // Fetch all of the registered DMPs
     const items = await fetchDMPs();
+    const sampleItem = items.length > 0 ? items[Math.round(items.length / 2)] : undefined;
+    logger.debug({ sampleDMP: sampleItem }, `DMP count: ${items.length}.`);
 
-console.log(`Deserialized items count ${items.length}. Sample:`);
-console.log(items[50]);
-
+    // Split the DMPs into manageable chunks
     const files = splitIntoFiles(items, MAX_FILE_SIZE_BYTES);
+    logger.debug(undefined, `File count: ${files.length}.`);
 
     // Gzip and upload each file to the S3 bucket
     const tstamp = currentDateAsString();
-
-console.log(`File count: ${files.length}, tstamp: ${tstamp}`);
-
     await Promise.all(files.map( async (fileContent, index) => await publishFile(tstamp, fileContent, index)));
+
+    const msg = `Uploaded ${files.length} file(s) to ${S3_BUCKET_NAME} with prefix "${FILE_PREFIX}"`
+    logger.info(undefined, msg);
 
     return {
       statusCode: 200,
-      body: `Uploaded ${files.length} file(s) to S3 with prefix "${FILE_PREFIX}"`,
+      body: msg,
     };
   } catch (error) {
-    console.error("Error:", error);
+    logger.fatal(error, `Unable to extract the DMPs and place them into the S3 bucket.`)
     return {
       statusCode: 500,
       body: `An error occurred: ${error.message}`,
@@ -69,15 +81,8 @@ const fetchDMPs = async (): Promise<DMPDynamoItem[]> => {
       TableName: TABLE_NAME,
       ExclusiveStartKey: lastEvaluatedKey,
       FilterExpression: "SK = :sk",
-      ExpressionAttributeValues: {
-        ":sk": {
-          S: "METADATA",
-        },
-      },
+      ExpressionAttributeValues: { ":sk": { S: "METADATA" } },
     };
-
-    //console.log(params)
-
     const command = new ScanCommand(params);
     const response = await dynamoDBClient.send(command);
 
@@ -87,9 +92,6 @@ const fetchDMPs = async (): Promise<DMPDynamoItem[]> => {
     // when it is undefined, then the query reached the end of the results.
     lastEvaluatedKey = response.LastEvaluatedKey;
   } while (lastEvaluatedKey);
-
-  console.log(`Item count: ${items.length}. Sample:`);
-  console.log(items[50]);
 
   // Deserialize and split items into multiple files if necessary
   return items.map((item) => deserializeDynamoItem(item));
@@ -125,6 +127,7 @@ const splitIntoFiles = (items: DMPDynamoItem[], maxFileSizeBytes: number): DMPDy
 // Gzip and upload the file to the S3 bucket
 const publishFile = async (tstamp: string, fileContent: DMPDynamoItem[], index: number): Promise<void> => {
   const gzippedData = await gzipPromise(fileContent.toString());
+
   // Set the file name (e.g. `dmps_2024-11-21_2.json.gz`)
   const fileName = `${FILE_PREFIX}_${tstamp}_${index + 1}.jsonl.gz`;
 
@@ -136,9 +139,5 @@ const publishFile = async (tstamp: string, fileContent: DMPDynamoItem[], index: 
     ContentEncoding: "gzip",
   };
 
-  try {
-    await s3Client.send(new PutObjectCommand(s3Params));
-  } catch(err) {
-    console.log(err);
-  }
+  await s3Client.send(new PutObjectCommand(s3Params));
 }

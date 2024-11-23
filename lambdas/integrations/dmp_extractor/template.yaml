@@ -7,6 +7,17 @@ Parameters:
   DomainName:
     Type: 'String'
 
+  LogLevel:
+    Type: 'String'
+    Default: 'info'
+    AllowedValues:
+      - 'fatal'
+      - 'error'
+      - 'warn'
+      - 'info'
+      - 'debug'
+      - 'trace'
+
   LogRetentionDays:
     Type: 'Number'
     Default: 14
@@ -21,6 +32,9 @@ Parameters:
     Type: 'String'
 
   DMPToolGeneralLayerArn:
+    Type: 'String'
+
+  DMPToolLoggerLayerArn:
     Type: 'String'
 
   EventBusArn:
@@ -46,10 +60,12 @@ Resources:
       Layers:
         - !Ref DMPToolDatabaseLayerArn
         - !Ref DMPToolGeneralLayerArn
+        - !Ref DMPToolLoggerLayerArn
       Architectures:
         - 'arm64'
       Environment:
         Variables:
+          LOG_LEVEL: !Ref LogLevel
           TABLE_NAME: !Ref DynamoIndexTableName
           S3_BUCKET_NAME: !Ref S3FileExchangeBucketId
           FILE_PREFIX: !Ref OutputFilePrefix

@@ -9,6 +9,7 @@
   "author": "briri",
   "license": "MIT",
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
     "typescript": "^5.7.2"
   }
 }

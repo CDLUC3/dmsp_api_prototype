@@ -28,7 +28,7 @@ VERSION_ARN=$(aws lambda publish-layer-version --layer-name "dmptool-${ZIP_NAME_
     --description "${LAYER_NAME} helper functions for NodeJS Lambda functions" \
     --zip-file "fileb://dmptool-${ZIP_NAME_SUFFIX}-${1}.zip" \
     --compatible-runtimes nodejs20.x \
-    --compatible-architectures "arm64" | jq -r '.LayerArn')
+    --compatible-architectures "arm64" | jq -r '.LayerVersionArn')
 
 # Publish the new Layer ARN to SSM. The Lambda Functions fetch the value when they are built
 echo "Layer published: ${VERSION_ARN}. Updating current version in SSM ..."

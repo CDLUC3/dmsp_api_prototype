@@ -40,10 +40,7 @@ if ARGV.length >= 3
 
   # Define any Paramaters here that are required by your template and are not available in SSM or as
   # CloudFormation stack outputs
-  @native_params = {
-    LogRetentionDays: 14,
-    OutputFilePrefix: 'dmps'
-  }
+  @native_params = { LogLevel: 'debug', LogRetentionDays: 14, OutputFilePrefix: 'dmps' }
 
   # List the names of all other parameters whose values should be available as exported CloudFormation stack
   # outputs. The env prefix will be appended to each name your provide.
@@ -54,7 +51,7 @@ if ARGV.length >= 3
   # match the final part of the SSM key name. This script will append the prefix automatically.
   #    For example if the parameter is 'DomainName' this script will look for '/uc3/dmp/hub/dev/DomainName'
   # @ssm_params = %w[SubnetA SubnetB SubnetC DomainName]
-  @ssm_params = %w[DomainName DMPToolDatabaseLayerArn DMPToolGeneralLayerArn]
+  @ssm_params = %w[DomainName DMPToolDatabaseLayerArn DMPToolGeneralLayerArn DMPToolLoggerLayerArn]
   #
   #
   # DON'T FORGET TO: Add an entry to the Sceptre config for lambda-iam.yaml and lambda-vpc.yaml for this Lambda!
