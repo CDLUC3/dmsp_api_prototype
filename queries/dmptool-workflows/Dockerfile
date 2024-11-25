@@ -1,4 +1,4 @@
-FROM quay.io/astronomer/astro-runtime:9.10.0
+FROM quay.io/astronomer/astro-runtime:9.20.0
 
 # Root user for installations
 USER root
