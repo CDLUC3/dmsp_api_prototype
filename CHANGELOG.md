@@ -1,4 +1,7 @@
+### Added
+- New API Lambda, `api/get_downloads_dmps`, that generates presigned URLs to fetch DMP metadata in jsonl format
 
+## v1.4.3
 ### Added
 
 - New harvester `lambdas/harvesters/ror/` has 2 new Lambda functions.

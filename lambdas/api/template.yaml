@@ -34,6 +34,12 @@ Parameters:
   ApiLayerId:
     Type: 'String'
 
+  DMPToolDatabaseLayerArn:
+    Type: 'String'
+
+  DMPToolLoggerLayerArn:
+    Type: 'String'
+
   CertificateArn:
     Type: 'String'
 
@@ -65,6 +71,9 @@ Parameters:
     Type: 'String'
 
   S3PrivateBucketId:
+    Type: 'String'
+
+  S3FileExchangeBucketId:
     Type: 'String'
 
   SnsEmailTopicArn:
@@ -259,6 +268,7 @@ Resources:
               - !Sub 'https://auth.${DomainName}/${Env}.read'
               - !Sub 'https://auth.${DomainName}/${Env}.upload'
               - !Sub 'https:/auth.${DomainName}/${Env}.write'
+              - !Sub 'https:/auth.${DomainName}/${Env}.data-transfer'
         DefaultAuthorizer: DmpHubCognitoAuthorizer
 
   # TODO: Add the actual API domain name to SSM so it can be referenced in the Lambdas!
@@ -665,6 +675,65 @@ Resources:
     Type: 'AWS::Logs::LogGroup'
     Properties:
       LogGroupName: !Sub "/aws/lambda/${GetDmpFunction}"
+      # Explicit retention time
+      RetentionInDays: !Ref LogRetentionDays
+
+  # Get Citations for the DOIs
+  GetDownloadsDmpsFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: 'get_downloads_dmps/'
+      Handler: 'index.handler'
+      Runtime: 'nodejs20.x'
+      Timeout: 30
+      Architectures:
+        - 'arm64'
+      Layers:
+        - !Ref DMPToolDatabaseLayerArn
+        - !Ref DMPToolLoggerLayerArn
+      Policies:
+        - DynamoDBReadPolicy:
+             TableName: !Ref DynamoTableName
+         - S3Policy:
+             BucketName: !Ref S3FileExchangeBucketId
+      DeadLetterQueue:
+        Type: 'SQS'
+        TargetArn: !Ref DeadLetterQueueArn
+      Environment:
+        Variables:
+          LOG_LEVEL: !Ref LogLevel
+          TABLE_NAME: !Ref DynamoTableName
+          S3_BUCKET_NAME: !Ref S3FileExchangeBucketId
+          FILE_PREFIX: !Ref OutputFilePrefix
+          CORS_ORIGIN: !If
+            - IsDev
+            - "*"
+            - !Sub "https://${DomainName}"
+      Events:
+        PostCitations:
+          # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Type: 'Api'
+          Properties:
+            RestApiId: !Ref DmpHubRestApi
+            Path: '/downloads/dmps'
+            Method: 'get'
+            RequestParameters:
+              - 'method.request.header.Authorization'
+            Auth:
+              Authorizer: 'DmpHubCognitoAuthorizer'
+              AuthorizationScopes:
+                - !Sub 'https://auth.${DomainName}/${Env}.data-transfer'
+    Metadata:
+       BuildMethod: 'esbuild'
+       BuildProperties:
+         Minify: true
+         Target: 'es2020'
+         Sourcemap: true
+
+  GetDownloadsDmps:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${GetDownloadsDmpsFunction}"
       # Explicit retention time
       RetentionInDays: !Ref LogRetentionDays
 
