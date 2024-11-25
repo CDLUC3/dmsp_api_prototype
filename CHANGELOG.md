@@ -5,7 +5,6 @@
 
 ## v1.4.3
 ### Added
-- New Lambda to generate the DMP metadata on a weekly basis and place it into our new FileExchange S3 bucket as part of the COKI integration
 - New harvester `lambdas/harvesters/ror/` has 2 new Lambda functions.
   - 1) Downloader is scheduled and gets kicked off on the first of each month. It queries Zenodo for the latest ROR snapshot. It stashes the snapshot in S3, then unzips it and determines how many records there are. It then sends a message to an SNS topic for every 50,000 records. Those messages invoke the 2nd new Lambda
   - 2) Processor is kicked off by an SNS message. It fetches the latest ROR ZIP from S3, unzips it and then processes the records it is instructed to (e.g. 50,001 - 100,000). Processing means that it adds/updates each record into the new ExternalData DynamoDB Table
