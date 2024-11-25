@@ -1,0 +1,186 @@
+CREATE TEMP FUNCTION split_name(name STRING)
+RETURNS STRUCT<given STRING, family STRING>
+LANGUAGE js AS """
+  let parts = name.trim().split(' ');
+  let family = parts.pop();
+  let given = parts.join(' ');
+  return {given: given, family: family};
+""";
+
+CREATE OR REPLACE TABLE `{{ openalex_norm_table_id }}` AS
+
+WITH min_project_start AS (
+  SELECT MIN(project_start) AS min_project_start
+  FROM {{ dmps_norm_table_id }}
+),
+
+funder_index AS (
+  SELECT
+    id,
+    {{ dataset_id }}.extract_ror(ids.ror) AS ror_id,
+    TRIM(ids.crossref) AS fundref_id,
+  FROM `{{ openalex_funders_table_id }}`
+),
+
+funders AS (
+  SELECT
+    id,
+    ARRAY_AGG(DISTINCT funder_id IGNORE NULLS) AS funder_ids
+  FROM (
+    SELECT
+      works.id AS id,
+      funder_index.ror_id AS funder_id
+    FROM `{{ openalex_works_table_id }}` AS works, UNNEST(grants) AS grant
+    LEFT JOIN funder_index ON funder_index.id = grant.funder
+
+    UNION ALL
+
+    SELECT
+      works.id AS id,
+      funder_index.fundref_id AS funder_id
+    FROM `{{ openalex_works_table_id }}` AS works, UNNEST(grants) AS grant
+    LEFT JOIN funder_index ON funder_index.id = grant.funder
+  )
+  GROUP BY id
+),
+
+-- OpenAlex has duplicate DOIs: select the work with the most RORs
+-- The below code down to openalex AS comes from the Academic Observatory
+--
+-- Copyright 2022 Curtin University
+--
+-- Licensed under the Apache License, Version 2.0 (the "License");
+-- you may not use this file except in compliance with the License.
+-- You may obtain a copy of the License at
+--
+--   http://www.apache.org/licenses/LICENSE-2.0
+--
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
+
+ror_case1 AS (
+  SELECT id, {{ dataset_id }}.normalise_doi(doi) AS doi, 0 as ror_count
+  FROM `{{ openalex_works_table_id }}`
+  WHERE doi IS NOT NULL AND authorships IS NULL
+),
+
+ror_case2 AS (
+  SELECT id, {{ dataset_id }}.normalise_doi(doi) AS doi, 0 as ror_count
+  FROM `{{ openalex_works_table_id }}`
+  WHERE doi IS NOT NULL AND ARRAY_LENGTH(authorships) = 0
+),
+
+ror_case3 AS (
+  SELECT id, {{ dataset_id }}.normalise_doi(doi) AS doi, 0 as ror_count
+  FROM `{{ openalex_works_table_id }}`, UNNEST(authorships) auths
+  WHERE doi IS NOT NULL AND ARRAY_LENGTH(authorships) > 0 AND auths.institutions IS NULL
+),
+
+ror_case4 AS (
+  SELECT id, {{ dataset_id }}.normalise_doi(doi) AS doi, 0 as ror_count
+  FROM `{{ openalex_works_table_id }}`, UNNEST(authorships) auths
+  WHERE doi IS NOT NULL AND ARRAY_LENGTH(authorships) > 0 AND ARRAY_LENGTH(auths.institutions) = 0
+),
+
+ror_case5 AS (
+  SELECT work.id id, {{ dataset_id }}.normalise_doi(doi) AS doi, COUNT(inst.ror) ror_count
+  FROM `{{ openalex_works_table_id }}` work, UNNEST(authorships) auths, UNNEST(institutions) inst
+  WHERE doi IS NOT NULL and ARRAY_LENGTH(authorships) > 0 AND ARRAY_LENGTH(auths.institutions) > 0
+  GROUP BY {{ dataset_id }}.normalise_doi(doi), work.id
+),
+
+ror_cases_merged AS (
+  SELECT * FROM ror_case1
+  UNION ALL
+  SELECT * FROM ror_case2
+  UNION ALL
+  SELECT * FROM ror_case3
+  UNION ALL
+  SELECT * FROM ror_case4
+  UNION ALL
+  SELECT * FROM ror_case5
+),
+
+ror_filtered AS (
+  SELECT doi, ARRAY_AGG(id ORDER BY ror_count DESC)[OFFSET(0)] id
+  FROM ror_cases_merged
+  GROUP BY doi
+),
+
+openalex AS (
+  SELECT
+    openalex.id,
+    {{ dataset_id }}.normalise_doi(openalex.doi) as doi,
+    title,
+    type,
+    publication_date,
+    authorships,
+    grants,
+    primary_location,
+    biblio
+  FROM `{{ openalex_works_table_id }}` openalex
+  INNER JOIN ror_filtered ON openalex.id = ror_filtered.id
+  WHERE type NOT IN ("review", "libguides", "letter", "editorial", "erratum", "grant", "supplementary-materials", "retraction", "paratext")
+  AND publication_date IS NOT NULL
+  AND (publication_date BETWEEN (SELECT min_project_start FROM min_project_start).min_project_start AND CURRENT_DATE())
+)
+
+SELECT
+  openalex.doi,
+
+  STRUCT(
+    {{ dataset_id }}.strip_html(openalex.title) AS title,
+    FORMAT_DATE('%Y-%m-%d', openalex.publication_date) AS publication_date,
+    openalex.type,
+    (SELECT ARRAY_AGG(split_name(author.author.display_name)) FROM UNNEST(openalex.authorships) AS author WHERE author.author.display_name IS NOT NULL) AS authors,
+    primary_location.source.display_name AS container_title,
+    biblio.volume,
+    biblio.issue,
+    IF(biblio.first_page IS NULL OR biblio.last_page IS NULL, NULL, CONCAT(biblio.first_page, '-', biblio.last_page)) AS page,
+    primary_location.source.publisher AS publisher,
+    NULL AS publisher_location,
+    NULL AS version
+  ) AS biblio_data,
+
+  STRUCT(
+    openalex.publication_date,
+    {{ dataset_id }}.create_content(
+      {{ dataset_id }}.strip_html(openalex.title),
+      COALESCE(
+        NULLIF(TRIM({{ dataset_id }}.strip_html(crossref.abstract)), ''),
+        NULLIF(TRIM({{ dataset_id }}.strip_html(ARRAY_TO_STRING(ARRAY(SELECT d.description FROM UNNEST(datacite.descriptions) AS d), " "))), ''),
+        NULL
+      ) -- Choose abstracts from Crossref first, then DataCite.
+    ) AS content,
+
+    -- Affiliations
+    (SELECT ARRAY_AGG(DISTINCT {{ dataset_id }}.normalise_name(institution.display_name) IGNORE NULLS) FROM UNNEST(authorships) AS author, UNNEST(author.institutions) AS institution WHERE institution.display_name IS NOT NULL) AS affiliations,
+
+    -- Affiliation IDs
+    (SELECT ARRAY_AGG(DISTINCT {{ dataset_id }}.extract_ror(institution.ror) IGNORE NULLS) FROM UNNEST(authorships) AS author, UNNEST(author.institutions) AS institution WHERE institution.ror IS NOT NULL) AS affiliation_ids,
+
+    -- Funders
+    (SELECT ARRAY_AGG(DISTINCT {{ dataset_id }}.normalise_name(grant.funder_display_name) IGNORE NULLS) FROM UNNEST(grants) AS grant WHERE grant.funder_display_name IS NOT NULL) AS funders,
+
+    -- Funder IDs
+    (SELECT ARRAY_AGG(DISTINCT funder_id IGNORE NULLS) FROM UNNEST(funders.funder_ids) AS funder_id WHERE funder_id IS NOT NULL) AS funder_ids,
+
+    -- ARRAY<STRING>[] AS funder_opportunity_ids,
+
+    -- Grant IDs
+    (SELECT ARRAY_AGG(DISTINCT LOWER(TRIM(grant.award_id)) IGNORE NULLS) FROM UNNEST(grants) AS grant WHERE grant.award_id IS NOT NULL) AS grant_ids,
+
+    -- People
+    (SELECT ARRAY_AGG(DISTINCT {{ dataset_id }}.normalise_person_name(author.author.display_name) IGNORE NULLS) FROM UNNEST(authorships) AS author WHERE author.author.display_name IS NOT NULL) AS people,
+
+    -- People IDs
+    (SELECT ARRAY_AGG(DISTINCT {{ dataset_id }}.extract_orcid(author.author.orcid) IGNORE NULLS) FROM UNNEST(authorships) AS author WHERE author.author.orcid IS NOT NULL) AS people_ids
+  ) AS match_data
+FROM openalex
+LEFT JOIN funders ON funders.id = openalex.id
+LEFT JOIN `{{ crossref_metadata_table_id }}` as crossref ON {{ dataset_id }}.normalise_doi(crossref.doi) = openalex.doi
+LEFT JOIN `{{ datacite_table_id }}` as datacite ON {{ dataset_id }}.normalise_doi(datacite.doi) = openalex.doi
+ORDER BY match_data.publication_date DESC

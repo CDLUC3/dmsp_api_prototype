@@ -15,6 +15,7 @@
 .env
 
 # OSX files
+.DS_Store
 .DS_store
 
 # Ignore Byebug command history file.
