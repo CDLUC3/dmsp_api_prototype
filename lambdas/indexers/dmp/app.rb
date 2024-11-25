@@ -445,9 +445,15 @@ module Functions
 
             parts[:repos] << host.fetch('title', {})['S']
             parts[:repo_ids] << host.fetch('url', {})['S']
-            parts[:repo_ids] << host.fetch('dmproadmap_host_id', {}).fetch('M', {}).fetch('identifier', {})['S']
+
+            re3url = 'https://www.re3data.org/api/v1/repository/'
+            host_id = host.fetch('dmproadmap_host_id', {}).fetch('M', {}).fetch('identifier', {})['S']
+            parts[:repo_ids] << host_id
+            # Include a cn entry for the re3data id without the full URL
+            parts[:repo_ids] << host_id.gsub(re3url, '') if host_id.start_with?(re3url)
           end
         end
+
         parts[:repo_ids] = parts[:repo_ids].compact.uniq
         parts[:repos] = parts[:repos].compact.uniq
         parts
