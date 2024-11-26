@@ -1,0 +1,148 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+
+Description: 'Lambda to extract DMP metadata, weekly, and place it into the FileExchange S3 bucket'
+
+Parameters:
+  DomainName:
+    Type: 'String'
+
+  LogLevel:
+    Type: 'String'
+    Default: 'info'
+    AllowedValues:
+      - 'fatal'
+      - 'error'
+      - 'warn'
+      - 'info'
+      - 'debug'
+      - 'trace'
+
+  LogRetentionDays:
+    Type: 'Number'
+    Default: 14
+
+  DynamoIndexTableName:
+    Type: 'String'
+
+  S3FileExchangeBucketId:
+    Type: 'String'
+
+  DMPToolDatabaseLayerArn:
+    Type: 'String'
+
+  DMPToolGeneralLayerArn:
+    Type: 'String'
+
+  DMPToolLoggerLayerArn:
+    Type: 'String'
+
+  EventBusArn:
+    Type: 'String'
+
+  DeadLetterQueueArn:
+    Type: 'String'
+
+  OutputFilePrefix:
+    Type: 'String'
+    Default: 'dmps'
+
+Resources:
+  # Lambda that extracts DMP metadata from the DynamoDB IndexTable
+  Function:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: 'index.handler'
+      CodeUri: '.'
+      Runtime: 'nodejs20.x'
+      Timeout: 300
+      MemorySize: 128
+      Layers:
+        - !Ref DMPToolDatabaseLayerArn
+        - !Ref DMPToolGeneralLayerArn
+        - !Ref DMPToolLoggerLayerArn
+      Architectures:
+        - 'arm64'
+      Environment:
+        Variables:
+          LOG_LEVEL: !Ref LogLevel
+          TABLE_NAME: !Ref DynamoIndexTableName
+          S3_BUCKET_NAME: !Ref S3FileExchangeBucketId
+          FILE_PREFIX: !Ref OutputFilePrefix
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref DynamoIndexTableName
+        - S3WritePolicy:
+            BucketName: !Ref S3FileExchangeBucketId
+      Events:
+        DmpExtractorSchedule:
+          Type: 'EventBridgeRule'
+          Properties:
+            DeadLetterConfig:
+              Arn: !Ref DeadLetterQueueArn
+            EventBusName: !Ref EventBusArn
+            Pattern: !Sub >
+              {
+                "source": ["${DomainName}:lambda:event_publisher"],
+                "detail-type": ["ScheduleDmpExtraction"]
+              }
+            RetryPolicy:
+              MaximumEventAgeInSeconds: 180
+              MaximumRetryAttempts: 2
+            State: 'ENABLED'  # 'DISABLED'
+    Metadata:
+      BuildMethod: 'esbuild'
+      BuildProperties:
+        Minify: true
+        Target: 'es2020'
+        Sourcemap: true
+
+  FunctionPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !Ref Function
+      Action: 'lambda:InvokeFunction'
+      Principal: 'events.amazonaws.com'
+
+  # Annoyingly, SAM does not auto-generate LogGroup for a non-API tiggered lambda
+  LogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    DependsOn:
+      - Function
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${Function}"
+      RetentionInDays: !Ref LogRetentionDays
+
+  # ----------------------------------------------------
+  # EventBus Scheduled Tasks - Trigger Lambdas defined below
+  #   See: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-events-rule.html#cfn-events-rule-scheduleexpression
+  # ----------------------------------------------------
+  ScheduledEventWeekly:
+    Type: 'AWS::Events::Rule'
+    Properties:
+      # AWS CRON expressions have some nuances: https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-cron-expressions.html
+      ScheduleExpression: 'cron(0 5 ? * SAT *)' # Every Saturday at 5am
+      Targets:
+        - Id: !Ref Function
+          Arn: !GetAtt Function.Arn
+
+  ScheduledEventWeeklyPermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt Function.Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: 'events.amazonaws.com'
+      SourceArn: !GetAtt ScheduledEventWeekly.Arn
+
+Outputs:
+  FunctionId:
+    Value: !Ref Function
+
+  FunctionArn:
+    Value: !GetAtt Function.Arn
+
+  LogGroupId:
+    Value: !Ref LogGroup
+
+  LogGroupArn:
+    Value: !GetAtt LogGroup.Arn

@@ -272,22 +272,22 @@ module Functions
 
         doc = doc.merge({
           dmp_id: Uc3DmpId::Helper.remove_pk_prefix(p_key: pk),
-          title: _remove_markup(text: hash.fetch('title', {})['S'])&.gsub(/'"/, ''),
-          visibility: visibility,
+          title: _remove_markup(text: hash.fetch('title', {})['S'])&.gsub(/'"/, '')&.to_s,
+          visibility: visibility&.to_s,
           featured: hash.fetch('dmproadmap_featured', {})['S']&.downcase&.strip == '1' ? 1 : 0,
-          description: _remove_markup(text: hash.fetch('description', {})['S'])&.gsub(/'"/, ''),
-          project_start: project_dates[:project_start],
-          project_end: project_dates[:project_end],
-          created: hash.fetch('created', {})['S']&.to_s&.split('T')&.first,
-          modified: hash.fetch('modified', {})['S']&.to_s&.split('T')&.first,
-          registered: hash.fetch('registered', {})['S']&.to_s&.split('T')&.first
+          description: _remove_markup(text: hash.fetch('description', {})['S'])&.gsub(/'"/, '')&.to_s,
+          project_start: project_dates[:project_start]&.to_s,
+          project_end: project_dates[:project_end]&.to_s,
+          created: hash.fetch('created', {})['S']&.to_s&.split('T')&.first&.to_s,
+          modified: hash.fetch('modified', {})['S']&.to_s&.split('T')&.first&.to_s,
+          registered: hash.fetch('registered', {})['S']&.to_s&.split('T')&.first&.to_s
         })
         logger.debug(message: 'New OpenSearch Document', details: { document: doc }) unless visibility == 'public'
         return doc unless visibility == 'public'
 
         # Attach the narrative PDF if the plan is public
         works = hash.fetch('dmproadmap_related_identifiers', hash.fetch('dmproadmap_related_identifier', {})).fetch('L', [])
-        doc[:narrative_url] = _extract_narrative(works:, logger:)
+        doc[:narrative_url] = _extract_narrative(works:, logger:)&.to_s
         logger.debug(message: 'New OpenSearch Document', details: { document: doc })
         doc
       end
@@ -356,7 +356,7 @@ module Functions
         return {} unless hash.is_a?(Hash)
 
         id = hash.fetch('funder_id', {}).fetch('M', {}).fetch('identifier', {})['S']
-        id = id&.gsub('https://doi.org/10.13039/', '')&.gsub('https://ror.org/', '')
+        id = id&.gsub('https://doi.org/10.13039/', '')&.gsub('https://ror.org/', '')&.to_s
         {
           funder_ids: [id],
           funders: [_prep_org_name(text: hash.fetch('name', {})['S'])],
@@ -365,7 +365,7 @@ module Functions
             hash.fetch('dmproadmap_project_number', {})['S']&.downcase&.strip
           ].compact.uniq,
           grant_ids: [_process_grant_id(id: hash.fetch('grant_id', {}).fetch('M', {}).fetch('identifier', {})['S'])],
-          funding_status: hash.fetch('funding_status', {}).fetch('S', 'planned')
+          funding_status: hash.fetch('funding_status', {}).fetch('S', 'planned')&.to_s
         }
       end
 
@@ -443,11 +443,17 @@ module Functions
           hosts.each do |host|
             next if host.nil?
 
-            parts[:repos] << host.fetch('title', {})['S']
-            parts[:repo_ids] << host.fetch('url', {})['S']
-            parts[:repo_ids] << host.fetch('dmproadmap_host_id', {}).fetch('M', {}).fetch('identifier', {})['S']
+            parts[:repos] << host.fetch('title', {})['S']&.to_s
+            parts[:repo_ids] << host.fetch('url', {})['S']&.to_s
+
+            re3url = 'https://www.re3data.org/api/v1/repository/'
+            host_id = host.fetch('dmproadmap_host_id', {}).fetch('M', {}).fetch('identifier', {})['S']&.to_s
+            parts[:repo_ids] << host_id
+            # Include a cn entry for the re3data id without the full URL
+            parts[:repo_ids] << host_id.gsub(re3url, '') if host_id.start_with?(re3url)
           end
         end
+
         parts[:repo_ids] = parts[:repo_ids].compact.uniq
         parts[:repos] = parts[:repos].compact.uniq
         parts
@@ -487,8 +493,8 @@ module Functions
         name = hash['M'].fetch('name', {})['S']&.downcase&.gsub(/\s+/, ' ')
         name = name.split(', ').reverse.join(' ') unless name.nil?
         {
-          name: hash['M'].fetch('name', {})['S']&.downcase&.gsub(/\s+/, ' '),
-          email: hash['M'].fetch('mbox', {})['S']&.downcase,
+          name: hash['M'].fetch('name', {})['S']&.downcase&.gsub(/\s+/, ' ')&.to_s,
+          email: hash['M'].fetch('mbox', {})['S']&.downcase&.to_s,
           id: _process_id(hash: hash['M'].fetch(id_type, {})),
           affiliation: affiliation[:name],
           affiliation_id: affiliation[:id]
@@ -510,8 +516,8 @@ module Functions
         return {} unless hash.is_a?(Hash) && !hash['M'].nil?
 
         {
-          name: _prep_org_name(text: hash['M'].fetch('name', {})['S']),
-          id: _process_id(hash: hash['M'].fetch('affiliation_id', {}))
+          name: _prep_org_name(text: hash['M'].fetch('name', {})['S'])&.to_s,
+          id: _process_id(hash: hash['M'].fetch('affiliation_id', {}))&.to_s
         }
       end
 
@@ -524,7 +530,7 @@ module Functions
       def _process_id(hash:)
         return nil unless hash.is_a?(Hash)
 
-        id = hash.fetch('M', {}).fetch('identifier', {})['S']
+        id = hash.fetch('M', {}).fetch('identifier', {})['S']&.to_s
         (id.nil? || id.blank?) ? nil : id.gsub('https://ror.org/', '').gsub('https://orcid.org/', '')
       end
     end
