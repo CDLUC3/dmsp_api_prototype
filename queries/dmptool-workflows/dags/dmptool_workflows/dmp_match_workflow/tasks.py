@@ -1,11 +1,10 @@
 import logging
 
-import google.cloud.bigquery
-import google.cloud.storage
 import observatory_platform.google.bigquery as bq
 import observatory_platform.google.gcs as gcs
 import pendulum
 from airflow import AirflowException
+from google.cloud import bigquery, storage
 from observatory_platform.files import load_jsonl
 
 from dmptool_workflows.config import project_path
@@ -32,7 +31,7 @@ def create_bq_dataset(
     dataset_id: str,
     location: str,
     table_expiration_days: int,
-    client: google.cloud.bigquery.Client = None,
+    bq_client: bigquery.Client = None,
 ):
     # Create dataset
     dataset = bq.bq_create_dataset(
@@ -40,17 +39,17 @@ def create_bq_dataset(
         dataset_id=dataset_id,
         location=location,
         description="The BigQuery dataset for matching academic works to DMPs",
-        client=client,
+        client=bq_client,
     )
 
     # Set expiration time in milliseconds
     dataset.default_table_expiration_ms = table_expiration_days * 24 * 60 * 60 * 1000
-    dataset = client.update_dataset(dataset, ["default_table_expiration_ms"])
+    dataset = bq_client.update_dataset(dataset, ["default_table_expiration_ms"])
     logging.info(f"Updated dataset {dataset_id} with default table expiration of {table_expiration_days} days.")
 
 
 def fetch_dmps(
-    *, project_id: str, bq_dataset_id: str, client: google.cloud.bigquery.Client = None, **context
+    *, project_id: str, bq_dataset_id: str, bq_client: bigquery.Client = None, **context
 ) -> pendulum.DateTime:
     # Fetch mock data
     # TODO: fetch with Brian's API
@@ -62,7 +61,7 @@ def fetch_dmps(
     dmp_dataset = DMPDataset(project_id, bq_dataset_id, release_date)
     table_id = dmp_dataset.dmps_raw
     success = bq.bq_load_from_memory(
-        table_id, data, schema_file_path=project_path("dmp_match_workflow", "schema", "dmps.json"), client=client
+        table_id, data, schema_file_path=project_path("dmp_match_workflow", "schema", "dmps.json"), client=bq_client
     )
     if not success:
         raise AirflowException(f"fetch_dmps: error loading {table_id}")
@@ -80,7 +79,7 @@ def create_dmp_matches(
     weighted_count_threshold: int,
     max_matches: int,
     dry_run: bool = False,
-    client: google.cloud.bigquery.Client = None,
+    bq_client: bigquery.Client = None,
 ):
     ao_dataset = AcademicObservatoryDataset(ao_project_id)
     dt_dataset = DMPToolDataset(dmps_project_id, dataset_id, release_date)
@@ -93,7 +92,7 @@ def create_dmp_matches(
         embedding_model_id=embedding_model_id,
         vertex_ai_model_id=vertex_ai_model_id,
         dry_run=dry_run,
-        client=client,
+        bq_client=bq_client,
     )
 
     # Normalise datasets
@@ -103,7 +102,7 @@ def create_dmp_matches(
         dmps_raw_table_id=dt_dataset.dmp_dataset.dmps_raw,
         dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
         dry_run=dry_run,
-        client=client,
+        bq_client=bq_client,
     )
     normalise_openalex(
         dataset_id=dataset_id,
@@ -114,7 +113,7 @@ def create_dmp_matches(
         dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
         openalex_norm_table_id=dt_dataset.openalex_match_dataset.normalised,
         dry_run=dry_run,
-        client=client,
+        bq_client=bq_client,
     )
     normalise_crossref(
         dataset_id=dataset_id,
@@ -124,7 +123,7 @@ def create_dmp_matches(
         dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
         crossref_norm_table_id=dt_dataset.crossref_match_dataset.normalised,
         dry_run=dry_run,
-        client=client,
+        bq_client=bq_client,
     )
     normalise_datacite(
         dataset_id=dataset_id,
@@ -134,7 +133,7 @@ def create_dmp_matches(
         openalex_norm_table_id=dt_dataset.openalex_match_dataset.normalised,
         datacite_norm_table_id=dt_dataset.datacite_match_dataset.normalised,
         dry_run=dry_run,
-        client=client,
+        bq_client=bq_client,
     )
 
     # Generate intermediate matches with the DMP table
@@ -148,7 +147,7 @@ def create_dmp_matches(
             max_matches=max_matches,
             dry_run=dry_run,
             dry_run_id=match.name,
-            client=client,
+            bq_client=bq_client,
         )
 
     # Generate content tables
@@ -157,7 +156,7 @@ def create_dmp_matches(
         dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
         dmps_content_table_id=dt_dataset.dmp_dataset.content,
         dry_run=dry_run,
-        client=client,
+        bq_client=bq_client,
     )
     for match in dt_dataset.match_datasets:
         create_content_table(
@@ -167,7 +166,7 @@ def create_dmp_matches(
             match_content_table_id=match.content,
             dry_run=dry_run,
             dry_run_id=match.name,
-            client=client,
+            bq_client=bq_client,
         )
 
     # Generate embeddings for intermediate matches
@@ -179,7 +178,7 @@ def create_dmp_matches(
             embeddings_table_id=match.content_embeddings,
             dry_run=dry_run,
             dry_run_id=match.name,
-            client=client,
+            bq_client=bq_client,
         )
 
     # Add vector search to matches
@@ -194,7 +193,7 @@ def create_dmp_matches(
             match_table_id=match.match,
             dry_run=dry_run,
             dry_run_id=match.name,
-            client=client,
+            bq_client=bq_client,
         )
 
 
@@ -205,14 +204,14 @@ def export_matches(
     dataset_id: str,
     release_date: pendulum.Date,
     bucket_name: str,
-    client: google.cloud.bigquery.Client = None,
+    bq_client: bigquery.Client = None,
 ):
     dt_dataset = DMPToolDataset(project_id, dataset_id, release_date)
     for match in dt_dataset.match_datasets:
         table_id = match.match
         destination_uri = match.destination_uri(bucket_name, dag_id)
         state = bq.bq_export_table(
-            table_id=match.match, file_type="jsonl.gz", destination_uri=destination_uri, client=client
+            table_id=match.match, file_type="jsonl.gz", destination_uri=destination_uri, client=bq_client
         )
         if not state:
             raise AirflowException(f"export_matches: error exporting {table_id} to {destination_uri}")
@@ -226,12 +225,12 @@ def submit_matches(
     release_date: pendulum.Date,
     bucket_name: str,
     download_folder: str,
-    client: google.cloud.storage.Client = None,
+    gcs_client: storage.Client = None,
 ):
     # Download files from bucket
     prefix = make_prefix(dag_id, release_date)
     success = gcs.gcs_download_blobs(
-        bucket_name=bucket_name, prefix=prefix, destination_path=download_folder, client=client
+        bucket_name=bucket_name, prefix=prefix, destination_path=download_folder, client=gcs_client
     )
     if not success:
         raise AirflowException(f"submit_matches: failed to download files from bucket {bucket_name}/{prefix}")

@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Union
 
-import google.cloud.bigquery
-import google.cloud.storage
 import pendulum
 from airflow import DAG
 from airflow.decorators import dag, task, task_group
@@ -94,7 +92,6 @@ def create_dag(dag_params: DagParams) -> DAG:
     def dmp_match_workflow():
         ao_project_id = dag_params.cloud_workspace.input_project_id
         dmps_project_id = dag_params.cloud_workspace.output_project_id
-        bq_client = google.cloud.bigquery.Client(dmps_project_id)
 
         @task
         def create_bq_dataset(**context) -> None:
@@ -105,7 +102,6 @@ def create_dag(dag_params: DagParams) -> DAG:
                 dataset_id=dag_params.bq_dataset_id,
                 location=dag_params.cloud_workspace.data_location,
                 table_expiration_days=dag_params.bq_dataset_expiration_days,
-                client=bq_client,
             )
 
         @task()
@@ -115,7 +111,6 @@ def create_dag(dag_params: DagParams) -> DAG:
             release_date = tasks.fetch_dmps(
                 project_id=dag_params.cloud_workspace.output_project_id,
                 bq_dataset_id=dag_params.bq_dataset_id,
-                client=bq_client,
             )
             return DMPToolMatchRelease(
                 dag_id=dag_params.dag_id,
@@ -135,7 +130,7 @@ def create_dag(dag_params: DagParams) -> DAG:
 
             @task(retries=0)
             def create_shared_functions(release: dict, **context):
-                queries.run_sql_template("shared_functions", dag_params.bq_dataset_id, dry_run, client=bq_client)
+                queries.run_sql_template("shared_functions", dag_params.bq_dataset_id, dry_run)
 
             @task(retries=0)
             def create_embedding_model(release: dict, **context):
@@ -144,13 +139,12 @@ def create_dag(dag_params: DagParams) -> DAG:
                     embedding_model_id=embedding_model_id,
                     vertex_ai_model_id=vertex_ai_model_id,
                     dry_run=dry_run,
-                    client=bq_client,
                 )
 
             @task(retries=0)
             def normalise_dmps(release: dict, **context):
                 release = DMPToolMatchRelease.from_dict(release)
-                ao_dataset = AcademicObservatoryDataset(ao_project_id, client=bq_client)
+                ao_dataset = AcademicObservatoryDataset(ao_project_id)
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
                 queries.normalise_dmps(
                     dataset_id=dag_params.bq_dataset_id,
@@ -158,13 +152,12 @@ def create_dag(dag_params: DagParams) -> DAG:
                     dmps_raw_table_id=dt_dataset.dmp_dataset.dmps_raw,
                     dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
                     dry_run=dry_run,
-                    client=bq_client,
                 )
 
             @task(retries=0)
             def normalise_openalex(release: dict, **context):
                 release = DMPToolMatchRelease.from_dict(release)
-                ao_dataset = AcademicObservatoryDataset(ao_project_id, client=bq_client)
+                ao_dataset = AcademicObservatoryDataset(ao_project_id)
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
                 queries.normalise_openalex(
                     dataset_id=dag_params.bq_dataset_id,
@@ -175,13 +168,12 @@ def create_dag(dag_params: DagParams) -> DAG:
                     dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
                     openalex_norm_table_id=dt_dataset.openalex_match_dataset.normalised,
                     dry_run=dry_run,
-                    client=bq_client,
                 )
 
             @task(retries=0)
             def normalise_crossref(release: dict, **context):
                 release = DMPToolMatchRelease.from_dict(release)
-                ao_dataset = AcademicObservatoryDataset(ao_project_id, client=bq_client)
+                ao_dataset = AcademicObservatoryDataset(ao_project_id)
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
                 queries.normalise_crossref(
                     dataset_id=dag_params.bq_dataset_id,
@@ -191,13 +183,12 @@ def create_dag(dag_params: DagParams) -> DAG:
                     dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
                     crossref_norm_table_id=dt_dataset.crossref_match_dataset.normalised,
                     dry_run=dry_run,
-                    client=bq_client,
                 )
 
             @task(retries=0)
             def normalise_datacite(release: dict, **context):
                 release = DMPToolMatchRelease.from_dict(release)
-                ao_dataset = AcademicObservatoryDataset(ao_project_id, client=bq_client)
+                ao_dataset = AcademicObservatoryDataset(ao_project_id)
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
                 queries.normalise_datacite(
                     dataset_id=dag_params.bq_dataset_id,
@@ -207,7 +198,6 @@ def create_dag(dag_params: DagParams) -> DAG:
                     openalex_norm_table_id=dt_dataset.openalex_match_dataset.normalised,
                     datacite_norm_table_id=dt_dataset.datacite_match_dataset.normalised,
                     dry_run=dry_run,
-                    client=bq_client,
                 )
 
             @task(retries=0)
@@ -224,7 +214,6 @@ def create_dag(dag_params: DagParams) -> DAG:
                         max_matches=max_matches,
                         dry_run=dry_run,
                         dry_run_id=match.name,
-                        client=bq_client,
                     )
 
             @task(retries=0)
@@ -236,7 +225,6 @@ def create_dag(dag_params: DagParams) -> DAG:
                     dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
                     dmps_content_table_id=dt_dataset.dmp_dataset.content,
                     dry_run=dry_run,
-                    client=bq_client,
                 )
 
             @task(retries=0)
@@ -251,7 +239,6 @@ def create_dag(dag_params: DagParams) -> DAG:
                         match_content_table_id=match.content,
                         dry_run=dry_run,
                         dry_run_id=match.name,
-                        client=bq_client,
                     )
 
             @task(retries=0)
@@ -266,7 +253,6 @@ def create_dag(dag_params: DagParams) -> DAG:
                         embeddings_table_id=match.content_embeddings,
                         dry_run=dry_run,
                         dry_run_id=match.name,
-                        client=bq_client,
                     )
 
             @task(retries=0)
@@ -284,7 +270,6 @@ def create_dag(dag_params: DagParams) -> DAG:
                         match_table_id=match.match,
                         dry_run=dry_run,
                         dry_run_id=match.name,
-                        client=bq_client,
                     )
 
             task_create_shared_functions = create_shared_functions(release)
@@ -324,7 +309,6 @@ def create_dag(dag_params: DagParams) -> DAG:
                 dataset_id=dag_params.bq_dataset_id,
                 release_date=release.snapshot_date,
                 bucket_name=dag_params.cloud_workspace.transform_bucket,
-                client=bq_client,
             )
 
         @task
@@ -332,7 +316,6 @@ def create_dag(dag_params: DagParams) -> DAG:
             """Send match files to DMPTool"""
 
             release = DMPToolMatchRelease.from_dict(release)
-            client = google.cloud.storage.Client(dmps_project_id)
             tasks.submit_matches(
                 dag_id=dag_params.dag_id,
                 project_id=dag_params.cloud_workspace.output_project_id,
@@ -340,10 +323,9 @@ def create_dag(dag_params: DagParams) -> DAG:
                 release_date=release.snapshot_date,
                 bucket_name=dag_params.cloud_workspace.transform_bucket,
                 download_folder=release.transform_folder,
-                client=client,
             )
 
-        check_task = check_dependencies(airflow_conns=[])  # dag_params.aws_cognito_conn_id
+        check_task = check_dependencies(airflow_vars=[], airflow_conns=[])  # dag_params.aws_cognito_conn_id
         create_bq_dataset_task = create_bq_dataset()
         xcom_release = fetch_dmps()
         create_dmp_matches_task = create_dmp_matches(xcom_release)

@@ -1,7 +1,7 @@
 from typing import Optional
 
 import observatory_platform.google.bigquery as bq
-from google.cloud.bigquery import Client
+from google.cloud import bigquery
 from observatory_platform.jinja2_utils import render_template
 
 from dmptool_workflows.config import project_path
@@ -12,7 +12,7 @@ def run_sql_template(
     dataset_id: str,
     dry_run: bool = False,
     dry_run_id: Optional[str] = None,
-    client: Client = None,
+    bq_client: bigquery.Client = None,
     **context,
 ):
     template_path = project_path("dmp_match_workflow", "sql", f"{template_name}.sql.jinja2")
@@ -25,11 +25,16 @@ def run_sql_template(
             f.write(sql)
     else:
         print(f"running query from template: {template_path}")
-        bq.bq_run_query(sql, client=client)
+        bq.bq_run_query(sql, client=bq_client)
 
 
 def create_embedding_model(
-    *, dataset_id: str, embedding_model_id: str, vertex_ai_model_id: str, dry_run: bool = False, client: Client = None
+    *,
+    dataset_id: str,
+    embedding_model_id: str,
+    vertex_ai_model_id: str,
+    dry_run: bool = False,
+    bq_client: bigquery.Client = None,
 ):
     run_sql_template(
         "embedding_model",
@@ -37,7 +42,7 @@ def create_embedding_model(
         dry_run=dry_run,
         embedding_model_id=embedding_model_id,
         vertex_ai_model_id=vertex_ai_model_id,
-        client=client,
+        bq_client=bq_client,
     )
 
 
@@ -48,7 +53,7 @@ def normalise_dmps(
     dmps_raw_table_id: str,
     dmps_norm_table_id: str,
     dry_run: bool = False,
-    client: Client = None,
+    bq_client: bigquery.Client = None,
 ):
     run_sql_template(
         "normalise_dmps",
@@ -57,7 +62,7 @@ def normalise_dmps(
         ror_table_id=ror_table_id,
         dmps_raw_table_id=dmps_raw_table_id,
         dmps_norm_table_id=dmps_norm_table_id,
-        client=client,
+        bq_client=bq_client,
     )
 
 
@@ -71,7 +76,7 @@ def normalise_openalex(
     dmps_norm_table_id: str,
     openalex_norm_table_id: str,
     dry_run: bool = False,
-    client: Client = None,
+    bq_client: bigquery.Client = None,
 ):
     run_sql_template(
         "normalise_openalex",
@@ -83,7 +88,7 @@ def normalise_openalex(
         datacite_table_id=datacite_table_id,
         dmps_norm_table_id=dmps_norm_table_id,
         openalex_norm_table_id=openalex_norm_table_id,
-        client=client,
+        bq_client=bq_client,
     )
 
 
@@ -96,7 +101,7 @@ def normalise_crossref(
     dmps_norm_table_id: str,
     crossref_norm_table_id: str,
     dry_run: bool = False,
-    client: Client = None,
+    bq_client: bigquery.Client = None,
 ):
     run_sql_template(
         "normalise_crossref",
@@ -107,7 +112,7 @@ def normalise_crossref(
         openalex_norm_table_id=openalex_norm_table_id,
         dmps_norm_table_id=dmps_norm_table_id,
         crossref_norm_table_id=crossref_norm_table_id,
-        client=client,
+        bq_client=bq_client,
     )
 
 
@@ -120,7 +125,7 @@ def normalise_datacite(
     openalex_norm_table_id: str,
     datacite_norm_table_id: str,
     dry_run: bool = False,
-    client: Client = None,
+    bq_client: bigquery.Client = None,
 ):
     run_sql_template(
         "normalise_datacite",
@@ -131,7 +136,7 @@ def normalise_datacite(
         dmps_norm_table_id=dmps_norm_table_id,
         openalex_norm_table_id=openalex_norm_table_id,
         datacite_norm_table_id=datacite_norm_table_id,
-        client=client,
+        bq_client=bq_client,
     )
 
 
@@ -145,7 +150,7 @@ def match_intermediate(
     max_matches: int = 100,
     dry_run: bool = False,
     dry_run_id: Optional[str] = None,
-    client: Client = None,
+    bq_client: bigquery.Client = None,
 ):
     run_sql_template(
         "match_intermediate",
@@ -157,7 +162,7 @@ def match_intermediate(
         match_intermediate_table_id=match_intermediate_table_id,
         weighted_count_threshold=weighted_count_threshold,
         max_matches=max_matches,
-        client=client,
+        bq_client=bq_client,
     )
 
 
@@ -168,7 +173,7 @@ def create_dmps_content_table(
     dmps_content_table_id: str,
     dry_run: bool = False,
     dry_run_id: Optional[str] = None,
-    client: Client = None,
+    bq_client: bigquery.Client = None,
 ):
     run_sql_template(
         "dmps_content_table",
@@ -177,7 +182,7 @@ def create_dmps_content_table(
         dry_run_id=dry_run_id,
         dmps_norm_table_id=dmps_norm_table_id,
         dmps_content_table_id=dmps_content_table_id,
-        client=client,
+        bq_client=bq_client,
     )
 
 
@@ -189,7 +194,7 @@ def create_content_table(
     match_content_table_id: str,
     dry_run: bool = False,
     dry_run_id: Optional[str] = None,
-    client: Client = None,
+    bq_client: bigquery.Client = None,
 ):
     run_sql_template(
         "match_content_table",
@@ -199,7 +204,7 @@ def create_content_table(
         match_norm_table_id=match_norm_table_id,
         match_intermediate_table_id=match_intermediate_table_id,
         match_content_table_id=match_content_table_id,
-        client=client,
+        bq_client=bq_client,
     )
 
 
@@ -211,7 +216,7 @@ def generate_embeddings(
     embeddings_table_id: str,
     dry_run: bool = False,
     dry_run_id: Optional[str] = None,
-    client: Client = None,
+    bq_client: bigquery.Client = None,
 ):
     run_sql_template(
         "generate_embeddings",
@@ -221,7 +226,7 @@ def generate_embeddings(
         content_table_id=content_table_id,
         embedding_model_id=embedding_model_id,
         embeddings_table_id=embeddings_table_id,
-        client=client,
+        bq_client=bq_client,
     )
 
 
@@ -236,7 +241,7 @@ def match_vector_search(
     match_table_id: str,
     dry_run: bool = False,
     dry_run_id: Optional[str] = None,
-    client: Client = None,
+    bq_client: bigquery.Client = None,
 ):
     run_sql_template(
         "match_vector_search",
@@ -249,5 +254,5 @@ def match_vector_search(
         match_embeddings_table_id=match_embeddings_table_id,
         dmps_embeddings_table_id=dmps_embeddings_table_id,
         match_table_id=match_table_id,
-        client=client,
+        bq_client=bq_client,
     )

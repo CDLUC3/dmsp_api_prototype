@@ -105,7 +105,27 @@ python3 run_queries.py ao-project-id my-project-id YYYY-MM-DD
 ```
 
 ## Deployment
-Switch to the Astro workspace that you want to work in:
+Deploying the project consists of:
+* Creating and configuring a Google Cloud project.
+* Creating and configuring an Astronomer.io Apache Airflow deployment.
+* Attaching a Customer Managed Service Account to your Astronomer.io deployment.
+* Deploy Airflow workflows.
+
+### Create Google Cloud Project
+Create your Google Cloud project:
+```bash
+gcloud projects create my-project-id --name="My Project Name"
+```
+
+Configure your Google Cloud project with the following script:
+```bash
+(cd bin && ./setup-gcloud-project.sh my-project-id my-bucket-name)
+```
+
+Copy the "DMP Airflow Service Account" ID printed by this script.
+
+### Create Astronomer.io Deployment
+Switch to the Astronomer.io workspace that you want to work in:
 ```bash
 astro workspace switch
 ```
@@ -116,19 +136,23 @@ alert_emails.
 astro deployment create --deployment-file ./bin/deployment.yaml
 ```
 
-In the Astronomer.io WebUI, click on your deployment, click Details and copy the Workload Identity for the next step.
-
-Setup your Google Cloud Project:
-```bash
-cd bin && ./setup-gcloud-project.sh my-project-name my-bucket-name my-astro-workload-identity@my-astro-workload-identity.iam.gserviceaccount.com
-```
-
 Create Apache Airflow Variables, customising the value for the WORKFLOWS key:
 ```bash
+astro deployment variable create GOOGLE_CLOUD_PROJECT=my-project-id
 astro deployment airflow-variable create --key DATA_PATH --value /home/astro/data
 astro deployment airflow-variable create --key WORKFLOWS --value '[{"dag_id":"dmp_match_workflow","name":"DMP Match Workflow","class_name":"dmptool_workflows.dmp_match_workflow.workflow","cloud_workspace":{...}}]'
 ```
 
+### Customer Managed Identity
+Attach the "DMP Airflow Service Account" to your Astro deployment as a "Customer Managed Identity".
+
+Follow the steps here: https://www.astronomer.io/docs/astro/authorize-deployments-to-your-cloud/#attach-a-service-account-to-your-deployment
+
+Use the "DMP Airflow Service Account" email printed by the `setup-gcloud-project.sh` script.
+
+Step 6 is not necessary.
+
+### Deploy Airflow Workflows
 Deploy workflows:
 ```bash
 astro deploy
