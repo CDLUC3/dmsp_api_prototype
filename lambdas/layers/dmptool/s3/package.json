@@ -1,0 +1,17 @@
+{
+  "name": "dmptool-s3",
+  "version": "1.0.0",
+  "description": "S3 helper functions for NodeJS Lambdas",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "author": "briri",
+  "license": "MIT",
+  "devDependencies": {
+    "@aws-sdk/client-cloudformation": "^3.699.0",
+    "@aws-sdk/client-s3": "^3.701.0",
+    "@aws-sdk/s3-request-presigner": "^3.701.0",
+    "typescript": "^5.7.2"
+  }
+}

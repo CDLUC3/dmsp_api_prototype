@@ -34,16 +34,34 @@ Parameters:
   ApiLayerId:
     Type: 'String'
 
+  DMPToolCloudFormationLayerArn:
+    Type: 'String'
+
+  DMPToolCognitoLayerArn:
+    Type: 'String'
+
   DMPToolDatabaseLayerArn:
     Type: 'String'
 
   DMPToolLoggerLayerArn:
     Type: 'String'
 
+  DMPToolS3LayerArn:
+    Type: 'String'
+
+  CognitoUserPoolExportName:
+    Type: 'String'
+
+  S3FileExchangeBucketExportName:
+    Type: 'String'
+
   CertificateArn:
     Type: 'String'
 
   CognitoUserPoolArn:
+    Type: 'String'
+
+  UserPoolId:
     Type: 'String'
 
   DomainName:
@@ -71,6 +89,9 @@ Parameters:
     Type: 'String'
 
   S3PrivateBucketId:
+    Type: 'String'
+
+  S3FileExchangeBucketArn:
     Type: 'String'
 
   S3FileExchangeBucketId:
@@ -199,6 +220,38 @@ Resources:
           Resource:
             - !Ref S3CloudFrontBucketArn
             - !Sub "${S3CloudFrontBucketArn}/*"
+
+  S3FileExchangeBucketPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      Description: 'DMPHub - Access to the S3 FileExchange Bucket'
+      ManagedPolicyName: !Sub 'DmpHub${Env}S3ExchangePolicy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: 'Allow'
+          Action:
+            - "s3:Get*"
+            - "s3:List*"
+            - "s3:Describe*"
+            - "s3:PutObject"
+          Resource:
+            - !Ref S3FileExchangeBucketArn
+            - !Sub "${S3FileExchangeBucketArn}/*"
+
+  CloudFormationPolicy:
+    Type: 'AWS::IAM::ManagedPolicy'
+    Properties:
+      Description: 'DMPHub - Access to the CloudFormation exports'
+      ManagedPolicyName: !Sub 'DmpHub${Env}CFExportsPolicy'
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: 'Allow'
+          Action:
+            - "cloudformation:Describe*"
+            - "cloudformation:List*"
+          Resource: '*'
 
   # ----------------------------------------------------
   # CloudWatch LogGroup
@@ -682,40 +735,41 @@ Resources:
   GetDownloadsDmpsFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      CodeUri: 'get_downloads_dmps/'
+      CodeUri: 'get_dmps_downloads/dist/'
       Handler: 'index.handler'
       Runtime: 'nodejs20.x'
       Timeout: 30
       Architectures:
         - 'arm64'
       Layers:
+        - !Ref DMPToolCloudFormationLayerArn
+        - !Ref DMPToolCognitoLayerArn
         - !Ref DMPToolDatabaseLayerArn
         - !Ref DMPToolLoggerLayerArn
+        - !Ref DMPToolS3LayerArn
       Policies:
-        - DynamoDBReadPolicy:
-             TableName: !Ref DynamoTableName
-         - S3Policy:
-             BucketName: !Ref S3FileExchangeBucketId
+        - !Ref S3FileExchangeBucketPolicy
+        - !Ref CognitoPolicy
+        - !Ref CloudFormationPolicy
       DeadLetterQueue:
         Type: 'SQS'
         TargetArn: !Ref DeadLetterQueueArn
       Environment:
         Variables:
-          LOG_LEVEL: !Ref LogLevel
-          TABLE_NAME: !Ref DynamoTableName
-          S3_BUCKET_NAME: !Ref S3FileExchangeBucketId
-          FILE_PREFIX: !Ref OutputFilePrefix
+          LOG_LEVEL: 'debug'
+          COGNITO_USER_POOL_EXP_NAME: !Ref CognitoUserPoolExportName
+          S3_BUCKET_EXP_NAME: !Ref S3FileExchangeBucketExportName
           CORS_ORIGIN: !If
             - IsDev
             - "*"
             - !Sub "https://${DomainName}"
       Events:
-        PostCitations:
+        GetDownloadsDmps:
           # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Type: 'Api'
           Properties:
             RestApiId: !Ref DmpHubRestApi
-            Path: '/downloads/dmps'
+            Path: '/dmps/downloads'
             Method: 'get'
             RequestParameters:
               - 'method.request.header.Authorization'
@@ -724,11 +778,30 @@ Resources:
               AuthorizationScopes:
                 - !Sub 'https://auth.${DomainName}/${Env}.data-transfer'
     Metadata:
-       BuildMethod: 'esbuild'
-       BuildProperties:
-         Minify: true
-         Target: 'es2020'
-         Sourcemap: true
+      BuildMethod: 'esbuild'
+      BuildProperties:
+        Minify: true
+        Target: 'es2020'
+        Sourcemap: true
+
+      # BuildMethod: 'esbuild'
+      # BuildProperties:
+      #   Minify: false
+      #   Target: 'es2020'
+      #   Sourcemap: true
+      #   Format: 'esm'
+      #   OutExtension:
+      #     - .js=.mjs
+      #   EntryPoints:
+      #     - 'src/index.ts'
+      #   # Exclude any packages that are either already present in the Lambda env or are provided by Layers
+      #   External:
+      #     - '@aws-sdk/client-dynamodb'
+      #     - '@aws-sdk/client-s3'
+      #     - '@aws-sdk/s3-request-presigner'
+      #     # - 'dmptool-database'
+      #     # - 'dmptool-logger'
+
 
   GetDownloadsDmps:
     Type: 'AWS::Logs::LogGroup'

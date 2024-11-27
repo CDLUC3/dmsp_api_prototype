@@ -1,0 +1,15 @@
+{
+  "name": "dmptool-cloudformation",
+  "version": "1.0.0",
+  "description": "CloudFormation helper functions for NodeJS Lambdas",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "author": "briri",
+  "license": "MIT",
+  "devDependencies": {
+    "@aws-sdk/client-cloudformation": "^3.699.0",
+    "typescript": "^5.7.2"
+  }
+}

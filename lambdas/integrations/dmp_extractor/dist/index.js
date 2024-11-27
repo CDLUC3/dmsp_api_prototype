@@ -15,7 +15,7 @@ const dmptool_logger_1 = require("dmptool-logger");
 const gzipPromise = (0, util_1.promisify)(zlib_1.gzip);
 // Environment variables
 const LOG_LEVEL = process.env.LOG_LEVEL?.toLowerCase() || 'info';
-const TABLE_NAME = process.env.TABLE_NAME;
+const TABLE_NAME = process.env.INDEX_TABLE_NAME;
 const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME;
 const FILE_PREFIX = process.env.FILE_PREFIX || "dmps";
 // Initialize AWS SDK clients (outside the handler function)
@@ -116,10 +116,5 @@ const publishFile = async (tstamp, fileContent, index) => {
         ContentType: "application/json",
         ContentEncoding: "gzip",
     };
-    try {
-        await s3Client.send(new client_s3_1.PutObjectCommand(s3Params));
-    }
-    catch (err) {
-        console.log(err);
-    }
+    await s3Client.send(new client_s3_1.PutObjectCommand(s3Params));
 };
