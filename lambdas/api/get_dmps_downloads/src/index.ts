@@ -40,17 +40,17 @@ exports.handler = async (event: APIGatewayEvent, context: Context) => {
     // List and filter S3 objects by `[clientName]-dmps-` prefix
     const presignedUrls: DMPToolPresignedURLOutput[] = [];
     const s3Objects = await listObjects(bucketName, `${client.name}-dmps`);
-    logger.debug({ s3Objects }, `Detected ${s3Objects.Contents.length} DMP metadata files`);
+    logger.debug({ s3Objects }, `Detected ${s3Objects.length} DMP metadata files`);
 
     // If there are no files available for download then return a 404
-    if (!s3Objects || !s3Objects.Contents) {
+    if (!s3Objects || !Array.isArray(s3Objects)) {
       logger.info(undefined, 'No DMP metadata files available');
       return { statusCode: 404, body: JSON.stringify({ message: 'No files found'}) };
     }
 
     // Generate a presigned URL for each file in the S3 bucket
-    for (const obj of s3Objects.Contents) {
-      presignedUrls.push(await getPresignedURL(bucketName, obj.Key));
+    for (const obj of s3Objects) {
+      presignedUrls.push(await getPresignedURL(bucketName, obj.key));
     }
     logger.info({ presignedUrls }, `Generated ${presignedUrls.length} presigned URLs`);
 

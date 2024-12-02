@@ -38,6 +38,7 @@ export const verifyAPIGatewayLambdaAuthorizer = async (
   if (clientId && scopes && scopes.includes(`${ENV}.${expectedScope}`)) {
     // Fetch the Client's name from Cognito
     const clientName = await getClientName(userPoolId, clientId);
+
     if (clientName) {
       return { id: clientId, name: clientName };
     }

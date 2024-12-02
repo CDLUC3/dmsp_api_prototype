@@ -26,7 +26,7 @@ const cfClient = new CloudFormationClient({});
 //     Name: 'DynamoDBTable1234',
 //     Value: 'arn:aws:dynamodb:us-west-2:00000000:table/my-dynamo-table-19RCAN1IAZXQ4'
 //   }
-let cfExports: Export[] = [];
+const cfExports: Export[] = [];
 
 // Collect all of the CloudFormation exported outputs
 const loadExports = async (): Promise<void> => {

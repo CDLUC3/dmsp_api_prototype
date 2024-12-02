@@ -1,6 +1,6 @@
 // Function to deserialize DynamoDB items. For example `{ "variableA": { "S": "value" } }` to `variableA`
 // to make it easier to work with. This function is recursive and will handle "M" and "L" item types
-export const deserializeDynamoItem = (item): Object => {
+export const deserializeDynamoItem = (item): object => {
   const unmarshalledItem = {};
 
   for (const key in item) {
