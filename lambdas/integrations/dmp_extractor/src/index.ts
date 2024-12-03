@@ -85,7 +85,7 @@ const splitIntoFiles = (items: DMPDynamoItem[], maxFileSizeBytes: number): DMPDy
   if (currentFile.length > 0) {
     files.push(currentFile);
   }
-  return files;
+  return files.map((file) => file.join('\n'));
 };
 
 // Gzip and upload the file to the S3 bucket
