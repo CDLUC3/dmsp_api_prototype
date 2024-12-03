@@ -27,6 +27,7 @@
     "dmptool-database": "file:../../layers/dmptool/database",
     "dmptool-general": "file:../../layers/dmptool/general",
     "dmptool-logger": "file:../../layers/dmptool/logger",
+    "dmptool-s3": "file:../../layers/dmptool/s3",
     "eslint": "^9.15.0",
     "jest": "^29.7.0",
     "jest-expect-message": "^1.1.3",

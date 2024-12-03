@@ -1,3 +1,4 @@
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { lambdaRequestTracker } from 'pino-lambda';
 import { APIGatewayEvent, Context, Handler } from 'aws-lambda';
 
@@ -39,7 +40,7 @@ export const handler: Handler = async (event: APIGatewayEvent, context: Context)
       logger.debug(undefined, `Generating presignedURLs for ${client.name}`);
 
       // List and filter S3 objects by `[clientName]-dmps-` prefix
-      const presignedUrls: DMPToolPresignedURLOutput[] = [];
+      const presignedUrls = {};
       const s3Objects = await listObjects(bucketName, `${client.name}-dmps`);
 
       // If there are no files available for download then return a 404
@@ -51,9 +52,9 @@ export const handler: Handler = async (event: APIGatewayEvent, context: Context)
 
       // Generate a presigned URL for each file in the S3 bucket
       for (const obj of s3Objects) {
-        presignedUrls.push(await getPresignedURL(bucketName, obj.key));
+        presignedUrls[obj.key] = await getPresignedURL(bucketName, obj.key);
       }
-      logger.info({ presignedUrls }, `Generated ${presignedUrls.length} presigned URLs`);
+      logger.info({ presignedUrls }, `Generated ${Object.keys(presignedUrls).length} presigned URLs`);
 
       // Success, return the pre-signed URL(s)
       return {

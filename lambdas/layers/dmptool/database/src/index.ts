@@ -1,6 +1,42 @@
+import { DynamoDBClient, ScanCommand } from "@aws-sdk/client-dynamodb";
+
+// Get the table names from the ENV
+const INDEX_TABLE_NAME = process.env.INDEX_TABLE_NAME;
+
+// Initialize AWS SDK clients (outside the handler function)
+const dynamoDBClient = new DynamoDBClient({});
+
+// Representation of a DynamoDB DMP record (standard DMP metadata OR an index record)
+export interface DMPDynamoItem {
+  PK: string;
+  SK: string;
+  created: string;
+  modified: string;
+}
+
+export interface ClientProfile {
+  PK: string;
+  SK: string;
+  contact: ClientProfileContact;
+  description: string;
+  downloadUri: string;
+  homepage: string;
+  name: string;
+  org_access_level: string;
+  redirectUri: string;
+  seedingWithLiveDmpIds: boolean;
+  tokenUri: string;
+}
+
+interface ClientProfileContact {
+  email: string;
+  name: string;
+}
+
+
 // Function to deserialize DynamoDB items. For example `{ "variableA": { "S": "value" } }` to `variableA`
 // to make it easier to work with. This function is recursive and will handle "M" and "L" item types
-export const deserializeDynamoItem = (item): object => {
+const deserializeDynamoItem = (item): object => {
   const unmarshalledItem = {};
 
   for (const key in item) {
@@ -35,29 +71,36 @@ export const deserializeDynamoItem = (item): object => {
   return unmarshalledItem;
 };
 
-// Representation of a DynamoDB DMP record (standard DMP metadata OR an index record)
-export interface DMPDynamoItem {
-  PK: string;
-  SK: string;
-  created: string;
-  modified: string;
+// Fetch all of the DMP metadata index records
+export const getAllDMPIndexItems = async (): Promise<DMPDynamoItem[]> => {
+  const params = {
+    FilterExpression: "SK = :sk",
+    ExpressionAttributeValues: { ":sk": { S: "METADATA" } },
+  };
+  return await scanTable(INDEX_TABLE_NAME, params);
 }
 
-export interface ClientProfile {
-  PK: string;
-  SK: string;
-  contact: ClientProfileContact;
-  description: string;
-  downloadUri: string;
-  homepage: string;
-  name: string;
-  org_access_level: string;
-  redirectUri: string;
-  seedingWithLiveDmpIds: boolean;
-  tokenUri: string;
-}
+// Scan the Index table for the specified criteria
+const scanTable = async (table: string, params: object): Promise<DMPDynamoItem[]> => {
+  let items = [];
+  let lastEvaluatedKey;
 
-interface ClientProfileContact {
-  email: string;
-  name: string;
+  // Query the DynamoDB index table for all DMP metadata (with pagination)
+  do {
+    const command = new ScanCommand({
+      TableName: table,
+      ExclusiveStartKey: lastEvaluatedKey,
+      ...params
+    });
+    const response = await dynamoDBClient.send(command);
+
+    // Collect items and update the pagination key
+    items = items.concat(response.Items || []);
+    // LastEvaluatedKey is the position of the end cursor from the query that was just run
+    // when it is undefined, then the query reached the end of the results.
+    lastEvaluatedKey = response.LastEvaluatedKey;
+  } while (lastEvaluatedKey);
+
+  // Deserialize and split items into multiple files if necessary
+  return items.map((item) => deserializeDynamoItem(item) as DMPDynamoItem);
 }

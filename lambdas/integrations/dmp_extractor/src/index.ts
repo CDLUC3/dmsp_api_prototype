@@ -3,27 +3,18 @@ import { gzip } from "zlib";
 import { promisify } from "util";
 import { lambdaRequestTracker } from 'pino-lambda';
 
-// Note that the AWS env already has the @aws-sdk installed, so if you are importing those
-// libraries, you should install them as devDependencies so that the build artifact does not include them!
-import { DynamoDBClient, ScanCommand } from "@aws-sdk/client-dynamodb";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-
 // Import modules from ../../layers/nodeJS. These should also be included as devDependencies!
 import { currentDateAsString } from 'dmptool-general';
-import { deserializeDynamoItem, DMPDynamoItem } from 'dmptool-database';
+import { getAllDMPIndexItems, DMPDynamoItem } from 'dmptool-database';
 import { initializeLogger, LogLevel } from 'dmptool-logger';
+import { putObject } from 'dmptool-s3';
 
 const gzipPromise = promisify(gzip);
 
 // Environment variables
 const LOG_LEVEL = process.env.LOG_LEVEL?.toLowerCase() || 'info';
-const TABLE_NAME = process.env.INDEX_TABLE_NAME;
 const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME;
 const FILE_PREFIX = process.env.FILE_PREFIX || "dmps";
-
-// Initialize AWS SDK clients (outside the handler function)
-const dynamoDBClient = new DynamoDBClient({});
-const s3Client = new S3Client({});
 
 // We want the files to be a manageable size, so set some limits
 const MAX_FILE_SIZE_MB = 10;
@@ -42,7 +33,7 @@ export const handler: Handler = async (event: ScheduledEvent, context: Context) 
     withRequest(event, context);
 
     // Fetch all of the registered DMPs
-    const items = await fetchDMPs();
+    const items = await getAllDMPIndexItems();
     const sampleItem = items.length > 0 ? items[Math.round(items.length / 2)] : undefined;
     logger.debug({ sampleDMP: sampleItem }, `DMP count: ${items.length}.`);
 
@@ -69,33 +60,6 @@ export const handler: Handler = async (event: ScheduledEvent, context: Context) 
     };
   }
 };
-
-// Fetch all DMP metadata from the DyanmoBD Index Table
-const fetchDMPs = async (): Promise<DMPDynamoItem[]> => {
-  let items = [];
-  let lastEvaluatedKey;
-
-  // Query the DynamoDB index table for all DMP metadata (with pagination)
-  do {
-    const params = {
-      TableName: TABLE_NAME,
-      ExclusiveStartKey: lastEvaluatedKey,
-      FilterExpression: "SK = :sk",
-      ExpressionAttributeValues: { ":sk": { S: "METADATA" } },
-    };
-    const command = new ScanCommand(params);
-    const response = await dynamoDBClient.send(command);
-
-    // Collect items and update the pagination key
-    items = items.concat(response.Items || []);
-    // LastEvaluatedKey is the position of the end cursor from the query that was just run
-    // when it is undefined, then the query reached the end of the results.
-    lastEvaluatedKey = response.LastEvaluatedKey;
-  } while (lastEvaluatedKey);
-
-  // Deserialize and split items into multiple files if necessary
-  return items.map((item) => deserializeDynamoItem(item) as DMPDynamoItem);
-}
 
 // Split items into multiple files based on the allowable size
 const splitIntoFiles = (items: DMPDynamoItem[], maxFileSizeBytes: number): DMPDynamoItem[][] => {
@@ -131,13 +95,9 @@ const publishFile = async (tstamp: string, fileContent: DMPDynamoItem[], index: 
   // Set the file name (e.g. `dmps_2024-11-21_2.json.gz`)
   const fileName = `${FILE_PREFIX}_${tstamp}_${index + 1}.jsonl.gz`;
 
-  const s3Params = {
-    Bucket: S3_BUCKET_NAME,
-    Key: fileName,
-    Body: gzippedData,
-    ContentType: "application/json",
-    ContentEncoding: "gzip",
-  };
-
-  await s3Client.send(new PutObjectCommand(s3Params));
+  try {
+    await putObject(S3_BUCKET_NAME, fileName, gzippedData, 'application/json', 'gzip');
+  } catch(err) {
+    logger.fatal(err, `DMPExtractor was unable to publish file: ${fileName}`);
+  }
 }

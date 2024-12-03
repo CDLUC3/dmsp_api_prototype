@@ -10,10 +10,7 @@ import {
 
 const s3Client = new S3Client({});
 
-export interface DMPToolPresignedURLOutput {
-  fileName: string;
-  url: string;
-}
+const REGION = process.env.AWS_REGION || 'us-west-2';
 
 export interface DMPToolListObjectsOutput {
   key: string;
@@ -46,9 +43,21 @@ export const getObject = async (bucket: string, key: string): Promise<GetObjectC
 }
 
 // Put an object into the specified bucket
-export const putObject = async (bucket: string, key: string): Promise<PutObjectCommandOutput> => {
+export const putObject = async (
+  bucket: string,
+  key: string,
+  body: any,
+  contentType = 'application/json',
+  contentEncoding = 'utf-8'
+): Promise<PutObjectCommandOutput> => {
   if (bucket && key && bucket.trim() !== '' && key.trim() !== '') {
-    const command = new PutObjectCommand({ Bucket: bucket, Key: key });
+    const command = new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+      ContentEncoding: contentEncoding,
+    });
     return await s3Client.send(command);
   }
   return undefined;
@@ -59,13 +68,20 @@ export const getPresignedURL = async (
   bucket: string,
   key: string,
   usePutMethod = false
-): Promise<DMPToolPresignedURLOutput> => {
+): Promise<string> => {
+  // The Pressigner needs a special config that sets the bucket endpoint
+  const presignerClient = new S3Client({
+    region: REGION,
+    forcePathStyle: false,
+    // endpoint: `https://${bucket}.s3.${REGION}.amazonaws.com`,
+  });
+
+console.log(`REGION: ${REGION}, BUCKET: ${bucket}, KEY: ${key}`);
+
   if (bucket && key && bucket.trim() !== '' && key.trim() !== '') {
     const params = { Bucket: bucket, Key: key };
     const command = usePutMethod ? new PutObjectCommand(params) : new GetObjectCommand(params);
-    const presignedURL = await getSignedUrl(s3Client, command);
-
-    return { fileName: key, url: presignedURL };
+    return await getSignedUrl(s3Client, command, { expiresIn: 900 });;
   }
   return undefined;
 }

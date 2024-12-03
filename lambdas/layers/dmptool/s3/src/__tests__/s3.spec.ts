@@ -66,22 +66,22 @@ describe('putObject', () => {
   it('raises errors', async () => {
     mockS3Command.mockImplementation(() => { throw new Error('Test S3 error') });
 
-    await expect(putObject('TestBucket', '/files')).rejects.toThrow('Test S3 error');
+    await expect(putObject('TestBucket', '/files', '12345')).rejects.toThrow('Test S3 error');
   });
 
   it('it returns undefined if no bucket is specified', async () => {
-    expect(await putObject('', '/files')).toEqual(undefined);
+    expect(await putObject('', '/files', '12345')).toEqual(undefined);
   });
 
   it('it returns undefined if no key prefix is specified', async () => {
-    expect(await putObject('Test', '  ')).toEqual(undefined);
+    expect(await putObject('Test', '  ', '12345')).toEqual(undefined);
   });
 
   it('it returns the list of objects', async () => {
     const items = [{ key: 'Test1' }, { key: 'Test2', size: 12345 }];
     mockS3Command.mockResolvedValue(items);
 
-    expect(await putObject('TestBucket', '/files')).toEqual(items);
+    expect(await putObject('TestBucket', '/files', '12345')).toEqual(items);
   });
 });
 

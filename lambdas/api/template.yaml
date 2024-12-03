@@ -232,6 +232,7 @@ Resources:
           Effect: 'Allow'
           Action:
             - "s3:Get*"
+            - "s3:GetObject"
             - "s3:List*"
             - "s3:Describe*"
             - "s3:PutObject"

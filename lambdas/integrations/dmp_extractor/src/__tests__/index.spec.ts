@@ -1,22 +1,21 @@
 // Need to define this all above the imports. I don't really understand why but it works
-const mockDynamoDBSend = jest.fn();
-const mockS3Send = jest.fn();
+const mockGetAllDMPIndexItems = jest.fn();
+const mockPutCommand = jest.fn();
 
 // Mock the AWS DynamoDB client
-jest.mock('@aws-sdk/client-dynamodb', () => ({
-  DynamoDBClient: jest.fn(() => ({
-    send: mockDynamoDBSend,
-  })),
-  ScanCommand: jest.fn(),
-}));
+jest.mock('dmptool-database', () => {
+  return {
+    __esModule: true,
+    getAllDMPIndexItems: mockGetAllDMPIndexItems
+  };
+});
 
-// Mock the AWS S3 client
-jest.mock('@aws-sdk/client-s3', () => ({
-  S3Client: jest.fn(() => ({
-    send: mockS3Send,
-  })),
-  PutObjectCommand: jest.fn(),
-}));
+jest.mock('dmptool-s3', () => {
+  return {
+    __esModule: true,
+    putObject: mockPutCommand,
+  };
+});
 
 // Mock the DMPTool logger
 jest.mock('dmptool-logger', () => {
@@ -50,21 +49,9 @@ describe('Lambda Handler', () => {
   });
 
   it('should scan the DynamoDB table and upload a JSON file to S3', async () => {
-    // Mock DynamoDB Scan responses
-    mockDynamoDBSend
-      .mockResolvedValueOnce({
-        Items: [{ id: { S: '1' }, name: { S: 'Item1' } }],
-        LastEvaluatedKey: 'lastKey1',
-      })
-      .mockResolvedValueOnce({
-        Items: [{ id: { S: '2' }, name: { S: 'Item2' } }],
-        LastEvaluatedKey: null,
-      });
+    mockGetAllDMPIndexItems.mockResolvedValueOnce([{ id: '1', name: 'Item1' }]);
+    mockPutCommand.mockResolvedValue({});
 
-    // Mock S3 upload
-    mockS3Send.mockResolvedValue({});
-
-    // Invoke the handler
     const response = await handler({}, mockContext, undefined);
 
     const expected = {
@@ -72,17 +59,14 @@ describe('Lambda Handler', () => {
       statusCode: 200,
     }
 
-    // Assertions
-    expect(mockDynamoDBSend).toHaveBeenCalledTimes(2);
-    expect(mockS3Send).toHaveBeenCalledTimes(1);
+    expect(mockGetAllDMPIndexItems).toHaveBeenCalledTimes(1);
+    expect(mockPutCommand).toHaveBeenCalledTimes(1);
     expect(response).toEqual(expected);
   });
 
   it('should handle errors when DynamoDB scan fails', async () => {
-    // Mock DynamoDB Scan failure
-    mockDynamoDBSend.mockRejectedValueOnce(new Error('DynamoDB error'));
+    mockGetAllDMPIndexItems.mockRejectedValueOnce(new Error('DynamoDB error'));
 
-    // Invoke the handler
     const response = await handler({}, mockContext, undefined);
 
     const expected = {
@@ -90,28 +74,21 @@ describe('Lambda Handler', () => {
       statusCode: 500,
     }
 
-    // Assertions
-    expect(mockDynamoDBSend).toHaveBeenCalledTimes(1);
-    expect(mockS3Send).not.toHaveBeenCalled();
+    expect(mockGetAllDMPIndexItems).toHaveBeenCalledTimes(1);
+    expect(mockPutCommand).not.toHaveBeenCalled();
     expect(response).toEqual(expected);
   });
 
   it('should split JSON output into multiple files if size exceeds 10MB', async () => {
     const largeValue = 'x'.repeat(11 * 1024 * 1024);
-    const largeItem = { id: { S: '1' }, name: { S: 'LargeItem' }, data: { S: largeValue } };
+    const largeItem = { id: '1', name: 'LargeItem', data: largeValue };
 
-    // Mock DynamoDB Scan responses
-    mockDynamoDBSend.mockResolvedValueOnce({
-      Items: [largeItem],
-      LastEvaluatedKey: null,
-    });
-
-    mockS3Send.mockResolvedValue({});
+    mockGetAllDMPIndexItems.mockResolvedValueOnce([largeItem]);
+    mockPutCommand.mockResolvedValue({});
 
     await handler({}, mockContext, undefined);
 
-    // Assertions
-    expect(mockDynamoDBSend).toHaveBeenCalledTimes(1);
-    expect(mockS3Send).toHaveBeenCalledTimes(2);
+    expect(mockGetAllDMPIndexItems).toHaveBeenCalledTimes(1);
+    expect(mockPutCommand).toHaveBeenCalledTimes(2);
   });
 });
