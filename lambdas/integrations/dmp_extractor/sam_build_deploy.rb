@@ -40,7 +40,7 @@ if ARGV.length >= 3
 
   # Define any Paramaters here that are required by your template and are not available in SSM or as
   # CloudFormation stack outputs
-  @native_params = { LogLevel: 'debug', LogRetentionDays: 14, OutputFilePrefix: 'dmps' }
+  @native_params = { LogLevel: 'debug', LogRetentionDays: 14, OutputFilePrefix: 'coki-dmps' }
 
   # List the names of all other parameters whose values should be available as exported CloudFormation stack
   # outputs. The env prefix will be appended to each name your provide.

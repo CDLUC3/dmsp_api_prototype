@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "target": "es2020",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "module": "commonjs",
+    "types": ["jest", "jest-expect-message"],
+  },
+  "include": ["src", "src/__tests__"],
+  "exclude": ["node_modules"],
+}

@@ -24,7 +24,7 @@ To find out which functions use the layer, search this repositories `lambdas` di
 ## Running the Linter and Tests
 This directory is setup to run ESLint and Jest on all of the layers at once.
 
-**Make sure you are in the `layers/nodeJS` directory!**
+**Make sure you are in the `layers/dmptool` directory!**
 
 If this is the first time you will need to run `npm install` first.
 
@@ -36,16 +36,16 @@ To run the tests: `npm run test`
 Once the Lambda Layer has been published, we can add it to a nodeJS Lambda function.
 
 **Make the Layer available for typescript so we can run tests and the linter**
-Typescript is going to want you to import from the layer code, so we need to add the layer's TS files to the function. To do this we need to run: `npm add ../../layers/nodeJS/general --save-dev` in the function's directory.
+Typescript is going to want you to import from the layer code, so we need to add the layer's TS files to the function. To do this we need to run: `npm add ../../layers/dmptool/general --save-dev` in the function's directory.
 This will update the `package.json` like this:
 ```
   "devDependencies": {
-    "nodejs-database": "file:../../layers/nodeJS/database",
-    "nodejs-general": "file:../../layers/nodeJS/general"
+    "dmptool-database": "file:../../layers/dmptool/database",
+    "dmptool-general": "file:../../layers/dmptool/general"
   }
 ```
 
-**Added the Layer to the AWS SAM template**
+**Adding the Layer to the AWS SAM template**
 To make sure that the function is able to access the layer when deployed, you will need to update the function's `template.yaml` file so that the layers are defined. The name of the parameter should match the name of the SSM parameter that gets created/updated when you build the layer (see above).
 
 For example:
