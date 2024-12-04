@@ -1,7 +1,7 @@
 {
-  "name": "get_dmps_downloads",
+  "name": "put_dmps_uploads",
   "version": "1.0.0",
-  "description": "API Lambda function to generate presigned URLs to download DMP metadata files from S3",
+  "description": "API Lambda function to generate presigned URLs to upload files",
   "main": "index.js",
   "scripts": {
     "compile": "tsc",
