@@ -159,13 +159,17 @@ if ARGV.length >= 3
     @static_params = [
       { template_param_name: 'Env', value: ARGV[0] },
       { template_param_name: 'DebugLevel', value: log_level },
-      { template_param_name: 'LogRetentionDays', value: 14 }
+      { template_param_name: 'LogRetentionDays', value: 14 },
+
+      # CloudFormation export names. Used by nodeJS lambda functions
+      { template_param_name: 'CognitoUserPoolExportName', value: "#{@env}-UserPoolId" },
+      { template_param_name: 'S3FileExchangeBucketExportName', value: "#{@env}-S3FileExchangeBucketId" }
     ]
 
     @fetchable_params = [
-      # { template_param_name: 'CertificateArn', lookup_name: "#{@cf_export_prefix}CertificateArn" },
-      { template_param_name: 'CertificateArn', lookup_name: "uc3-dmp-hub-dev-global-cert-CertificateArn" },
+      { template_param_name: 'CertificateArn', lookup_name: "#{@cf_export_prefix}CertificateArn" },
       { template_param_name: 'CognitoUserPoolArn', lookup_name: "#{@cf_export_prefix}CognitoUserPoolArn" },
+      { template_param_name: 'UserPoolId', lookup_name: "#{@cf_export_prefix}UserPoolId" },
       { template_param_name: 'DeadLetterQueueArn', lookup_name: "#{@cf_export_prefix}DeadLetterQueueArn" },
       { template_param_name: 'DomainName', lookup_name: "#{@cf_export_prefix}DomainName" },
       { template_param_name: 'DynamoTableArn', lookup_name: "#{@cf_export_prefix}DynamoTableArn" },
@@ -180,12 +184,25 @@ if ARGV.length >= 3
       { template_param_name: 'HostedZoneId', lookup_name: "#{@cf_export_prefix}HostedZoneId" },
       { template_param_name: 'S3PrivateBucketId', lookup_name: "#{@cf_export_prefix}S3PrivateBucketId" },
       { template_param_name: 'S3CloudFrontBucketArn', lookup_name: "#{@cf_export_prefix}S3CloudFrontBucketArn" },
+      { template_param_name: 'S3FileExchangeBucketArn', lookup_name: "#{@cf_export_prefix}S3FileExchangeBucketArn" },
+      { template_param_name: 'S3FileExchangeBucketId', lookup_name: "#{@cf_export_prefix}S3FileExchangeBucketId" },
       { template_param_name: 'SnsEmailTopicArn', lookup_name: "#{@cf_export_prefix}SnsTopicEmailArn" },
-      { template_param_name: 'ApiLayerId', lookup_name: "#{@cf_export_prefix}ApiLayerId" }
+      { template_param_name: 'ApiLayerId', lookup_name: "#{@cf_export_prefix}ApiLayerId" },
+
+      # Layers for NodeJS Lambdas
+      { template_param_name: 'DMPToolCloudFormationLayerArn', lookup_name: "#{@cf_export_prefix}DMPToolCloudFormationLayerArn" },
+      { template_param_name: 'DMPToolCognitoLayerArn', lookup_name: "#{@cf_export_prefix}DMPToolCognitoLayerArn" },
+      { template_param_name: 'DMPToolDatabaseLayerArn', lookup_name: "#{@cf_export_prefix}DMPToolDatabaseLayerArn" },
+      { template_param_name: 'DMPToolLoggerLayerArn', lookup_name: "#{@cf_export_prefix}DMPToolLoggerLayerArn" },
+      { template_param_name: 'DMPToolS3LayerArn', lookup_name: "#{@cf_export_prefix}DMPToolS3LayerArn" }
     ]
   end
 
   if ARGV[1].to_s.downcase.strip == 'true'
+    # Before we build we need to run nodeJS lambda builds independently
+    puts "Build nodeJS based Lambda functions"
+    system("cd get_dmps_downloads && npm run build")
+
     # Run the SAM build
     puts 'Building SAM artifacts ...'
     system("sam build --parameter-overrides #{build_deploy_overrides}")

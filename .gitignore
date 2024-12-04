@@ -11,8 +11,16 @@
 /tmp/
 /scripts/tmp
 
+# JS artifacts
+coverage
+dist
+
 # Used by dotenv library to load environment variables.
 .env
+
+# OSX files
+.DS_Store
+.DS_store
 
 # Ignore Byebug command history file.
 .byebug_history
@@ -72,6 +80,5 @@ landing_page/build/
 swagger/node_modules/
 swagger/swagger-ui-5.17.14/dist/
 
-# Ignore OSX files
-.DS_Store
-
+# Ignore Dynamo Table dumps
+scripts/DMP-INDEX*.json

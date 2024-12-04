@@ -944,57 +944,6 @@
       }
     },
 
-    "/narratives/{narrativeId}": {
-      "servers": [
-        {
-          "description": "DMPHub development instance",
-          "url": "https://api.dmphub.uc3dev.cdlib.net"
-        }
-      ],
-      "get": {
-        "tags": [
-          "UI support operations"
-        ],
-        "operationId": "GetNarrative",
-        "description": "Download the DMP narrative document",
-        "parameters": [
-          {
-            "name": "narrativeId",
-            "in": "path",
-            "description": "The Narrative Id",
-            "example": "abcdefg12345.pdf",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The DMP narrative document",
-            "content": {
-              "application/pdf": {
-                "schema": {
-                  "type": "string",
-                  "format": "base64"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StandardErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-
     "/narratives": {
       "servers": [
         {

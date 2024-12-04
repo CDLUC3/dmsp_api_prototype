@@ -1,0 +1,15 @@
+{
+  "name": "dmptool-ssm",
+  "version": "1.0.0",
+  "description": "General helper functions for interacting with AWS SSM Parameter Store",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "author": "briri",
+  "license": "MIT",
+  "devDependencies": {
+    "@aws-sdk/client-ssm": "^3.699.0",
+    "typescript": "^5.7.2"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "dmptool-general",
+  "version": "1.0.0",
+  "description": "General helper functions for NodeJS Lambdas",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "author": "briri",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.145",
+    "typescript": "^5.7.2"
+  }
+}
