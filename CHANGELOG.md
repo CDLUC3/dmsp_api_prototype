@@ -2,7 +2,8 @@
 - DmpExtractor nodeJS Lambda function
 - General and Database Lambda Layers for nodeJS
 - Added README to the `lambda/layers/dmptool` dir explaining how nodeJS layers work
-- New API Lambda, `api/get_downloads_dmps`, that generates presigned URLs to fetch DMP metadata in jsonl format
+- New API Lambda, `lambda/api/get_dmps_downloads`, that generates presigned URLs to fetch DMP metadata in jsonl format
+- New API Lambda, `lambda/api/put_dmps_uploads`, that generates presigned URLs to put files into the S3 bucket
 
 ## v1.4.3
 ### Added
