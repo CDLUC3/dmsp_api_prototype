@@ -109,7 +109,7 @@ describe('handler', () => {
     const response = await handler(mockEvent, mockContext, undefined);
 
     expect(response.statusCode).toEqual(403);
-    const msg = 'Unauthorized: Missing user identiity or scope';
+    const msg = 'Unauthorized: Missing user identity or scope';
     expect(JSON.parse(response.body)).toEqual({ message: msg });
   });
 
@@ -124,16 +124,17 @@ describe('handler', () => {
   });
 
   it('returns a 200 with the pre-signed URLs', async () => {
-    const expected = [
-      { fileName: 'testOne.json', url: 'http://example.com/test/1' },
-      { fileName: 'testTwo.json', url: 'http://example.com/test/2' },
-    ];
+    const expected = {}
+    expected['testOne.json'] = 'http://example.com/test/1';
+    expected['testTwo.json'] = 'http://example.com/test/2';
     mockGetExport.mockResolvedValue('Test');
     mockVerifyAPIGatewayLambdaAuthorizer.mockResolvedValue({ name: 'Tester' });
-    mockListObjects.mockResolvedValue([{ key: 'testOne' }, { key: 'testTwo' }]);
-    mockGetPresignedURL.mockResolvedValueOnce(expected[0]);
-    mockGetPresignedURL.mockResolvedValueOnce(expected[1]);
+    mockListObjects.mockResolvedValue([{ key: 'testOne.json' }, { key: 'testTwo.json' }]);
+    mockGetPresignedURL.mockResolvedValueOnce(expected['testOne.json']);
+    mockGetPresignedURL.mockResolvedValueOnce(expected['testTwo.json']);
     const response = await handler(mockEvent, mockContext, undefined);
+
+console.log(response.body)
 
     expect(response.statusCode).toEqual(200);
     expect(JSON.parse(response.body)).toEqual({ DMPMetadataFiles: expected });

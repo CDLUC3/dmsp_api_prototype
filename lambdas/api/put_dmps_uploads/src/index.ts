@@ -5,7 +5,7 @@ import { APIGatewayEvent, Context, Handler } from 'aws-lambda';
 import { getExport } from 'dmptool-cloudformation';
 import { verifyAPIGatewayLambdaAuthorizer } from 'dmptool-cognito';
 import { initializeLogger, LogLevel } from 'dmptool-logger';
-import { getPresignedURL, listObjects } from 'dmptool-s3';
+import { getPresignedURL } from 'dmptool-s3';
 
 const LOG_LEVEL = process.env.LOG_LEVEL?.toLowerCase() || 'info';
 const COGNITO_USER_POOL_EXP_NAME = process.env.COGNITO_USER_POOL_EXP_NAME;
