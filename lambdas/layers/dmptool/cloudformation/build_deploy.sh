@@ -22,12 +22,12 @@ rm -rf dist/node_modules/typescript
 echo "creating ZIP artifact ..."
 zip -r "dmptool-${ZIP_NAME_SUFFIX}-${1}.zip" dist
 
-if [ "$ARGV[0]" != "dev" ]; then
+# if [ "$ARGV[0]" != "dev" ]; then
   # We need to assume the CloudFormation role when running in the stg/prd env
-  CF_ROLE=$(aws cloudformation list-exports --query "Exports[?Name=='uc3-prd-ops-cfn-service-role'].Value" --output text)
-  echo "Assuming CloudFormation role"
-  aws sts assume-role --role-arn ${CF_ROLE} --role-session-name uc3-prd-ops-cfn-service-role
-fi
+  # CF_ROLE=$(aws cloudformation list-exports --query "Exports[?Name=='uc3-prd-ops-cfn-service-role'].Value" --output text)
+  # echo "Assuming CloudFormation role"
+  # aws sts assume-role --role-arn ${CF_ROLE} --role-session-name uc3-prd-ops-cfn-service-role
+# fi
 
 # Publish the layer
 echo "Publishing ZIP archive to S3 ..."
