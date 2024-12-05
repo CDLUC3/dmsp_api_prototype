@@ -732,7 +732,7 @@ Resources:
       # Explicit retention time
       RetentionInDays: !Ref LogRetentionDays
 
-  # Get Citations for the DOIs
+  # Get DMP metadata files
   GetDownloadsDmpsFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
@@ -745,7 +745,6 @@ Resources:
       Layers:
         - !Ref DMPToolCloudFormationLayerArn
         - !Ref DMPToolCognitoLayerArn
-        - !Ref DMPToolDatabaseLayerArn
         - !Ref DMPToolLoggerLayerArn
         - !Ref DMPToolS3LayerArn
       Policies:
@@ -783,26 +782,7 @@ Resources:
       BuildProperties:
         Minify: true
         Target: 'es2020'
-        Sourcemap: true
-
-      # BuildMethod: 'esbuild'
-      # BuildProperties:
-      #   Minify: false
-      #   Target: 'es2020'
-      #   Sourcemap: true
-      #   Format: 'esm'
-      #   OutExtension:
-      #     - .js=.mjs
-      #   EntryPoints:
-      #     - 'src/index.ts'
-      #   # Exclude any packages that are either already present in the Lambda env or are provided by Layers
-      #   External:
-      #     - '@aws-sdk/client-dynamodb'
-      #     - '@aws-sdk/client-s3'
-      #     - '@aws-sdk/s3-request-presigner'
-      #     # - 'dmptool-database'
-      #     # - 'dmptool-logger'
-
+        Sourcemap: false
 
   GetDownloadsDmps:
     Type: 'AWS::Logs::LogGroup'
@@ -1030,6 +1010,65 @@ Resources:
       # Explicit retention time
       RetentionInDays: !Ref LogRetentionDays
 
+  # Get DMP metadata files
+  PutUploadsDmpsFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      CodeUri: 'put_dmps_uploads/dist/'
+      Handler: 'index.handler'
+      Runtime: 'nodejs20.x'
+      Timeout: 30
+      Architectures:
+        - 'arm64'
+      Layers:
+        - !Ref DMPToolCloudFormationLayerArn
+        - !Ref DMPToolCognitoLayerArn
+        - !Ref DMPToolLoggerLayerArn
+        - !Ref DMPToolS3LayerArn
+      Policies:
+        - !Ref S3FileExchangeBucketPolicy
+        - !Ref CognitoPolicy
+        - !Ref CloudFormationPolicy
+      DeadLetterQueue:
+        Type: 'SQS'
+        TargetArn: !Ref DeadLetterQueueArn
+      Environment:
+        Variables:
+          LOG_LEVEL: 'debug'
+          COGNITO_USER_POOL_EXP_NAME: !Ref CognitoUserPoolExportName
+          S3_BUCKET_EXP_NAME: !Ref S3FileExchangeBucketExportName
+          CORS_ORIGIN: !If
+            - IsDev
+            - "*"
+            - !Sub "https://${DomainName}"
+      Events:
+        PutUploadsDmps:
+          # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Type: 'Api'
+          Properties:
+            RestApiId: !Ref DmpHubRestApi
+            Path: '/dmps/uploads'
+            Method: 'put'
+            RequestParameters:
+              - 'method.request.header.Authorization'
+            Auth:
+              Authorizer: 'DmpHubCognitoAuthorizer'
+              AuthorizationScopes:
+                - !Sub 'https://auth.${DomainName}/${Env}.data-transfer'
+    Metadata:
+      BuildMethod: 'esbuild'
+      BuildProperties:
+        Minify: true
+        Target: 'es2020'
+        Sourcemap: false
+
+  PutUploadsDmps:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${PutUploadsDmpsFunction}"
+      # Explicit retention time
+      RetentionInDays: !Ref LogRetentionDays
+
   ValidateDmpFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
@@ -1169,6 +1208,11 @@ Outputs:
     Value: !GetAtt PostCitationsFunction.Arn
   PostNarrativeFunctionArn:
     Value: !GetAtt PostNarrativesFunction.Arn
+
+  GetDownloadsDmpsFunctionArn:
+    Value: !GetAtt GetDownloadsDmpsFunction.Arn
+  PutUploadsDmpsFunctionArn:
+    Value: !GetAtt PutUploadsDmpsFunction.Arn
 
   ApiBaseUrl:
     Value: !Sub "https://${DmpHubRestApi}.execute-api.${AWS::Region}.amazonaws.com/v0/"

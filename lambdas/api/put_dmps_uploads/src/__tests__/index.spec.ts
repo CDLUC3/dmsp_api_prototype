@@ -1,6 +1,5 @@
 const mockGetExport = jest.fn();
 const mockVerifyAPIGatewayLambdaAuthorizer = jest.fn();
-const mockListObjects = jest.fn();
 const mockGetPresignedURL = jest.fn();
 
 jest.mock('dmptool-cloudformation', () => {
@@ -24,7 +23,6 @@ jest.mock('dmptool-cognito', () => {
 jest.mock('dmptool-s3', () => {
   return {
     __esModule: true,
-    listObjects: mockListObjects,
     getPresignedURL: mockGetPresignedURL,
   }
 });
@@ -63,6 +61,7 @@ beforeEach(() => {
   mockScope = 'dev.data-transfer';
 
   mockEvent = {
+    body: `{"fileName":"${casual.first_name}"}`,
     requestContext: {
       authorizer: {
         claims: {
@@ -90,7 +89,7 @@ describe('handler', () => {
     const response = await handler(mockEvent, mockContext, undefined);
 
     expect(response.statusCode).toEqual(500);
-    const msg = 'Unable to generate download URLs for your DMP metadata at this time';
+    const msg = 'Unable to generate upload URL for your file at this time';
     expect(JSON.parse(response.body)).toEqual({ message: msg });
   });
 
@@ -99,7 +98,7 @@ describe('handler', () => {
     const response = await handler(mockEvent, mockContext, undefined);
 
     expect(response.statusCode).toEqual(500);
-    const msg = 'Unable to generate download URLs for your DMP metadata at this time - configuration issue';
+    const msg = 'Unable to generate upload URL for your file at this time - configuration issue';
     expect(JSON.parse(response.body)).toEqual({ message: msg });
   });
 
@@ -113,27 +112,27 @@ describe('handler', () => {
     expect(JSON.parse(response.body)).toEqual({ message: msg });
   });
 
-  it('returns a 404 if there are no downloadable files', async () => {
+  it('returns a 400 if there is no fileName specified', async () => {
     mockGetExport.mockResolvedValue('Test');
     mockVerifyAPIGatewayLambdaAuthorizer.mockResolvedValue({ name: 'Tester' });
-    mockListObjects.mockResolvedValue(undefined);
+    mockEvent.body = null;
     const response = await handler(mockEvent, mockContext, undefined);
 
-    expect(response.statusCode).toEqual(404);
-    expect(JSON.parse(response.body)).toEqual({ message: 'No files found' });
+    expect(response.statusCode).toEqual(400);
+    const msg = 'You must specify a file name in the body of your request (e.g. `{ "fileName": "test.json" }`)'
+    expect(JSON.parse(response.body)).toEqual({ message: msg });
   });
 
-  it('returns a 200 with the pre-signed URLs', async () => {
-    const expected = {}
-    expected['testOne.json'] = 'http://example.com/test/1';
-    expected['testTwo.json'] = 'http://example.com/test/2';
+  it('returns a 200 with the pre-signed URL', async () => {
+    const mockUrl = 'http://example.com/test/1';
     mockGetExport.mockResolvedValue('Test');
     mockVerifyAPIGatewayLambdaAuthorizer.mockResolvedValue({ name: 'Tester' });
-    mockListObjects.mockResolvedValue([{ key: 'testOne.json' }, { key: 'testTwo.json' }]);
-    mockGetPresignedURL.mockResolvedValueOnce(expected['testOne.json']);
-    mockGetPresignedURL.mockResolvedValueOnce(expected['testTwo.json']);
+    mockGetPresignedURL.mockResolvedValueOnce(mockUrl);
     const response = await handler(mockEvent, mockContext, undefined);
+
     expect(response.statusCode).toEqual(200);
-    expect(JSON.parse(response.body)).toEqual({ DMPMetadataFiles: expected });
+    const expected = {};
+    expected[`Tester-${JSON.parse(mockEvent.body).fileName.toLowerCase()}`] = mockUrl;
+    expect(JSON.parse(response.body)).toEqual({ UploadDestination: expected });
   });
 });

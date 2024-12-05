@@ -202,6 +202,7 @@ if ARGV.length >= 3
     # Before we build we need to run nodeJS lambda builds independently
     puts "Build nodeJS based Lambda functions"
     system("cd get_dmps_downloads && npm run build")
+    system("cd put_dmps_uploads && npm run build")
 
     # Run the SAM build
     puts 'Building SAM artifacts ...'

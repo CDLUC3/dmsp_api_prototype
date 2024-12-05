@@ -5,22 +5,23 @@ import { APIGatewayEvent, Context, Handler } from 'aws-lambda';
 import { getExport } from 'dmptool-cloudformation';
 import { verifyAPIGatewayLambdaAuthorizer } from 'dmptool-cognito';
 import { initializeLogger, LogLevel } from 'dmptool-logger';
-import { getPresignedURL, listObjects } from 'dmptool-s3';
+import { getPresignedURL } from 'dmptool-s3';
 
 const LOG_LEVEL = process.env.LOG_LEVEL?.toLowerCase() || 'info';
 const COGNITO_USER_POOL_EXP_NAME = process.env.COGNITO_USER_POOL_EXP_NAME;
 const S3_BUCKET_EXP_NAME = process.env.S3_BUCKET_EXP_NAME;
 
 const MSG_UNAUTHORIZED = 'Unauthorized: Missing user identity or scope';
-const MSG_FATAL = 'Unable to generate download URLs for your DMP metadata at this time';
+const MSG_FATAL = 'Unable to generate upload URL for your file at this time';
+const MSG_BAD_INPUT = 'You must specify a file name in the body of your request (e.g. `{ "fileName": "test.json" }`)';
 
 // Initialize the logger
-const logger = initializeLogger('APIGetDownloadsDmps', LogLevel[LOG_LEVEL]);
+const logger = initializeLogger('APIPutUploadsDmps', LogLevel[LOG_LEVEL]);
 
 // Setup the LambdaRequestTracker for the logger
 const withRequest = lambdaRequestTracker();
 
-// Lambda function to fetch presigned URLs for the DMP download files
+// Lambda function to create presigned URLs for the file uploads
 export const handler: Handler = async (event: APIGatewayEvent, context: Context) => {
   try {
     // Initialize the logger by setting up automatic request tracing.
@@ -28,6 +29,11 @@ export const handler: Handler = async (event: APIGatewayEvent, context: Context)
 
     const bucketName = await getExport(S3_BUCKET_EXP_NAME);
     const userPoolId = await getExport(COGNITO_USER_POOL_EXP_NAME);
+    let fileName: string = JSON.parse(event.body || "{}").fileName;
+
+    if (!fileName || fileName.trim() === '') {
+      return { statusCode: 400, body: JSON.stringify({ message: MSG_BAD_INPUT }) };
+    }
 
     if (bucketName && userPoolId) {
       // Validate the caller by examining the Authorizor and ensuring it has the `data-transfer` scope
@@ -38,27 +44,19 @@ export const handler: Handler = async (event: APIGatewayEvent, context: Context)
       }
       logger.debug(undefined, `Generating presignedURLs for ${client.name}`);
 
-      // List and filter S3 objects by `[clientName]-dmps-` prefix
-      const presignedUrls = {};
-      const s3Objects = await listObjects(bucketName, `${client.name}-dmps`);
+      // Ensure that the filename is prefixed with the client name `[clientName]-`
+      fileName = fileName.toLowerCase();
+      fileName = fileName.startsWith(`${client.name}-`) ? fileName : `${client.name}-${fileName}`;
 
-      // If there are no files available for download then return a 404
-      if (!s3Objects || !Array.isArray(s3Objects)) {
-        logger.info(undefined, 'No DMP metadata files available');
-        return { statusCode: 404, body: JSON.stringify({ message: 'No files found'}) };
-      }
-      logger.debug({ s3Objects }, `Detected ${s3Objects.length} DMP metadata files`);
+      // Generate the pre-signed URL
+      const presignedURL = {};
+      presignedURL[fileName] = await getPresignedURL(bucketName, fileName, true);
+      logger.info({ fileName, presignedURL }, 'Generated a presigned upload URL');
 
-      // Generate a presigned URL for each file in the S3 bucket
-      for (const obj of s3Objects) {
-        presignedUrls[obj.key] = await getPresignedURL(bucketName, obj.key);
-      }
-      logger.info({ presignedUrls }, `Generated ${Object.keys(presignedUrls).length} presigned URLs`);
-
-      // Success, return the pre-signed URL(s)
+      // Success, return the pre-signed URL
       return {
         statusCode: 200,
-        body: JSON.stringify({ DMPMetadataFiles: presignedUrls }),
+        body: JSON.stringify({ UploadDestination: presignedURL }),
       };
     }
 

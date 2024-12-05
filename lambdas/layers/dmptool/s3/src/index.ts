@@ -73,7 +73,6 @@ export const getPresignedURL = async (
   const presignerClient = new S3Client({
     region: REGION,
     forcePathStyle: false,
-    // endpoint: `https://${bucket}.s3.${REGION}.amazonaws.com`,
   });
 
 console.log(`REGION: ${REGION}, BUCKET: ${bucket}, KEY: ${key}`);
