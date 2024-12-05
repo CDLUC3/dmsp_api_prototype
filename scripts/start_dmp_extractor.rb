@@ -3,7 +3,7 @@ require 'aws-sdk-eventbridge'
 
 if ARGV.length >= 2
   env = ARGV[0]
-  bus_arn = ARGV[2]
+  bus_arn = ARGV[1]
 
   bridge = Aws::EventBridge::Client.new(region: ENV.fetch('AWS_REGION', 'us-west-2'))
   message = {
