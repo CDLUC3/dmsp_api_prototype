@@ -133,9 +133,6 @@ describe('handler', () => {
     mockGetPresignedURL.mockResolvedValueOnce(expected['testOne.json']);
     mockGetPresignedURL.mockResolvedValueOnce(expected['testTwo.json']);
     const response = await handler(mockEvent, mockContext, undefined);
-
-console.log(response.body)
-
     expect(response.statusCode).toEqual(200);
     expect(JSON.parse(response.body)).toEqual({ DMPMetadataFiles: expected });
   });

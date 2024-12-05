@@ -1014,8 +1014,7 @@ Resources:
   PutUploadsDmpsFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
-      # CodeUri: 'put_dmps_uploads/dist/'
-      CodeUri: 'put_dmps_uploads/src/'
+      CodeUri: 'put_dmps_uploads/dist/'
       Handler: 'index.handler'
       Runtime: 'nodejs20.x'
       Timeout: 30
