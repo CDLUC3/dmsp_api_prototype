@@ -23,6 +23,10 @@ Parameters:
     Type: 'String'
     Default: 'dev'
 
+  NodeEnv:
+    Type: 'String'
+    Default: 'development'
+
   DebugLevel:
     Type: 'String'
     Default: 'error'
@@ -74,12 +78,6 @@ Parameters:
     Type: 'String'
 
   DynamoIndexTableName:
-    Type: 'String'
-
-  DynamoExternalDataTableName:
-    Type: 'String'
-
-  ApiRoleArn:
     Type: 'String'
 
   DynamoPolicyArn:
@@ -341,95 +339,6 @@ Resources:
   # API Lambdas
   #  See: https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-property-function-api.html
   # ----------------------------------------------------
-
-  # TEMPORARY LAMBDAS THAT WILL BE REPLACED BY DIRECT CALLS TO OPENSEARCH
-  GetAffiliationsFunction:
-    Type: 'AWS::Serverless::Function'
-    Properties:
-      CodeUri: 'get_affiliations/dist/index/'
-      Handler: 'index.handler'
-      Runtime: 'nodejs20.x'
-      Timeout: 5
-      Architectures:
-        - 'x86_64'
-      Role: !Ref ApiRoleArn
-      DeadLetterQueue:
-        Type: 'SQS'
-        TargetArn: !Ref DeadLetterQueueArn
-      Environment:
-        Variables:
-          LAMBDA_ENV: !Ref Env
-          LOG_LEVEL: !Ref DebugLevel # 'debug'
-          SNS_FATAL_ERROR_TOPIC: !Ref SnsEmailTopicArn
-          COGNITO_USER_POOL_ID: !Ref CognitoUserPoolArn
-          DYNAMO_INDEX_TABLE: !Ref DynamoIndexTableName
-          CORS_ORIGIN: !If
-            - IsDev
-            - "*"
-            - !Sub "https://${DomainName}"
-      Events:
-        GetAffiliations:
-          Type: 'Api'
-          Properties:
-            RestApiId: !Ref DmpHubRestApi
-            Path: '/affiliations'
-            Method: 'get'
-            Auth:
-              Authorizer: 'DmpHubCognitoAuthorizer'
-              AuthorizationScopes:
-                - !Sub 'https://auth.${DomainName}/${Env}.read'
-
-  GetAffiliationsLogGroup:
-    Type: 'AWS::Logs::LogGroup'
-    Properties:
-      LogGroupName: !Sub "/aws/lambda/${GetAffiliationsFunction}"
-      # Explicit retention time
-      RetentionInDays: !Ref LogRetentionDays
-
-  GetAffiliationFunction:
-    Type: 'AWS::Serverless::Function'
-    Properties:
-      CodeUri: 'get_affiliation/dist/index/'
-      Handler: 'index.handler'
-      Runtime: 'nodejs20.x'
-      Timeout: 5
-      Architectures:
-        - 'x86_64'
-      Layers:
-        - !Ref ApiLayerId
-      Role: !Ref ApiRoleArn
-      DeadLetterQueue:
-        Type: 'SQS'
-        TargetArn: !Ref DeadLetterQueueArn
-      Environment:
-        Variables:
-          LAMBDA_ENV: !Ref Env
-          LOG_LEVEL: !Ref DebugLevel # 'debug'
-          DMP_ID_BASE_URL: 'doi.org'
-          DYNAMO_EXTERNAL_DATA_TABLE: !Ref DynamoExternalDataTableName
-          SNS_FATAL_ERROR_TOPIC: !Ref SnsEmailTopicArn
-          CORS_ORIGIN: !If
-            - IsDev
-            - "*"
-            - !Sub "https://${DomainName}"
-      Events:
-        GetAffiliation:
-          # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
-          Type: 'Api'
-          Properties:
-            RestApiId: !Ref DmpHubRestApi
-            Path: '/affiliations/{affiliation_id+}'
-            Method: 'get'
-            Auth:
-              Authorizer: 'NONE'
-
-  GetAffiliationLogGroup:
-    Type: 'AWS::Logs::LogGroup'
-    Properties:
-      LogGroupName: !Sub "/aws/lambda/${GetAffiliationFunction}"
-      # Explicit retention time
-      RetentionInDays: !Ref LogRetentionDays
-
 
   # Tombstone a DMP
   DeleteDmpFunction:
@@ -757,6 +666,7 @@ Resources:
       Environment:
         Variables:
           LOG_LEVEL: 'debug'
+          NODE_ENV: !Ref NodeEnv
           COGNITO_USER_POOL_EXP_NAME: !Ref CognitoUserPoolExportName
           S3_BUCKET_EXP_NAME: !Ref S3FileExchangeBucketExportName
           CORS_ORIGIN: !If
@@ -1035,6 +945,7 @@ Resources:
       Environment:
         Variables:
           LOG_LEVEL: 'debug'
+          NODE_ENV: !Ref NodeEnv
           COGNITO_USER_POOL_EXP_NAME: !Ref CognitoUserPoolExportName
           S3_BUCKET_EXP_NAME: !Ref S3FileExchangeBucketExportName
           CORS_ORIGIN: !If

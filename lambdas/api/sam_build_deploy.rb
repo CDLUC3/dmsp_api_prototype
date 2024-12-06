@@ -154,10 +154,12 @@ if ARGV.length >= 3
 
   if ARGV[1].to_s.downcase.strip == 'true' || ARGV[2].to_s.downcase.strip == 'true'
     log_level = ARGV[3].nil? ? 'error' : ARGV[3]
+    node_env = ARGV[0] == 'prd' ? 'production' : (ARGV[0] == 'stg' ? 'staging' : 'development');
 
     # Define the parameters required by the template.yaml
     @static_params = [
       { template_param_name: 'Env', value: ARGV[0] },
+      { template_param_name: 'NodeEnv', value: node_env },
       { template_param_name: 'DebugLevel', value: log_level },
       { template_param_name: 'LogRetentionDays', value: 14 },
 
@@ -175,11 +177,7 @@ if ARGV.length >= 3
       { template_param_name: 'DynamoTableArn', lookup_name: "#{@cf_export_prefix}DynamoTableArn" },
       { template_param_name: 'DynamoTableName', lookup_name: "#{@cf_export_prefix}DynamoTableName" },
       { template_param_name: 'DynamoIndexTableName', lookup_name: "#{@cf_export_prefix}DynamoIndexTableName" },
-      { template_param_name: 'DynamoExternalDataTableName', lookup_name: "#{@cf_export_prefix}ExternalDataDynamoTableName" },
-      { template_param_name: 'ApiRoleArn', lookup_name: "#{@cf_export_prefix}ApiRoleArn" },
       { template_param_name: 'DynamoPolicyArn', lookup_name: "#{ARGV[0]}-DynamoPolicyArn" },
-      # { template_param_name: 'ResourcesDynamoTableArn', lookup_name: "#{@cf_export_prefix}ResourcesDynamoTableArn" },
-      # { template_param_name: 'ResourcesDynamoTableName', lookup_name: "#{@cf_export_prefix}ResourcesDynamoTableName" },
       { template_param_name: 'EventBusArn', lookup_name: "#{@cf_export_prefix}EventBusArn" },
       { template_param_name: 'HostedZoneId', lookup_name: "#{@cf_export_prefix}HostedZoneId" },
       { template_param_name: 'S3PrivateBucketId', lookup_name: "#{@cf_export_prefix}S3PrivateBucketId" },
