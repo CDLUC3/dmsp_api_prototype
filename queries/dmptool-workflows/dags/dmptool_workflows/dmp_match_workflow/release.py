@@ -1,6 +1,7 @@
+import os
+
 import pendulum
 from observatory_platform.airflow.release import SnapshotRelease
-from observatory_platform.airflow.workflow import CloudWorkspace
 
 
 class DMPToolMatchRelease(SnapshotRelease):
@@ -16,6 +17,18 @@ class DMPToolMatchRelease(SnapshotRelease):
             run_id=run_id,
             snapshot_date=snapshot_date,
         )
+
+    @property
+    def dmps_folder(self):
+        path = os.path.join(self.release_folder, "dmps")
+        os.makedirs(path, exist_ok=True)
+        return path
+
+    @property
+    def export_folder(self):
+        path = os.path.join(self.release_folder, "export")
+        os.makedirs(path, exist_ok=True)
+        return path
 
     @staticmethod
     def from_dict(dict_: dict):

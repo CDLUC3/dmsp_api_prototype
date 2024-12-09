@@ -3,6 +3,8 @@ import os
 import observatory_platform.google.bigquery as bq
 import pendulum
 
+DATE_FORMAT = "%Y-%m-%d"
+
 
 class DMPToolDataset:
     def __init__(self, project_id: str, dataset_id: str, release_date: pendulum.Date):
@@ -82,10 +84,10 @@ class MatchDataset:
 
 
 def make_destination_uri(bucket_name: str, dag_id: str, release_date: pendulum.Date, source: str) -> str:
-    date_str = release_date.strftime("%Y%m%d")
-    return f"gs://{bucket_name}/{dag_id}_{date_str}/{source}-*.jsonl.gz"
+    prefix = make_prefix(dag_id, release_date)
+    return f"gs://{bucket_name}/{prefix}/coki-{source}_{release_date.strftime(DATE_FORMAT)}_*.jsonl.gz"
 
 
 def make_prefix(dag_id: str, release_date: pendulum.Date) -> str:
-    date_str = release_date.strftime("%Y%m%d")
+    date_str = release_date.strftime(DATE_FORMAT)
     return f"{dag_id}_{date_str}"

@@ -8,11 +8,13 @@ from airflow.decorators import dag, task, task_group
 from observatory_platform.airflow.airflow import on_failure_callback
 from observatory_platform.airflow.tasks import check_dependencies
 from observatory_platform.airflow.workflow import CloudWorkspace
+from observatory_platform.dataset_api import DatasetAPI
 
 import dmptool_workflows.dmp_match_workflow.queries as queries
 import dmptool_workflows.dmp_match_workflow.tasks as tasks
 from dmptool_workflows.dmp_match_workflow.academic_observatory_dataset import AcademicObservatoryDataset
-from dmptool_workflows.dmp_match_workflow.dmptool_dataset import DMPToolDataset
+from dmptool_workflows.dmp_match_workflow.dmptool_api import DMPToolAPI, get_dmptool_api_creds
+from dmptool_workflows.dmp_match_workflow.dmptool_dataset import DMPToolDataset, make_prefix
 from dmptool_workflows.dmp_match_workflow.release import DMPToolMatchRelease
 
 
@@ -22,8 +24,10 @@ class DagParams:
         dag_id: str,
         cloud_workspace: CloudWorkspace,
         bq_dataset_id: str = "dmptool",
+        api_bq_dataset_id: str = "dataset_api",
         bq_dataset_expiration_days: int = 31,
-        aws_cognito_conn_id: str = "dmptool_aws_cognito",
+        dmptool_api_env: str = "prd",
+        dmptool_api_conn_id: str = "dmptool_api_credentials",
         vertex_ai_model_id: str = "text-multilingual-embedding-002",
         weighted_count_threshold: int = 3,
         max_matches: int = 100,
@@ -43,7 +47,7 @@ class DagParams:
             cloud_workspace: the Google Cloud project settings.
             bq_dataset_id: the BigQuery dataset ID where this workflow will save data.
             bq_dataset_expiration_days: expiration days for the tables in the BigQuery dataset.
-            aws_cognito_conn_id: the AWS Cognito Client Apache Airflow connection ID.
+            dmptool_api_conn_id: the DMPTool API credentials Apache Airflow connection ID.
             vertex_ai_model_id: the ID of Vertex AI model that will be used to generate embeddings. Use
                 text-multilingual-embedding-002 (default) for multi-language support or text-embedding-004 for English
                 (as of Q4 2024). See here for available models: https://cloud.google.com/vertex-ai/generative-ai/docs/embeddings/get-text-embeddings.
@@ -63,7 +67,9 @@ class DagParams:
         self.cloud_workspace = cloud_workspace
         self.bq_dataset_id = bq_dataset_id
         self.bq_dataset_expiration_days = bq_dataset_expiration_days
-        self.aws_cognito_conn_id = aws_cognito_conn_id
+        self.api_bq_dataset_id = api_bq_dataset_id
+        self.dmptool_api_env = dmptool_api_env
+        self.dmptool_api_conn_id = dmptool_api_conn_id
         self.vertex_ai_model_id = vertex_ai_model_id
         self.weighted_count_threshold = weighted_count_threshold
         self.max_matches = max_matches
@@ -108,15 +114,21 @@ def create_dag(dag_params: DagParams) -> DAG:
         def fetch_dmps(**context) -> dict:
             """Fetch DMPs table, load as a BigQuery table and construct a release object"""
 
-            release_date = tasks.fetch_dmps(
+            client_id, client_secret = get_dmptool_api_creds(dag_params.dmptool_api_conn_id)
+            dmptool_api = DMPToolAPI(env=dag_params.dmptool_api_env, client_id=client_id, client_secret=client_secret)
+            dataset_api = DatasetAPI(
+                bq_project_id=dag_params.cloud_workspace.output_project_id, bq_dataset_id=dag_params.api_bq_dataset_id
+            )
+            release = tasks.fetch_dmps(
+                dmptool_api=dmptool_api,
+                dataset_api=dataset_api,
+                dag_id=dag_params.dag_id,
+                run_id=context["run_id"],
+                bucket_name=dag_params.cloud_workspace.download_bucket,
                 project_id=dag_params.cloud_workspace.output_project_id,
                 bq_dataset_id=dag_params.bq_dataset_id,
             )
-            return DMPToolMatchRelease(
-                dag_id=dag_params.dag_id,
-                run_id=context["run_id"],
-                snapshot_date=release_date,
-            ).to_dict()
+            return release.to_dict()
 
         @task_group()
         def create_dmp_matches(release: dict, **context) -> None:
@@ -308,7 +320,7 @@ def create_dag(dag_params: DagParams) -> DAG:
                 project_id=dag_params.cloud_workspace.output_project_id,
                 dataset_id=dag_params.bq_dataset_id,
                 release_date=release.snapshot_date,
-                bucket_name=dag_params.cloud_workspace.transform_bucket,
+                bucket_name=dag_params.cloud_workspace.download_bucket,
             )
 
         @task
@@ -316,21 +328,34 @@ def create_dag(dag_params: DagParams) -> DAG:
             """Send match files to DMPTool"""
 
             release = DMPToolMatchRelease.from_dict(release)
+            client_id, client_secret = get_dmptool_api_creds(dag_params.dmptool_api_conn_id)
+            dmptool_api = DMPToolAPI(env=dag_params.dmptool_api_env, client_id=client_id, client_secret=client_secret)
             tasks.submit_matches(
-                dag_id=dag_params.dag_id,
-                project_id=dag_params.cloud_workspace.output_project_id,
-                dataset_id=dag_params.bq_dataset_id,
-                release_date=release.snapshot_date,
-                bucket_name=dag_params.cloud_workspace.transform_bucket,
-                download_folder=release.transform_folder,
+                dmptool_api=dmptool_api,
+                bucket_name=dag_params.cloud_workspace.download_bucket,
+                bucket_prefix=make_prefix(dag_params.dag_id, release.snapshot_date),
+                export_folder=release.export_folder,
             )
 
-        check_task = check_dependencies(airflow_vars=[], airflow_conns=[])  # dag_params.aws_cognito_conn_id
+        @task
+        def add_dataset_release(release: dict, **context):
+            """"""
+            release = DMPToolMatchRelease.from_dict(release)
+            tasks.add_dataset_release(
+                dag_id=dag_params.dag_id,
+                run_id=context["run_id"],
+                snapshot_date=release.snapshot_date,
+                bq_project_id=dag_params.cloud_workspace.output_project_id,
+                api_bq_dataset_id=dag_params.api_bq_dataset_id,
+            )
+
+        check_task = check_dependencies(airflow_vars=[], airflow_conns=[dag_params.dmptool_api_conn_id])
         create_bq_dataset_task = create_bq_dataset()
         xcom_release = fetch_dmps()
         create_dmp_matches_task = create_dmp_matches(xcom_release)
         export_matches_task = export_matches(xcom_release)
         submit_matches_task = submit_matches(xcom_release)
+        add_dataset_release_task = add_dataset_release(xcom_release)
 
         (
             check_task
@@ -339,6 +364,7 @@ def create_dag(dag_params: DagParams) -> DAG:
             >> create_dmp_matches_task
             >> export_matches_task
             >> submit_matches_task
+            >> add_dataset_release_task
         )
 
     return dmp_match_workflow()

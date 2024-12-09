@@ -1,15 +1,20 @@
 import logging
+import os
+import urllib.request
 
 import observatory_platform.google.bigquery as bq
 import observatory_platform.google.gcs as gcs
 import pendulum
 from airflow import AirflowException
 from google.cloud import bigquery, storage
-from observatory_platform.files import load_jsonl
+from google.cloud.bigquery import SourceFormat
+from observatory_platform.dataset_api import DatasetAPI, DatasetRelease
+from observatory_platform.files import list_files
 
 from dmptool_workflows.config import project_path
 from dmptool_workflows.dmp_match_workflow.academic_observatory_dataset import AcademicObservatoryDataset
-from dmptool_workflows.dmp_match_workflow.dmptool_dataset import DMPDataset, DMPToolDataset, make_prefix
+from dmptool_workflows.dmp_match_workflow.dmptool_api import DMPToolAPI
+from dmptool_workflows.dmp_match_workflow.dmptool_dataset import DMPDataset, DMPToolDataset
 from dmptool_workflows.dmp_match_workflow.queries import (
     create_content_table,
     create_dmps_content_table,
@@ -23,6 +28,9 @@ from dmptool_workflows.dmp_match_workflow.queries import (
     normalise_openalex,
     run_sql_template,
 )
+from dmptool_workflows.dmp_match_workflow.release import DMPToolMatchRelease
+
+DATASET_API_ENTITY_ID = "dmp_match"
 
 
 def create_bq_dataset(
@@ -49,24 +57,58 @@ def create_bq_dataset(
 
 
 def fetch_dmps(
-    *, project_id: str, bq_dataset_id: str, bq_client: bigquery.Client = None, **context
-) -> pendulum.DateTime:
-    # Fetch mock data
-    # TODO: fetch with Brian's API
-    path = project_path("dmp_match_workflow", "data", "dmps20241007.jsonl")
-    data = load_jsonl(path)
-    release_date = pendulum.datetime(2024, 10, 7)
+    *,
+    dmptool_api: DMPToolAPI,
+    dataset_api: DatasetAPI,
+    dag_id: str,
+    run_id: str,
+    bucket_name: str,
+    project_id: str,
+    bq_dataset_id: str,
+    entity_id: str = DATASET_API_ENTITY_ID,
+    bq_client: bigquery.Client = None,
+    **context,
+) -> DMPToolMatchRelease:
+    # Get release date and list of latest DMP files to download
+    latest_files, release_date = dmptool_api.fetch_dmps()
+
+    # Get previous release and on first run check that previous releases removed
+    prev_release = dataset_api.get_latest_dataset_release(dag_id=dag_id, entity_id=entity_id, date_key="snapshot_date")
+    if release_date <= prev_release.snapshot_date:
+        raise ValueError(f"fetch_dmps: already processed release {release_date}")
+
+    # Download files
+    release = DMPToolMatchRelease(
+        dag_id=dag_id,
+        run_id=run_id,
+        snapshot_date=release_date,
+    )
+    file_paths = []
+    for file_name, file_url in latest_files:
+        file_path = os.path.join(release.dmps_folder, file_name)
+        file_paths.append(file_path)
+        urllib.request.urlretrieve(file_url, file_path)
+
+    # Upload files to cloud storage
+    success = gcs.gcs_upload_files(bucket_name=bucket_name, file_paths=file_paths)
+    if not success:
+        raise AirflowException(f"Error uploading files {file_paths} to bucket {bucket_name}")
 
     # Load BigQuery table
     dmp_dataset = DMPDataset(project_id, bq_dataset_id, release_date)
     table_id = dmp_dataset.dmps_raw
-    success = bq.bq_load_from_memory(
-        table_id, data, schema_file_path=project_path("dmp_match_workflow", "schema", "dmps.json"), client=bq_client
+    uri = gcs.gcs_blob_uri(bucket_name, "*.jsonl.gz")
+    success = bq.bq_load_table(
+        uri=uri,
+        table_id=table_id,
+        source_format=SourceFormat.NEWLINE_DELIMITED_JSON,
+        schema_file_path=project_path("dmp_match_workflow", "schema", "dmps.json"),
+        client=bq_client,
     )
     if not success:
         raise AirflowException(f"fetch_dmps: error loading {table_id}")
 
-    return release_date
+    return release
 
 
 def create_dmp_matches(
@@ -219,26 +261,47 @@ def export_matches(
 
 def submit_matches(
     *,
-    dag_id: str,
-    project_id: str,
-    dataset_id: str,
-    release_date: pendulum.Date,
+    dmptool_api: DMPToolAPI,
     bucket_name: str,
-    download_folder: str,
+    bucket_prefix: str,
+    export_folder: str,
     gcs_client: storage.Client = None,
 ):
     # Download files from bucket
-    prefix = make_prefix(dag_id, release_date)
     success = gcs.gcs_download_blobs(
-        bucket_name=bucket_name, prefix=prefix, destination_path=download_folder, client=gcs_client
+        bucket_name=bucket_name, prefix=bucket_prefix, destination_path=export_folder, client=gcs_client
     )
     if not success:
-        raise AirflowException(f"submit_matches: failed to download files from bucket {bucket_name}/{prefix}")
+        raise AirflowException(f"submit_matches: failed to download files from bucket {bucket_name}/{bucket_prefix}")
 
-    # Submit files to DMP tool
-    # TODO: upload with Brian's API
-    # dt_dataset = DMPToolDataset(project_id, dataset_id, release_date)
-    # for match in dt_dataset.match_datasets:
-    #     path = match.local_file_path(download_folder)
-    #     print(f"File {path} exists: {os.path.exists(path)}")
-    #     print(f"Uploading to DMPTool: {path}")
+    # List files
+    file_paths = list_files(export_folder, r"^*.\.jsonl\.gz$")
+    if len(file_paths) == 0:
+        raise AirflowException(f"submit_matches: no files downloaded")
+
+    # Upload files
+    for file_path in file_paths:
+        dmptool_api.upload_match(file_path)
+
+
+def add_dataset_release(
+    *,
+    dag_id: str,
+    run_id: str,
+    snapshot_date: pendulum.DateTime,
+    bq_project_id: str,
+    api_bq_dataset_id: str,
+    entity_id: str = DATASET_API_ENTITY_ID,
+):
+    api = DatasetAPI(bq_project_id=bq_project_id, bq_dataset_id=api_bq_dataset_id)
+    api.seed_db()
+    now = pendulum.now()
+    dataset_release = DatasetRelease(
+        dag_id=dag_id,
+        entity_id=entity_id,
+        dag_run_id=run_id,
+        created=now,
+        modified=now,
+        snapshot_date=snapshot_date,
+    )
+    api.add_dataset_release(dataset_release)
