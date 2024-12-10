@@ -38,6 +38,7 @@ def get_latest_files(data) -> tuple[list[tuple[str, str]], pendulum.DateTime | N
         # Extract the date portion (assumes format 'coki-dmps_YYYY-MM-DD_*.jsonl.gz')
         date_str = filename.split("_")[1]
         file_date = pendulum.parse(date_str, exact=True)
+        file_date = pendulum.DateTime(file_date.year, file_date.month, file_date.day)
         if file_date not in file_groups:
             file_groups[file_date] = []
         file_groups[file_date].append((filename, url))

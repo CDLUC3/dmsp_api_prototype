@@ -75,6 +75,8 @@ gcloud iam roles create $DMP_ROLE_NAME --project=$PROJECT_ID \
  --title="DMP Airflow Role" \
  --description="Gives Astro permissions to specific Google Cloud resources" \
  --permissions=bigquery.datasets.create,\
+bigquery.datasets.get,\
+bigquery.datasets.update,\
 bigquery.jobs.create,\
 bigquery.tables.create,\
 bigquery.tables.update,\
@@ -83,7 +85,14 @@ bigquery.tables.get,\
 bigquery.tables.getData,\
 bigquery.tables.list,\
 bigquery.tables.export,\
-bigquery.connections.use
+bigquery.connections.use,\
+bigquery.models.create,\
+bigquery.models.updateData,\
+bigquery.models.updateMetadata,\
+bigquery.routines.create,\
+bigquery.routines.update,\
+bigquery.routines.invoke,\
+bigquery.routines.get
 
 echo "Create DMP Airflow Service Account"
 DMP_SERVICE_ACCOUNT_NAME="dmp-airflow"

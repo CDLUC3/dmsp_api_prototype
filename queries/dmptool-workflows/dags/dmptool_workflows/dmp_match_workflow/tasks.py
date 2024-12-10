@@ -41,8 +41,11 @@ def create_bq_dataset(
     table_expiration_days: int,
     bq_client: bigquery.Client = None,
 ):
+    if bq_client is None:
+        bq_client = bigquery.Client()
+
     # Create dataset
-    dataset = bq.bq_create_dataset(
+    bq.bq_create_dataset(
         project_id=project_id,
         dataset_id=dataset_id,
         location=location,
@@ -51,9 +54,14 @@ def create_bq_dataset(
     )
 
     # Set expiration time in milliseconds
-    dataset.default_table_expiration_ms = table_expiration_days * 24 * 60 * 60 * 1000
-    dataset = bq_client.update_dataset(dataset, ["default_table_expiration_ms"])
-    logging.info(f"Updated dataset {dataset_id} with default table expiration of {table_expiration_days} days.")
+    table_expiration_ms = table_expiration_days * 24 * 60 * 60 * 1000
+    dataset = bq_client.get_dataset(f"{project_id}.{dataset_id}")
+    if dataset.default_table_expiration_ms != table_expiration_ms:
+        dataset.default_table_expiration_ms = table_expiration_ms
+        bq_client.update_dataset(dataset, ["default_table_expiration_ms"])
+        logging.info(f"Updated dataset {dataset_id} with default table expiration of {table_expiration_days} days.")
+    else:
+        logging.info(f"Dataset {dataset_id} already has expiration of {table_expiration_days} days.")
 
 
 def fetch_dmps(
@@ -72,9 +80,12 @@ def fetch_dmps(
     # Get release date and list of latest DMP files to download
     latest_files, release_date = dmptool_api.fetch_dmps()
 
+    logging.info(f"Release date: {release_date}")
+    logging.info(f"Discovered DMPs: {[file_name for file_name, _ in latest_files]}")
+
     # Get previous release and on first run check that previous releases removed
     prev_release = dataset_api.get_latest_dataset_release(dag_id=dag_id, entity_id=entity_id, date_key="snapshot_date")
-    if release_date <= prev_release.snapshot_date:
+    if prev_release is not None and release_date <= prev_release.snapshot_date:
         raise ValueError(f"fetch_dmps: already processed release {release_date}")
 
     # Download files

@@ -119,6 +119,7 @@ def create_dag(dag_params: DagParams) -> DAG:
             dataset_api = DatasetAPI(
                 bq_project_id=dag_params.cloud_workspace.output_project_id, bq_dataset_id=dag_params.api_bq_dataset_id
             )
+            dataset_api.seed_db()
             release = tasks.fetch_dmps(
                 dmptool_api=dmptool_api,
                 dataset_api=dataset_api,
