@@ -1,3 +1,126 @@
+CREATE TEMP FUNCTION extract_grant_id(input_string STRING)
+RETURNS STRING
+LANGUAGE js AS """
+  function extractGrantId(input_string) {
+    // Check if the string contains a URL
+    if(input_string.match(/https?:\\/\\//i)) {
+      // From more specific to general
+
+      // https://www.nsf.gov/awardsearch/showAward?AWD_ID=2234213&HistoricalAwards=false
+      let match = input_string.match(/AWD_ID=([0-9]+)/);
+      if(match){
+        // Return second group
+        return match[1];
+      }
+
+      // https://www.nsf.gov/pubs/2023/nsf23579/nsf23579.html
+      match = input_string.match(/nsf[0-9]+(-[0-9]+)*/);
+      if(match){
+        return match[0];
+      }
+
+      // https://www.moore.org/grant-detail?grantId=GBMF1619
+      match = input_string.match(/grantId=(GBMF[0-9]+)/);
+      if(match){
+        // Return second group
+        return match[1];
+      }
+
+      // https://www.grants.gov/web/grants/view-opportunity.html?oppId=345796
+      match = input_string.match(/oppId=([0-9]+)/);
+      if(match){
+        // Return second group
+        return match[1];
+      }
+
+      // https://grants.nih.gov/grants/guide/rfa-files/RFA-OD-23-017.html
+      // https://grants.nih.gov/grants/guide/rfa-files/RFA-TR-22-030.html
+      // https://grants.nih.gov/grants/guide/rfa-files/RFA-MH-25-140.html
+      // https://grants.nih.gov/grants/guide/pa-files/PAR-24-035.html
+      // https://grants.nih.gov/grants/guide/pa-files/PA-20-188.html
+      if (input_string.match(/https?:\\/\\/grants.nih.gov/i)) {
+        match = input_string.match(/[a-zA-Z]+(-[a-zA-Z]+)*-[0-9]+(-[0-9]+)*/);
+        if(match){
+          return match[0];
+        }
+      }
+
+      // 2021/03601-1/https://bv.fapesp.br/pt/pesquisador/713585/elias-de-franca/
+      match = input_string.match(/[0-9]{4}\\/[0-9]{5}-[0-9]{1}/);
+      if(match){
+        return match[0];
+      }
+
+      // ARC Grant ID
+      // https://dataportal.arc.gov.au/NCGP/Web/Grant/Grant/DP240100968
+      // https://dataportal.arc.gov.au/NCGP/Web/Grant/Grant/FT220100024
+      match = input_string.match(/[A-Z]{2}[0-9]{9}/);
+      if(match){
+        return match[0];
+      }
+
+      // Any other
+      // https://cdmrp.health.mil/funding/pa/HT942524PRMRPDA-GG.pdf (Funding Opportunity Number)
+      // https://cdmrp.health.mil/funding/pa/HT942524BCRPBTA12-GG.pdf (Funding Opportunity Number)
+      // https://www.nifa.usda.gov/sites/default/files/2023-07/FY23-AFRI-FAS-RFA-MOD2.pdf	2023
+      // https://www.nifa.usda.gov/sites/default/files/2023-12/FY24-CPPM-RFA-P-MOD1.pdf	2023
+      // https://www.nre.navy.mil/assets/2022-09/N00014-23-S-B001.pdf
+      // https://science.osti.gov/grants/Lab-Announcements/-/media/grants/pdf/lab-announcements/2022/LAB_22-2580.pdf
+      match = input_string.match(/[A-Z0-9-_]{8,}/);
+      if(match){
+        return match[0];
+      }
+
+      // Any number 5 or more digits
+      match = input_string.match(/\\d{5,}/);
+      if(match){
+        return match[0];
+      }
+
+      return input_string;
+    }
+
+    // 2018/00381-8; 2021/08773-5	2018/00381-8; 2021/08773-5
+    match = input_string.match(/[0-9]{4}\\/[0-9]{5}-[0-9]{1}/);
+    if(match){
+      return match[0];
+    }
+
+    return input_string;
+  };
+
+  // If input string is null then return
+  if(input_string == null){
+    return null;
+  }
+
+  // Extract grant id
+  let grantId = extractGrantId(input_string);
+  grantId = grantId.trim().toLowerCase();
+  if(grantId === ""){
+    return null;
+  }
+
+  return grantId;
+""";
+
+CREATE TEMP FUNCTION remove_empty_strings(name STRING)
+RETURNS STRING
+LANGUAGE js
+AS  r"""
+  if (name == null){
+    return null;
+  }
+
+  // If empty string return null
+  name = name.trim().toLowerCase();
+  if (name === "") {
+    return null;
+  }
+
+  return name;
+""";
+
 CREATE OR REPLACE TABLE `{{ dmps_norm_table_id }}` AS
 
 WITH fundref_index AS (
@@ -43,22 +166,20 @@ normalised AS (
     project_start,
     project_end,
 
-    affiliations,
-    affiliation_ids,
+    (SELECT ARRAY_AGG(remove_empty_strings(affiliation) IGNORE NULLS) FROM UNNEST(dmps.affiliations) AS affiliation) AS affiliations,
+    (SELECT ARRAY_AGG(remove_empty_strings(affiliation_id) IGNORE NULLS) FROM UNNEST(dmps.affiliation_ids) AS affiliation_id) AS affiliation_ids,
 
-    funders,
+    (SELECT ARRAY_AGG(remove_empty_strings(funder) IGNORE NULLS) FROM UNNEST(dmps.funders) AS funder) AS funders,
     funder_index.funder_ids, -- Add additional Funder IDS from Crossref Fundref list of Funder IDs
-    funder_opportunity_ids,
+    (SELECT ARRAY_AGG(remove_empty_strings(funder_opportunity_id) IGNORE NULLS) FROM UNNEST(dmps.funder_opportunity_ids) AS funder_opportunity_id) AS funder_opportunity_ids,
 
-    grant_ids,
+    (SELECT ARRAY_AGG(extract_grant_id(grant_id) IGNORE NULLS) FROM UNNEST(dmps.grant_ids) AS grant_id) AS grant_ids,
 
     -- Contains email addresses and peoples names are a mix of given family and family, given
-    -- TODO: standardise name format (e.g. given + ' ' + family), remove email addresses
-    (SELECT ARRAY_AGG(person) FROM UNNEST(dmps.people) AS person WHERE NOT {{ dataset_id }}.is_email(person)) AS people,
+    (SELECT ARRAY_AGG(remove_empty_strings(person) IGNORE NULLS) FROM UNNEST(dmps.people) AS person) AS people,
 
     -- Contains email addresses and some ORCIDs have a prefix and others don't e.g. https://orcid.org/0000-0000-0000-0000 and 0000-0000-0000-0000
-    -- TODO: standardise ORCID format, remove email addresses
-    (SELECT ARRAY_AGG(people_id) FROM UNNEST(dmps.people_ids) AS people_id WHERE {{ dataset_id }}.is_orcid(people_id)) AS people_ids,
+    (SELECT ARRAY_AGG(remove_empty_strings(people_id) IGNORE NULLS) FROM UNNEST(dmps.people_ids) AS people_id WHERE {{ dataset_id }}.is_orcid(people_id)) AS people_ids,
 
 --    repos,
 --    repo_ids,

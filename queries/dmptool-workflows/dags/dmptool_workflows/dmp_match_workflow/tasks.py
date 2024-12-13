@@ -64,19 +64,14 @@ def create_bq_dataset(
         logging.info(f"Dataset {dataset_id} already has expiration of {table_expiration_days} days.")
 
 
-def fetch_dmps(
+def download_dmps(
     *,
     dmptool_api: DMPToolAPI,
     dataset_api: DatasetAPI,
     dag_id: str,
     run_id: str,
-    bucket_name: str,
-    project_id: str,
-    bq_dataset_id: str,
     entity_id: str = DATASET_API_ENTITY_ID,
-    bq_client: bigquery.Client = None,
-    **context,
-) -> DMPToolMatchRelease:
+):
     # Get release date and list of latest DMP files to download
     latest_files, release_date = dmptool_api.fetch_dmps()
 
@@ -100,13 +95,31 @@ def fetch_dmps(
         file_paths.append(file_path)
         urllib.request.urlretrieve(file_url, file_path)
 
+    return file_paths, release
+
+
+def fetch_dmps(
+    *,
+    dmptool_api: DMPToolAPI,
+    dataset_api: DatasetAPI,
+    dag_id: str,
+    run_id: str,
+    bucket_name: str,
+    project_id: str,
+    bq_dataset_id: str,
+    bq_client: bigquery.Client = None,
+    **context,
+) -> DMPToolMatchRelease:
+    # Download DMPs
+    file_paths, release = download_dmps(dmptool_api=dmptool_api, dataset_api=dataset_api, dag_id=dag_id, run_id=run_id)
+
     # Upload files to cloud storage
     success = gcs.gcs_upload_files(bucket_name=bucket_name, file_paths=file_paths)
     if not success:
         raise AirflowException(f"Error uploading files {file_paths} to bucket {bucket_name}")
 
     # Load BigQuery table
-    dmp_dataset = DMPDataset(project_id, bq_dataset_id, release_date)
+    dmp_dataset = DMPDataset(project_id, bq_dataset_id, release.snapshot_date)
     table_id = dmp_dataset.dmps_raw
     uri = gcs.gcs_blob_uri(bucket_name, "*.jsonl.gz")
     success = bq.bq_load_table(
@@ -286,7 +299,7 @@ def submit_matches(
         raise AirflowException(f"submit_matches: failed to download files from bucket {bucket_name}/{bucket_prefix}")
 
     # List files
-    file_paths = list_files(export_folder, r"^*.\.jsonl\.gz$")
+    file_paths = list_files(export_folder, r"^.*\.jsonl\.gz$")
     if len(file_paths) == 0:
         raise AirflowException(f"submit_matches: no files downloaded")
 

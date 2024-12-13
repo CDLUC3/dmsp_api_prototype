@@ -24,6 +24,10 @@ class DagParams:
         dag_id: str,
         cloud_workspace: CloudWorkspace,
         bq_dataset_id: str = "dmptool",
+        bq_ror_dataset_id: str = "ror",
+        bq_openalex_dataset_id: str = "openalex",
+        bq_crossref_metadata_dataset_id: str = "crossref_metadata",
+        bq_datacite_dataset_id: str = "datacite",
         api_bq_dataset_id: str = "dataset_api",
         bq_dataset_expiration_days: int = 31,
         dmptool_api_env: str = "prd",
@@ -67,6 +71,10 @@ class DagParams:
         self.cloud_workspace = cloud_workspace
         self.bq_dataset_id = bq_dataset_id
         self.bq_dataset_expiration_days = bq_dataset_expiration_days
+        self.bq_ror_dataset_id = bq_ror_dataset_id
+        self.bq_openalex_dataset_id = bq_openalex_dataset_id
+        self.bq_crossref_metadata_dataset_id = bq_crossref_metadata_dataset_id
+        self.bq_datacite_dataset_id = bq_datacite_dataset_id
         self.api_bq_dataset_id = api_bq_dataset_id
         self.dmptool_api_env = dmptool_api_env
         self.dmptool_api_conn_id = dmptool_api_conn_id
@@ -157,7 +165,13 @@ def create_dag(dag_params: DagParams) -> DAG:
             @task(retries=0)
             def normalise_dmps(release: dict, **context):
                 release = DMPToolMatchRelease.from_dict(release)
-                ao_dataset = AcademicObservatoryDataset(ao_project_id)
+                ao_dataset = AcademicObservatoryDataset(
+                    ao_project_id,
+                    ror_dataset_id=dag_params.bq_ror_dataset_id,
+                    openalex_dataset_id=dag_params.bq_openalex_dataset_id,
+                    crossref_metadata_dataset_id=dag_params.bq_crossref_metadata_dataset_id,
+                    datacite_dataset_id=dag_params.bq_datacite_dataset_id,
+                )
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
                 queries.normalise_dmps(
                     dataset_id=dag_params.bq_dataset_id,
@@ -170,7 +184,13 @@ def create_dag(dag_params: DagParams) -> DAG:
             @task(retries=0)
             def normalise_openalex(release: dict, **context):
                 release = DMPToolMatchRelease.from_dict(release)
-                ao_dataset = AcademicObservatoryDataset(ao_project_id)
+                ao_dataset = AcademicObservatoryDataset(
+                    ao_project_id,
+                    ror_dataset_id=dag_params.bq_ror_dataset_id,
+                    openalex_dataset_id=dag_params.bq_openalex_dataset_id,
+                    crossref_metadata_dataset_id=dag_params.bq_crossref_metadata_dataset_id,
+                    datacite_dataset_id=dag_params.bq_datacite_dataset_id,
+                )
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
                 queries.normalise_openalex(
                     dataset_id=dag_params.bq_dataset_id,
@@ -186,7 +206,13 @@ def create_dag(dag_params: DagParams) -> DAG:
             @task(retries=0)
             def normalise_crossref(release: dict, **context):
                 release = DMPToolMatchRelease.from_dict(release)
-                ao_dataset = AcademicObservatoryDataset(ao_project_id)
+                ao_dataset = AcademicObservatoryDataset(
+                    ao_project_id,
+                    ror_dataset_id=dag_params.bq_ror_dataset_id,
+                    openalex_dataset_id=dag_params.bq_openalex_dataset_id,
+                    crossref_metadata_dataset_id=dag_params.bq_crossref_metadata_dataset_id,
+                    datacite_dataset_id=dag_params.bq_datacite_dataset_id,
+                )
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
                 queries.normalise_crossref(
                     dataset_id=dag_params.bq_dataset_id,
@@ -201,7 +227,13 @@ def create_dag(dag_params: DagParams) -> DAG:
             @task(retries=0)
             def normalise_datacite(release: dict, **context):
                 release = DMPToolMatchRelease.from_dict(release)
-                ao_dataset = AcademicObservatoryDataset(ao_project_id)
+                ao_dataset = AcademicObservatoryDataset(
+                    ao_project_id,
+                    ror_dataset_id=dag_params.bq_ror_dataset_id,
+                    openalex_dataset_id=dag_params.bq_openalex_dataset_id,
+                    crossref_metadata_dataset_id=dag_params.bq_crossref_metadata_dataset_id,
+                    datacite_dataset_id=dag_params.bq_datacite_dataset_id,
+                )
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
                 queries.normalise_datacite(
                     dataset_id=dag_params.bq_dataset_id,
