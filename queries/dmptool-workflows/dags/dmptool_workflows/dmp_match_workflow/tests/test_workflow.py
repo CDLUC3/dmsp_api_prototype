@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import pendulum
 from airflow.models import Connection
+from observatory_platform.airflow.release import DATE_TIME_FORMAT
 from observatory_platform.airflow.workflow import Workflow
 from observatory_platform.dataset_api import DatasetAPI
 from observatory_platform.files import save_jsonl_gz
@@ -16,11 +17,6 @@ from dmptool_workflows.dmp_match_workflow.dmptool_api import DMPToolAPI
 from dmptool_workflows.dmp_match_workflow.release import DMPToolMatchRelease
 from dmptool_workflows.dmp_match_workflow.tasks import DATASET_API_ENTITY_ID
 from dmptool_workflows.dmp_match_workflow.workflow import create_dag, DagParams
-
-
-def load_json(file_path: str):
-    with open(file_path, mode="r") as f:
-        return json.load(f)
 
 
 class TestDMPToolWorkflow(SandboxTestCase):
@@ -96,55 +92,6 @@ class TestDMPToolWorkflow(SandboxTestCase):
             dag_file = os.path.join(project_path(), "..", "..", "dags", "load_dags.py")
             self.assert_dag_load(self.dag_id, dag_file)
 
-    def load_test_data(self, project_id: str, dataset_id: str, bucket_name: str, snapshot_date: pendulum.DateTime):
-        schema_path = project_path("dmp_match_workflow", "tests", "fixtures", "schema")
-        data_path = project_path("dmp_match_workflow", "tests", "fixtures", "data")
-        tables = [
-            Table(
-                "crossref_metadata",
-                True,
-                dataset_id,
-                load_json(os.path.join(data_path, "crossref_metadata.json")),
-                bq_find_schema(path=schema_path, table_name="crossref_metadata"),
-            ),
-            Table(
-                "datacite",
-                True,
-                dataset_id,
-                load_json(os.path.join(data_path, "datacite.json")),
-                bq_find_schema(path=schema_path, table_name="datacite"),
-            ),
-            # It may be better to put these two OpenAlex tables into their own dataset
-            Table(
-                "funders",
-                False,
-                dataset_id,
-                load_json(os.path.join(data_path, "openalex_funders.json")),
-                bq_find_schema(path=schema_path, table_name="openalex_funders"),
-            ),
-            Table(
-                "works",
-                False,
-                dataset_id,
-                load_json(os.path.join(data_path, "openalex_works.json")),
-                bq_find_schema(path=schema_path, table_name="openalex_works"),
-            ),
-            Table(
-                "ror",
-                True,
-                dataset_id,
-                load_json(os.path.join(data_path, "ror.json")),
-                bq_find_schema(path=schema_path, table_name="ror"),
-            ),
-        ]
-
-        bq_load_tables(
-            project_id=project_id,
-            tables=tables,
-            bucket_name=bucket_name,
-            snapshot_date=snapshot_date,
-        )
-
     def test_workflow(self):
         env = SandboxEnvironment(project_id=self.gcp_project_id, data_location=self.gcp_data_location)
         api_bq_dataset_id = env.add_dataset("dataset_api")
@@ -153,9 +100,9 @@ class TestDMPToolWorkflow(SandboxTestCase):
         dmp_snapshot_date = pendulum.datetime(year=2024, month=11, day=30)
         logical_date = pendulum.datetime(year=2024, month=12, day=1)
 
-        with env.create():
+        with env.create() as t:
             # Load test data
-            self.load_test_data(self.gcp_project_id, bq_dataset_id, bucket_name, logical_date)
+            load_test_data(self.gcp_project_id, bq_dataset_id, bucket_name, logical_date)
 
             # Crate DAG
             dag_params = DagParams(
@@ -197,10 +144,82 @@ class TestDMPToolWorkflow(SandboxTestCase):
                 return [file_path], release
 
             # Run DAG
-            with patch("dmptool_workflows.dmp_match_workflow.workflow.DMPToolAPI") as dmptool_api, patch(
+            with patch("dmptool_workflows.dmp_match_workflow.workflow.DMPToolAPI") as MockDMPToolAPI, patch(
                 "dmptool_workflows.dmp_match_workflow.tasks.download_dmps", side_effect=download_dmps
-            ) as download_dmps:
+            ) as mock_download_dmps:
                 dagrun = dag.test(execution_date=logical_date)
 
-            # Make assertions
-            self.assertEqual("success", dagrun.state)
+                # Check that DAG ran successfully
+                self.assertEqual("success", dagrun.state)
+
+                # Assert that dmptool_api.upload_match called three times, once for OpenAlex, Crossref and DataCite
+                mock_dmptool_api = MockDMPToolAPI.return_value
+                self.assertEqual(3, mock_dmptool_api.upload_match.call_count)
+                datasets = ["openalex", "crossref", "datacite"]
+                for name in datasets:
+                    mock_dmptool_api.upload_match.assert_any_call(
+                        os.path.join(
+                            t,
+                            "data",
+                            f"{self.dag_id}",
+                            dagrun.run_id,
+                            f"snapshot_{dmp_snapshot_date.format(DATE_TIME_FORMAT)}",
+                            "export",
+                            f"coki-{name}_{dmp_snapshot_date.format('YYYY-MM-DD')}_000000000000.jsonl.gz",
+                        )
+                    )
+
+
+def load_json(file_path: str):
+    with open(file_path, mode="r") as f:
+        return json.load(f)
+
+
+def load_test_data(project_id: str, dataset_id: str, bucket_name: str, snapshot_date: pendulum.DateTime):
+    schema_path = project_path("dmp_match_workflow", "tests", "fixtures", "schema")
+    data_path = project_path("dmp_match_workflow", "tests", "fixtures", "data")
+    tables = [
+        Table(
+            "crossref_metadata",
+            True,
+            dataset_id,
+            load_json(os.path.join(data_path, "crossref_metadata.json")),
+            bq_find_schema(path=schema_path, table_name="crossref_metadata"),
+        ),
+        Table(
+            "datacite",
+            True,
+            dataset_id,
+            load_json(os.path.join(data_path, "datacite.json")),
+            bq_find_schema(path=schema_path, table_name="datacite"),
+        ),
+        # It may be better to put these two OpenAlex tables into their own dataset
+        Table(
+            "funders",
+            False,
+            dataset_id,
+            load_json(os.path.join(data_path, "openalex_funders.json")),
+            bq_find_schema(path=schema_path, table_name="openalex_funders"),
+        ),
+        Table(
+            "works",
+            False,
+            dataset_id,
+            load_json(os.path.join(data_path, "openalex_works.json")),
+            bq_find_schema(path=schema_path, table_name="openalex_works"),
+        ),
+        Table(
+            "ror",
+            True,
+            dataset_id,
+            load_json(os.path.join(data_path, "ror.json")),
+            bq_find_schema(path=schema_path, table_name="ror"),
+        ),
+    ]
+
+    bq_load_tables(
+        project_id=project_id,
+        tables=tables,
+        bucket_name=bucket_name,
+        snapshot_date=snapshot_date,
+    )

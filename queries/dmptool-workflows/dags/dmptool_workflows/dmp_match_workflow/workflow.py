@@ -372,7 +372,8 @@ def create_dag(dag_params: DagParams) -> DAG:
 
         @task
         def add_dataset_release(release: dict, **context):
-            """"""
+            """Add dataset release"""
+
             release = DMPToolMatchRelease.from_dict(release)
             tasks.add_dataset_release(
                 dag_id=dag_params.dag_id,
