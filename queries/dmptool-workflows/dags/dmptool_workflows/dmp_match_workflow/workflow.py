@@ -36,7 +36,7 @@ class DagParams:
         weighted_count_threshold: int = 3,
         max_matches: int = 100,
         start_date: pendulum.DateTime = pendulum.datetime(2024, 10, 1),
-        schedule: str = "0 7 * * Sun",
+        schedule: str = "15 0 * * Sun",
         max_active_runs: int = 1,
         retries: int = 2,
         retry_delay: Union[int, float] = 5,
