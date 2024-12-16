@@ -132,7 +132,7 @@ SELECT
   openalex.doi,
 
   STRUCT(
-    {{ dataset_id }}.strip_html(openalex.title) AS title,
+    {{ dataset_id }}.remove_markup(openalex.title) AS title,
     FORMAT_DATE('%Y-%m-%d', openalex.publication_date) AS publication_date,
     openalex.type,
     (SELECT ARRAY_AGG(split_name(author.author.display_name)) FROM UNNEST(openalex.authorships) AS author WHERE author.author.display_name IS NOT NULL) AS authors,
@@ -148,10 +148,10 @@ SELECT
   STRUCT(
     openalex.publication_date,
     {{ dataset_id }}.create_content(
-      {{ dataset_id }}.strip_html(openalex.title),
+      {{ dataset_id }}.remove_markup(openalex.title),
       COALESCE(
-        NULLIF(TRIM({{ dataset_id }}.strip_html(crossref.abstract)), ''),
-        NULLIF(TRIM({{ dataset_id }}.strip_html(ARRAY_TO_STRING(ARRAY(SELECT d.description FROM UNNEST(datacite.descriptions) AS d), " "))), ''),
+        NULLIF(TRIM({{ dataset_id }}.remove_markup(crossref.abstract)), ''),
+        NULLIF(TRIM({{ dataset_id }}.remove_markup(ARRAY_TO_STRING(ARRAY(SELECT d.description FROM UNNEST(datacite.descriptions) AS d), " "))), ''),
         NULL
       ) -- Choose abstracts from Crossref first, then DataCite.
     ) AS content,

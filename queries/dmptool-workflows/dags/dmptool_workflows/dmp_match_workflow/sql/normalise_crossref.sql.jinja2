@@ -76,7 +76,7 @@ SELECT
 
   -- Data to send back to DMPTool
   STRUCT(
-    {{ dataset_id }}.strip_html(cf.title[SAFE_OFFSET(0)]) AS title,
+    {{ dataset_id }}.remove_markup(cf.title[SAFE_OFFSET(0)]) AS title,
     {{ dataset_id }}.parts_to_date_string(issued.date_parts) AS publication_date,
     normalise_type(cf.type) AS type,
     (SELECT ARRAY_AGG(
@@ -98,8 +98,8 @@ SELECT
   STRUCT(
       {{ dataset_id }}.date_parts_to_date(issued.date_parts) AS publication_date,
       {{ dataset_id }}.create_content(
-        {{ dataset_id }}.strip_html(ARRAY_TO_STRING(ARRAY(SELECT t FROM UNNEST(cf.title) AS t), " ")),
-        {{ dataset_id }}.strip_html(cf.abstract)
+        {{ dataset_id }}.remove_markup(ARRAY_TO_STRING(ARRAY(SELECT t FROM UNNEST(cf.title) AS t), " ")),
+        {{ dataset_id }}.remove_markup(cf.abstract)
       ) AS content,
 
       -- Affiliations

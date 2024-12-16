@@ -68,9 +68,10 @@ AS (
 );
 
 
-CREATE OR REPLACE FUNCTION {{ dataset_id }}.strip_html(input STRING)
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.remove_markup(input STRING)
 RETURNS STRING AS (
-  REGEXP_REPLACE(REPLACE(REPLACE(input, '&lt;', '<'), '&gt;', '>'),r'<[^>]*>','')
+  -- Remove HTML and quotation marks
+  REGEXP_REPLACE(REGEXP_REPLACE(REPLACE(REPLACE(input, '&lt;', '<'), '&gt;', '>'), r'<[^>]*>',''), r'[\'"]', '')
 );
 
 CREATE OR REPLACE FUNCTION {{ dataset_id }}.normalise_name(input STRING)
