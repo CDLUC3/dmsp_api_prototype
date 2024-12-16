@@ -104,6 +104,24 @@ export PYTHONPATH=/path/to/dmptool-workflows/dags:$PYTHONPATH
 python3 run_queries.py ao-project-id my-project-id YYYY-MM-DD
 ```
 
+### Running tests
+Make sure that the `dags` folder is on your Python path:
+```bash
+export PYTHONPATH=/path/to/dmptool-workflows/dags:$PYTHONPATH
+```
+
+Set the following environment variables:
+* GOOGLE_APPLICATION_CREDENTIALS: as described above.
+* TEST_GCP_PROJECT_ID: Google Cloud project ID for testing.
+* TEST_GCP_DATA_LOCATION: the Google Cloud Storage and BigQuery data location.
+
+Your service account needs the same permissions as granted in `./bin/setup-gcloud-project.sh`. 
+
+Run tests:
+```bash
+python -m unittest discover
+```
+
 ## Deployment
 Deploying the project consists of:
 * Creating and configuring a Google Cloud project.

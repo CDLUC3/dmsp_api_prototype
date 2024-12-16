@@ -7,49 +7,6 @@ from airflow.hooks.base import BaseHook
 from requests.auth import HTTPBasicAuth
 
 
-def get_dmptool_api_creds(aws_conn_id: str) -> tuple[str, str]:
-    """Get the AWS access key id and secret access key from the aws_conn_id airflow connection.
-
-    :return: access key id and secret access key
-    """
-
-    conn = BaseHook.get_connection(aws_conn_id)
-    client_id = conn.login
-    client_secret = conn.password
-
-    if client_id is None:
-        raise ValueError(f"Airflow Connection: {aws_conn_id} login is None")
-
-    if client_secret is None:
-        raise ValueError(f"Airflow Connection: {aws_conn_id} password is None")
-
-    return client_id, client_secret
-
-
-def get_latest_files(data) -> tuple[list[tuple[str, str]], pendulum.DateTime | None]:
-    # Extract the files and URLs from the dictionary
-    files = data.get("DMPMetadataFiles", {})
-    if not len(files):
-        return [], None
-
-    # Parse the dates from the filenames and group by date
-    file_groups = {}
-    for filename, url in files.items():
-        # Extract the date portion (assumes format 'coki-dmps_YYYY-MM-DD_*.jsonl.gz')
-        date_str = filename.split("_")[1]
-        file_date = pendulum.parse(date_str, exact=True)
-        file_date = pendulum.DateTime(file_date.year, file_date.month, file_date.day)
-        if file_date not in file_groups:
-            file_groups[file_date] = []
-        file_groups[file_date].append((filename, url))
-
-    # Find the latest date
-    latest_date = max(file_groups.keys())
-
-    # Return the list of files for the latest date
-    return file_groups[latest_date], latest_date
-
-
 class DMPToolAPI:
     def __init__(self, *, env: str, client_id: str, client_secret: str):
         self.env = env
@@ -128,3 +85,46 @@ class DMPToolAPI:
         if "access_token" not in json_data:
             raise ValueError(f"DMPToolAPI.oauth_token: access_token not returned in response")
         return json_data["access_token"]
+
+
+def get_dmptool_api_creds(aws_conn_id: str) -> tuple[str, str]:
+    """Get the AWS access key id and secret access key from the aws_conn_id airflow connection.
+
+    :return: access key id and secret access key
+    """
+
+    conn = BaseHook.get_connection(aws_conn_id)
+    client_id = conn.login
+    client_secret = conn.password
+
+    if client_id is None:
+        raise ValueError(f"Airflow Connection: {aws_conn_id} login is None")
+
+    if client_secret is None:
+        raise ValueError(f"Airflow Connection: {aws_conn_id} password is None")
+
+    return client_id, client_secret
+
+
+def get_latest_files(data) -> tuple[list[tuple[str, str]], pendulum.DateTime | None]:
+    # Extract the files and URLs from the dictionary
+    files = data.get("DMPMetadataFiles", {})
+    if not len(files):
+        return [], None
+
+    # Parse the dates from the filenames and group by date
+    file_groups = {}
+    for filename, url in files.items():
+        # Extract the date portion (assumes format 'coki-dmps_YYYY-MM-DD_*.jsonl.gz')
+        date_str = filename.split("_")[1]
+        file_date = pendulum.parse(date_str, exact=True)
+        file_date = pendulum.DateTime(file_date.year, file_date.month, file_date.day)
+        if file_date not in file_groups:
+            file_groups[file_date] = []
+        file_groups[file_date].append((filename, url))
+
+    # Find the latest date
+    latest_date = max(file_groups.keys())
+
+    # Return the list of files for the latest date
+    return file_groups[latest_date], latest_date
