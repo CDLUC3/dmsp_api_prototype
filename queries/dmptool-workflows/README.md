@@ -130,17 +130,19 @@ Switch to the Astronomer.io workspace that you want to work in:
 astro workspace switch
 ```
 
-Create your Astro deployment. Note that you may need to customise some of the variables, such as workspace_name and
-alert_emails.
+Create your Astro deployment. Note that you may need to update or customise some of the variables, such as 
+runtime_version, workspace_name and alert_emails.
 ```bash
 astro deployment create --deployment-file ./bin/deployment.yaml
 ```
 
-Create Apache Airflow Variables, customising the value for the WORKFLOWS key:
+Create Apache Airflow Variables, customising the value for the WORKFLOWS key. Your Airflow instance needs to be out
+of hibernation to run the `airflow-variable create` and `connection create` commands.
 ```bash
 astro deployment variable create GOOGLE_CLOUD_PROJECT=my-project-id
 astro deployment airflow-variable create --key DATA_PATH --value /home/astro/data
 astro deployment airflow-variable create --key WORKFLOWS --value '[{"dag_id":"dmp_match_workflow","name":"DMP Match Workflow","class_name":"dmptool_workflows.dmp_match_workflow.workflow","cloud_workspace":{...}}]'
+astro deployment connection create --conn-id dmptool_api_credentials --conn-type http --login my-client-secret --password my-client-password
 ```
 
 ### Customer Managed Identity

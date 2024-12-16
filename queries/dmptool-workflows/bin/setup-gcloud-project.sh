@@ -91,7 +91,6 @@ bigquery.models.updateData,\
 bigquery.models.updateMetadata,\
 bigquery.routines.create,\
 bigquery.routines.update,\
-bigquery.routines.invoke,\
 bigquery.routines.get
 
 echo "Create DMP Airflow Service Account"

@@ -2,7 +2,7 @@ deployment:
   configuration:
     name: "DMPTool Workflows"
     description: "Apache Airflow workflows for ingesting bibliometric data into the DMPTool"
-    runtime_version: 9.20.0
+    runtime_version: 9.21.0
     dag_deploy_enabled: true
     ci_cd_enforcement: false
     scheduler_size: SMALL

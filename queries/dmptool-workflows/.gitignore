@@ -11,3 +11,4 @@ airflow.db
 .idea
 workflows-config.yaml
 docker-compose.override.yml
+venv
