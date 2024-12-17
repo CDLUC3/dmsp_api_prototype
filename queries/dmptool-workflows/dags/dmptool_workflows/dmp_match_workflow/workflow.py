@@ -277,7 +277,7 @@ def create_dag(dag_params: DagParams) -> DAG:
                 release = DMPToolMatchRelease.from_dict(release)
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
                 for match in dt_dataset.match_datasets:
-                    queries.create_content_table(
+                    queries.create_match_content_table(
                         dataset_id=dag_params.bq_dataset_id,
                         match_norm_table_id=match.normalised,
                         match_intermediate_table_id=match.match_intermediate,

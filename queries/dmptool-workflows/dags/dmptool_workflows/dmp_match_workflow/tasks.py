@@ -16,7 +16,7 @@ from dmptool_workflows.dmp_match_workflow.academic_observatory_dataset import Ac
 from dmptool_workflows.dmp_match_workflow.dmptool_api import DMPToolAPI
 from dmptool_workflows.dmp_match_workflow.dmptool_dataset import DMPDataset, DMPToolDataset
 from dmptool_workflows.dmp_match_workflow.queries import (
-    create_content_table,
+    create_match_content_table,
     create_dmps_content_table,
     create_embedding_model,
     generate_embeddings,
@@ -225,7 +225,7 @@ def create_dmp_matches(
         bq_client=bq_client,
     )
     for match in dt_dataset.match_datasets:
-        create_content_table(
+        create_match_content_table(
             dataset_id=dataset_id,
             match_norm_table_id=match.normalised,
             match_intermediate_table_id=match.match_intermediate,

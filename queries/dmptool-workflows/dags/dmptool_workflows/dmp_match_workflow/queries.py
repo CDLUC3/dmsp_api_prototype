@@ -186,7 +186,7 @@ def create_dmps_content_table(
     )
 
 
-def create_content_table(
+def create_match_content_table(
     *,
     dataset_id: str,
     match_norm_table_id: str,
@@ -197,7 +197,7 @@ def create_content_table(
     bq_client: bigquery.Client = None,
 ):
     run_sql_template(
-        "match_content_table",
+        "create_match_content_table",
         dataset_id,
         dry_run=dry_run,
         dry_run_id=dry_run_id,
