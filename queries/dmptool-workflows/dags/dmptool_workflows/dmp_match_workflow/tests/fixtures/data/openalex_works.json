@@ -1,0 +1,1085 @@
+[
+  {
+    "abstract_inverted_index": {
+      "keys": [
+        "Abstract",
+        "The",
+        "goal",
+        "of",
+        "open",
+        "access",
+        "is",
+        "to",
+        "allow",
+        "more",
+        "people",
+        "read",
+        "and",
+        "use",
+        "research",
+        "outputs.",
+        "An",
+        "observed",
+        "association",
+        "between",
+        "highly",
+        "cited",
+        "outputs",
+        "has",
+        "been",
+        "claimed",
+        "as",
+        "evidence",
+        "increased",
+        "usage",
+        "the",
+        "research,",
+        "but",
+        "this",
+        "remains",
+        "controversial.",
+        "A",
+        "higher",
+        "citation",
+        "count",
+        "also",
+        "does",
+        "not",
+        "necessarily",
+        "imply",
+        "wider",
+        "such",
+        "citations",
+        "by",
+        "authors",
+        "from",
+        "places.",
+        "knowledge",
+        "gap",
+        "exists",
+        "in",
+        "our",
+        "understanding",
+        "who",
+        "gets",
+        "where",
+        "users",
+        "are",
+        "located.",
+        "Here",
+        "we",
+        "address",
+        "examining",
+        "an",
+        "output’s",
+        "status",
+        "diversity",
+        "that",
+        "cite",
+        "it.",
+        "By",
+        "analysing",
+        "large-scale",
+        "bibliographic",
+        "data",
+        "2010",
+        "2019,",
+        "found",
+        "a",
+        "robust",
+        "sources",
+        "institutions,",
+        "countries,",
+        "subregions,",
+        "regions,",
+        "fields",
+        "across",
+        "with",
+        "both",
+        "high",
+        "medium–low",
+        "counts.",
+        "Open",
+        "through",
+        "disciplinary",
+        "or",
+        "institutional",
+        "repositories",
+        "showed",
+        "stronger",
+        "effect",
+        "than",
+        "via",
+        "publisher",
+        "platforms.",
+        "This",
+        "study",
+        "adds",
+        "new",
+        "perspective",
+        "how",
+        "can",
+        "be",
+        "used",
+        "explore",
+        "effects",
+        "access.",
+        "It",
+        "provides",
+        "at",
+        "global",
+        "scale",
+        "benefits",
+        "mechanism",
+        "for",
+        "widening",
+        "increasing",
+        "communities",
+        "benefit"
+      ],
+      "values": [
+        "0",
+        "1",
+        "2",
+        "3, 33, 36, 69, 101, 127, 137, 174, 184, 195, 198, 208, 214",
+        "4, 26, 74, 95, 122, 160, 185, 199",
+        "5, 27, 75, 96, 123, 149, 161, 200",
+        "6",
+        "7, 11, 72, 114, 171, 180",
+        "8",
+        "9, 60",
+        "10",
+        "12",
+        "13, 25, 78, 98, 124, 135, 144, 210",
+        "14, 73, 207",
+        "15, 23, 76, 102, 209",
+        "16",
+        "17",
+        "18",
+        "19, 91, 120",
+        "20, 92, 121",
+        "21",
+        "22",
+        "24, 77, 103, 140",
+        "28",
+        "29",
+        "30",
+        "31, 55, 201",
+        "32, 191",
+        "34, 125",
+        "35, 53",
+        "37, 90, 99, 182, 196, 206, 212, 215",
+        "38, 138",
+        "39",
+        "40, 86",
+        "41",
+        "42",
+        "43, 62",
+        "44",
+        "45, 128, 146",
+        "46",
+        "47, 188",
+        "48",
+        "49",
+        "50",
+        "51",
+        "52",
+        "54",
+        "56, 176",
+        "57, 88, 130",
+        "58",
+        "59, 112, 219",
+        "61",
+        "63",
+        "64, 87",
+        "65",
+        "66",
+        "67, 172",
+        "68, 173",
+        "70",
+        "71",
+        "79",
+        "80",
+        "81",
+        "82",
+        "83",
+        "84, 116",
+        "85",
+        "89",
+        "93",
+        "94",
+        "97",
+        "100, 126, 213",
+        "104, 217",
+        "105",
+        "106, 220",
+        "107",
+        "108",
+        "109",
+        "110",
+        "111",
+        "113",
+        "115",
+        "117",
+        "118, 156, 168, 202",
+        "119",
+        "129",
+        "131",
+        "132",
+        "133",
+        "134",
+        "136",
+        "139",
+        "141",
+        "142",
+        "143",
+        "145",
+        "147",
+        "148",
+        "150",
+        "151",
+        "152",
+        "153",
+        "154",
+        "155",
+        "157",
+        "158",
+        "159",
+        "162",
+        "163",
+        "164",
+        "165",
+        "166",
+        "167",
+        "169, 190",
+        "170",
+        "175",
+        "177",
+        "178",
+        "179",
+        "181",
+        "183",
+        "186",
+        "187",
+        "189",
+        "192",
+        "193",
+        "194",
+        "197",
+        "203",
+        "204",
+        "205",
+        "211",
+        "216",
+        "218"
+      ]
+    },
+    "apc_list": {
+      "currency": "EUR",
+      "provenance": "doaj",
+      "value": "2290",
+      "value_usd": "2890"
+    },
+    "apc_paid": {
+      "currency": "EUR",
+      "provenance": "doaj",
+      "value": "2290",
+      "value_usd": "2890"
+    },
+    "authors_count": "7",
+    "authorships": [
+      {
+        "author": {
+          "display_name": "Chun‐Kai Huang",
+          "id": "https://openalex.org/A5090536127",
+          "orcid": "https://orcid.org/0000-0002-9656-5932"
+        },
+        "author_position": "first",
+        "countries": [
+          "AU"
+        ],
+        "country_ids": [
+          "https://openalex.org/countries/AU"
+        ],
+        "institutions": [
+          {
+            "country_code": "AU",
+            "country_id": "https://openalex.org/countries/AU",
+            "display_name": "Curtin University",
+            "id": "https://openalex.org/I205640436",
+            "lineage": [
+              "https://openalex.org/I205640436"
+            ],
+            "ror": "https://ror.org/02n415q13",
+            "type": "education",
+            "type_id": "https://openalex.org/institution-types/education"
+          }
+        ],
+        "is_corresponding": "true",
+        "raw_affiliation_string": null,
+        "raw_affiliation_strings": [
+          "Centre for Culture and Technology, Curtin University, Bentley, WA, Australia"
+        ],
+        "raw_author_name": "Chun-Kai Huang",
+        "affiliations": [
+          {
+            "raw_affiliation_string": "Centre for Culture and Technology, Curtin University, Bentley, WA, Australia",
+            "institution_ids": [
+              "https://openalex.org/I205640436"
+            ]
+          }
+        ]
+      },
+      {
+        "author": {
+          "display_name": "Cameron Neylon",
+          "id": "https://openalex.org/A5048552040",
+          "orcid": "https://orcid.org/0000-0002-0068-716X"
+        },
+        "author_position": "middle",
+        "countries": [
+          "AU"
+        ],
+        "country_ids": [
+          "https://openalex.org/countries/AU"
+        ],
+        "institutions": [
+          {
+            "country_code": "AU",
+            "country_id": "https://openalex.org/countries/AU",
+            "display_name": "Curtin University",
+            "id": "https://openalex.org/I205640436",
+            "lineage": [
+              "https://openalex.org/I205640436"
+            ],
+            "ror": "https://ror.org/02n415q13",
+            "type": "education",
+            "type_id": "https://openalex.org/institution-types/education"
+          }
+        ],
+        "is_corresponding": "false",
+        "raw_affiliation_string": null,
+        "raw_affiliation_strings": [
+          "Centre for Culture and Technology, Curtin University, Bentley, WA, Australia"
+        ],
+        "raw_author_name": "Cameron Neylon",
+        "affiliations": [
+          {
+            "raw_affiliation_string": "Centre for Culture and Technology, Curtin University, Bentley, WA, Australia",
+            "institution_ids": [
+              "https://openalex.org/I205640436"
+            ]
+          }
+        ]
+      },
+      {
+        "author": {
+          "display_name": "Lucy Montgomery",
+          "id": "https://openalex.org/A5013301732",
+          "orcid": "https://orcid.org/0000-0001-6551-8140"
+        },
+        "author_position": "middle",
+        "countries": [
+          "AU"
+        ],
+        "country_ids": [
+          "https://openalex.org/countries/AU"
+        ],
+        "institutions": [
+          {
+            "country_code": "AU",
+            "country_id": "https://openalex.org/countries/AU",
+            "display_name": "Curtin University",
+            "id": "https://openalex.org/I205640436",
+            "lineage": [
+              "https://openalex.org/I205640436"
+            ],
+            "ror": "https://ror.org/02n415q13",
+            "type": "education",
+            "type_id": "https://openalex.org/institution-types/education"
+          }
+        ],
+        "is_corresponding": "false",
+        "raw_affiliation_string": null,
+        "raw_affiliation_strings": [
+          "Centre for Culture and Technology, Curtin University, Bentley, WA, Australia"
+        ],
+        "raw_author_name": "Lucy Montgomery",
+        "affiliations": [
+          {
+            "raw_affiliation_string": "Centre for Culture and Technology, Curtin University, Bentley, WA, Australia",
+            "institution_ids": [
+              "https://openalex.org/I205640436"
+            ]
+          }
+        ]
+      },
+      {
+        "author": {
+          "display_name": "Richard Hosking",
+          "id": "https://openalex.org/A5071633579",
+          "orcid": "https://orcid.org/0000-0001-8288-5241"
+        },
+        "author_position": "middle",
+        "countries": [
+          "AU"
+        ],
+        "country_ids": [
+          "https://openalex.org/countries/AU"
+        ],
+        "institutions": [
+          {
+            "country_code": "AU",
+            "country_id": "https://openalex.org/countries/AU",
+            "display_name": "Curtin University",
+            "id": "https://openalex.org/I205640436",
+            "lineage": [
+              "https://openalex.org/I205640436"
+            ],
+            "ror": "https://ror.org/02n415q13",
+            "type": "education",
+            "type_id": "https://openalex.org/institution-types/education"
+          }
+        ],
+        "is_corresponding": "false",
+        "raw_affiliation_string": null,
+        "raw_affiliation_strings": [
+          "Centre for Culture and Technology, Curtin University, Bentley, WA, Australia"
+        ],
+        "raw_author_name": "Richard Hosking",
+        "affiliations": [
+          {
+            "raw_affiliation_string": "Centre for Culture and Technology, Curtin University, Bentley, WA, Australia",
+            "institution_ids": [
+              "https://openalex.org/I205640436"
+            ]
+          }
+        ]
+      },
+      {
+        "author": {
+          "display_name": "James P. Diprose",
+          "id": "https://openalex.org/A5070201494",
+          "orcid": "https://orcid.org/0000-0002-5094-3571"
+        },
+        "author_position": "middle",
+        "countries": [
+          "AU"
+        ],
+        "country_ids": [
+          "https://openalex.org/countries/AU"
+        ],
+        "institutions": [
+          {
+            "country_code": "AU",
+            "country_id": "https://openalex.org/countries/AU",
+            "display_name": "Curtin University",
+            "id": "https://openalex.org/I205640436",
+            "lineage": [
+              "https://openalex.org/I205640436"
+            ],
+            "ror": "https://ror.org/02n415q13",
+            "type": "education",
+            "type_id": "https://openalex.org/institution-types/education"
+          }
+        ],
+        "is_corresponding": "false",
+        "raw_affiliation_string": null,
+        "raw_affiliation_strings": [
+          "Centre for Culture and Technology, Curtin University, Bentley, WA, Australia"
+        ],
+        "raw_author_name": "James P. Diprose",
+        "affiliations": [
+          {
+            "raw_affiliation_string": "Centre for Culture and Technology, Curtin University, Bentley, WA, Australia",
+            "institution_ids": [
+              "https://openalex.org/I205640436"
+            ]
+          }
+        ]
+      },
+      {
+        "author": {
+          "display_name": "R.N. Handcock",
+          "id": "https://openalex.org/A5058690346",
+          "orcid": "https://orcid.org/0000-0001-5903-6620"
+        },
+        "author_position": "middle",
+        "countries": [
+          "AU"
+        ],
+        "country_ids": [
+          "https://openalex.org/countries/AU"
+        ],
+        "institutions": [
+          {
+            "country_code": "AU",
+            "country_id": "https://openalex.org/countries/AU",
+            "display_name": "Curtin University",
+            "id": "https://openalex.org/I205640436",
+            "lineage": [
+              "https://openalex.org/I205640436"
+            ],
+            "ror": "https://ror.org/02n415q13",
+            "type": "education",
+            "type_id": "https://openalex.org/institution-types/education"
+          }
+        ],
+        "is_corresponding": "false",
+        "raw_affiliation_string": null,
+        "raw_affiliation_strings": [
+          "Curtin Institute for Data Science, Curtin University, Bentley, WA, Australia"
+        ],
+        "raw_author_name": "Rebecca N. Handcock",
+        "affiliations": [
+          {
+            "raw_affiliation_string": "Curtin Institute for Data Science, Curtin University, Bentley, WA, Australia",
+            "institution_ids": [
+              "https://openalex.org/I205640436"
+            ]
+          }
+        ]
+      },
+      {
+        "author": {
+          "display_name": "Katie Wilson",
+          "id": "https://openalex.org/A5047192603",
+          "orcid": "https://orcid.org/0000-0001-8705-1027"
+        },
+        "author_position": "last",
+        "countries": [
+          "NZ"
+        ],
+        "country_ids": [
+          "https://openalex.org/countries/NZ"
+        ],
+        "institutions": [
+          {
+            "country_code": "NZ",
+            "country_id": "https://openalex.org/countries/NZ",
+            "display_name": "Victoria University of Wellington",
+            "id": "https://openalex.org/I41156924",
+            "lineage": [
+              "https://openalex.org/I41156924"
+            ],
+            "ror": "https://ror.org/0040r6f76",
+            "type": "education",
+            "type_id": "https://openalex.org/institution-types/education"
+          }
+        ],
+        "is_corresponding": "false",
+        "raw_affiliation_string": null,
+        "raw_affiliation_strings": [
+          "Faculty of Education, Te Herenga Waka - Victoria University of Wellington, Wellington, New Zealand"
+        ],
+        "raw_author_name": "Katie Wilson",
+        "affiliations": [
+          {
+            "raw_affiliation_string": "Faculty of Education, Te Herenga Waka - Victoria University of Wellington, Wellington, New Zealand",
+            "institution_ids": [
+              "https://openalex.org/I41156924"
+            ]
+          }
+        ]
+      }
+    ],
+    "authorships_truncated": null,
+    "best_oa_location": {
+      "doi": "https://doi.org/10.1007/s11192-023-04894-0",
+      "is_accepted": "true",
+      "is_oa": "true",
+      "is_published": "true",
+      "landing_page_url": "https://doi.org/10.1007/s11192-023-04894-0",
+      "license": "cc-by",
+      "license_id": "https://openalex.org/licenses/cc-by",
+      "pdf_url": "https://link.springer.com/content/pdf/10.1007/s11192-023-04894-0.pdf",
+      "source": {
+        "display_name": "Scientometrics",
+        "host_organization": "https://openalex.org/P4310320108",
+        "host_organization_lineage": [
+          "https://openalex.org/P4310319965",
+          "https://openalex.org/P4310320108"
+        ],
+        "host_organization_lineage_names": [
+          "Springer Nature",
+          "Springer Nature (Netherlands)"
+        ],
+        "host_organization_name": "Springer Nature (Netherlands)",
+        "id": "https://openalex.org/S148561398",
+        "is_in_doaj": "false",
+        "is_oa": "false",
+        "issn": [
+          "0138-9130",
+          "1588-2861"
+        ],
+        "issn_l": "0138-9130",
+        "publisher": "Springer Nature (Netherlands)",
+        "type": "journal",
+        "type_id": "https://openalex.org/source-types/journal"
+      },
+      "version": "publishedVersion"
+    },
+    "biblio": {
+      "first_page": "825",
+      "issue": "2",
+      "last_page": "845",
+      "volume": "129"
+    },
+    "cited_by_api_url": "https://api.openalex.org/works?filter\u003dcites:W4390674594",
+    "cited_by_count": "19",
+    "cited_by_percentile_year": {
+      "max": "100.0",
+      "min": "99.0"
+    },
+    "concepts": [
+      {
+        "display_name": "Citation",
+        "id": "https://openalex.org/C2778805511",
+        "level": "2",
+        "score": "0.77174807",
+        "wikidata": "https://www.wikidata.org/wiki/Q1713"
+      },
+      {
+        "display_name": "Diversity (politics)",
+        "id": "https://openalex.org/C2781316041",
+        "level": "2",
+        "score": "0.601911",
+        "wikidata": "https://www.wikidata.org/wiki/Q1230584"
+      },
+      {
+        "display_name": "Computer science",
+        "id": "https://openalex.org/C41008148",
+        "level": "0",
+        "score": "0.508945",
+        "wikidata": "https://www.wikidata.org/wiki/Q21198"
+      },
+      {
+        "display_name": "Perspective (graphical)",
+        "id": "https://openalex.org/C12713177",
+        "level": "2",
+        "score": "0.47561437",
+        "wikidata": "https://www.wikidata.org/wiki/Q1900281"
+      },
+      {
+        "display_name": "Scale (ratio)",
+        "id": "https://openalex.org/C2778755073",
+        "level": "2",
+        "score": "0.45348898",
+        "wikidata": "https://www.wikidata.org/wiki/Q10858537"
+      },
+      {
+        "display_name": "Free access",
+        "id": "https://openalex.org/C3020366717",
+        "level": "2",
+        "score": "0.44916967",
+        "wikidata": "https://www.wikidata.org/wiki/Q14075"
+      },
+      {
+        "display_name": "Open research",
+        "id": "https://openalex.org/C2778464652",
+        "level": "2",
+        "score": "0.44374424",
+        "wikidata": "https://www.wikidata.org/wiki/Q309849"
+      },
+      {
+        "display_name": "Scholarly communication",
+        "id": "https://openalex.org/C2777462167",
+        "level": "3",
+        "score": "0.44105154",
+        "wikidata": "https://www.wikidata.org/wiki/Q7432048"
+      },
+      {
+        "display_name": "Data science",
+        "id": "https://openalex.org/C2522767166",
+        "level": "1",
+        "score": "0.42945158",
+        "wikidata": "https://www.wikidata.org/wiki/Q2374463"
+      },
+      {
+        "display_name": "Citation impact",
+        "id": "https://openalex.org/C2778793908",
+        "level": "3",
+        "score": "0.42817876",
+        "wikidata": "https://www.wikidata.org/wiki/Q5122404"
+      },
+      {
+        "display_name": "Association (psychology)",
+        "id": "https://openalex.org/C142853389",
+        "level": "2",
+        "score": "0.41450697",
+        "wikidata": "https://www.wikidata.org/wiki/Q744778"
+      },
+      {
+        "display_name": "World Wide Web",
+        "id": "https://openalex.org/C136764020",
+        "level": "1",
+        "score": "0.39140278",
+        "wikidata": "https://www.wikidata.org/wiki/Q466"
+      },
+      {
+        "display_name": "Knowledge management",
+        "id": "https://openalex.org/C56739046",
+        "level": "1",
+        "score": "0.36197066",
+        "wikidata": "https://www.wikidata.org/wiki/Q192060"
+      },
+      {
+        "display_name": "Political science",
+        "id": "https://openalex.org/C17744445",
+        "level": "0",
+        "score": "0.3134089",
+        "wikidata": "https://www.wikidata.org/wiki/Q36442"
+      },
+      {
+        "display_name": "Psychology",
+        "id": "https://openalex.org/C15744967",
+        "level": "0",
+        "score": "0.20142269",
+        "wikidata": "https://www.wikidata.org/wiki/Q9418"
+      },
+      {
+        "display_name": "Geography",
+        "id": "https://openalex.org/C205649164",
+        "level": "0",
+        "score": "0.16131252",
+        "wikidata": "https://www.wikidata.org/wiki/Q1071"
+      },
+      {
+        "display_name": "Publishing",
+        "id": "https://openalex.org/C151719136",
+        "level": "2",
+        "score": "0.08185503",
+        "wikidata": "https://www.wikidata.org/wiki/Q3972943"
+      },
+      {
+        "display_name": "Cartography",
+        "id": "https://openalex.org/C58640448",
+        "level": "1",
+        "score": "0.0",
+        "wikidata": "https://www.wikidata.org/wiki/Q42515"
+      },
+      {
+        "display_name": "Artificial intelligence",
+        "id": "https://openalex.org/C154945302",
+        "level": "1",
+        "score": "0.0",
+        "wikidata": "https://www.wikidata.org/wiki/Q11660"
+      },
+      {
+        "display_name": "Law",
+        "id": "https://openalex.org/C199539241",
+        "level": "1",
+        "score": "0.0",
+        "wikidata": "https://www.wikidata.org/wiki/Q7748"
+      },
+      {
+        "display_name": "Psychotherapist",
+        "id": "https://openalex.org/C542102704",
+        "level": "1",
+        "score": "0.0",
+        "wikidata": "https://www.wikidata.org/wiki/Q183257"
+      }
+    ],
+    "concepts_count": "21",
+    "corresponding_author_ids": [
+      "https://openalex.org/A5090536127"
+    ],
+    "corresponding_institution_ids": [
+      "https://openalex.org/I205640436"
+    ],
+    "countries_distinct_count": "2",
+    "counts_by_year": [
+      {
+        "cited_by_count": "18",
+        "year": "2024"
+      }
+    ],
+    "created_date": "2024-01-13",
+    "datasets": [],
+    "display_name": "Open access research outputs receive more diverse citations",
+    "doi": "https://doi.org/10.1007/s11192-023-04894-0",
+    "doi_registration_agency": null,
+    "fulltext_origin": "pdf",
+    "grants": [],
+    "has_fulltext": "true",
+    "id": "https://openalex.org/W4390674594",
+    "ids": {
+      "arxiv_id": null,
+      "doi": "https://doi.org/10.1007/s11192-023-04894-0",
+      "mag": null,
+      "openalex": "https://openalex.org/W4390674594",
+      "pmcid": null,
+      "pmid": null
+    },
+    "indexed_in": [
+      "crossref"
+    ],
+    "institutions_distinct_count": "2",
+    "is_paratext": "false",
+    "is_retracted": "false",
+    "is_review": null,
+    "keywords": [
+      {
+        "display_name": "Open Access Publishing",
+        "id": "https://openalex.org/keywords/open-access-publishing",
+        "keyword": null,
+        "score": "0.542454"
+      },
+      {
+        "display_name": "Open Access",
+        "id": "https://openalex.org/keywords/open-access",
+        "keyword": null,
+        "score": "0.516773"
+      },
+      {
+        "display_name": "Publication Bias",
+        "id": "https://openalex.org/keywords/publication-bias",
+        "keyword": null,
+        "score": "0.512563"
+      },
+      {
+        "display_name": "Research Integrity",
+        "id": "https://openalex.org/keywords/research-integrity",
+        "keyword": null,
+        "score": "0.50355"
+      },
+      {
+        "display_name": "Research Dissemination",
+        "id": "https://openalex.org/keywords/research-dissemination",
+        "keyword": null,
+        "score": "0.502309"
+      },
+      {
+        "display_name": "Open research",
+        "id": "https://openalex.org/keywords/open-research",
+        "keyword": null,
+        "score": "0.44374424"
+      },
+      {
+        "display_name": "Scholarly communication",
+        "id": "https://openalex.org/keywords/scholarly-communication",
+        "keyword": null,
+        "score": "0.44105154"
+      },
+      {
+        "display_name": "Citation impact",
+        "id": "https://openalex.org/keywords/citation-impact",
+        "keyword": null,
+        "score": "0.42817876"
+      },
+      {
+        "display_name": "Association (psychology)",
+        "id": "https://openalex.org/keywords/association",
+        "keyword": null,
+        "score": "0.41450697"
+      }
+    ],
+    "language": "en",
+    "language_id": "https://openalex.org/languages/en",
+    "license": null,
+    "locations": [
+      {
+        "doi": "https://doi.org/10.1007/s11192-023-04894-0",
+        "is_accepted": "true",
+        "is_oa": "true",
+        "is_published": "true",
+        "landing_page_url": "https://doi.org/10.1007/s11192-023-04894-0",
+        "license": "cc-by",
+        "license_id": "https://openalex.org/licenses/cc-by",
+        "pdf_url": "https://link.springer.com/content/pdf/10.1007/s11192-023-04894-0.pdf",
+        "source": {
+          "display_name": "Scientometrics",
+          "host_organization": "https://openalex.org/P4310320108",
+          "host_organization_lineage": [
+            "https://openalex.org/P4310319965",
+            "https://openalex.org/P4310320108"
+          ],
+          "host_organization_lineage_names": [
+            "Springer Nature",
+            "Springer Nature (Netherlands)"
+          ],
+          "host_organization_name": "Springer Nature (Netherlands)",
+          "id": "https://openalex.org/S148561398",
+          "is_in_doaj": "false",
+          "is_oa": "false",
+          "issn": [
+            "0138-9130",
+            "1588-2861"
+          ],
+          "issn_l": "0138-9130",
+          "publisher": "Springer Nature (Netherlands)",
+          "type": "journal",
+          "type_id": "https://openalex.org/source-types/journal"
+        },
+        "version": "publishedVersion"
+      }
+    ],
+    "locations_count": "1",
+    "mesh": [],
+    "open_access": {
+      "any_repository_has_fulltext": "false",
+      "is_oa": "true",
+      "oa_status": "hybrid",
+      "oa_url": "https://link.springer.com/content/pdf/10.1007/s11192-023-04894-0.pdf"
+    },
+    "primary_location": {
+      "doi": "https://doi.org/10.1007/s11192-023-04894-0",
+      "is_accepted": "true",
+      "is_oa": "true",
+      "is_published": "true",
+      "landing_page_url": "https://doi.org/10.1007/s11192-023-04894-0",
+      "license": "cc-by",
+      "license_id": "https://openalex.org/licenses/cc-by",
+      "pdf_url": "https://link.springer.com/content/pdf/10.1007/s11192-023-04894-0.pdf",
+      "source": {
+        "display_name": "Scientometrics",
+        "host_organization": "https://openalex.org/P4310320108",
+        "host_organization_lineage": [
+          "https://openalex.org/P4310319965",
+          "https://openalex.org/P4310320108"
+        ],
+        "host_organization_lineage_names": [
+          "Springer Nature",
+          "Springer Nature (Netherlands)"
+        ],
+        "host_organization_name": "Springer Nature (Netherlands)",
+        "id": "https://openalex.org/S148561398",
+        "is_in_doaj": "false",
+        "is_oa": "false",
+        "issn": [
+          "0138-9130",
+          "1588-2861"
+        ],
+        "issn_l": "0138-9130",
+        "publisher": "Springer Nature (Netherlands)",
+        "type": "journal",
+        "type_id": "https://openalex.org/source-types/journal"
+      },
+      "version": "publishedVersion"
+    },
+    "primary_topic": {
+      "display_name": "Bibliometric Analysis and Research Evaluation",
+      "domain": {
+        "display_name": "Social Sciences",
+        "id": "https://openalex.org/domains/2"
+      },
+      "field": {
+        "display_name": "Decision Sciences",
+        "id": "https://openalex.org/fields/18"
+      },
+      "id": "https://openalex.org/T10102",
+      "score": "0.9994",
+      "subfield": {
+        "display_name": "Statistics, Probability and Uncertainty",
+        "id": "https://openalex.org/subfields/1804"
+      }
+    },
+    "publication_date": "2024-01-08",
+    "publication_year": "2024",
+    "referenced_works": [
+      "https://openalex.org/W2160597895",
+      "https://openalex.org/W2257858171",
+      "https://openalex.org/W2322381034",
+      "https://openalex.org/W2604304190",
+      "https://openalex.org/W2660852010",
+      "https://openalex.org/W2741809807",
+      "https://openalex.org/W2798229828",
+      "https://openalex.org/W2892561184",
+      "https://openalex.org/W2953304564",
+      "https://openalex.org/W2962761131",
+      "https://openalex.org/W2997371893",
+      "https://openalex.org/W3002924435",
+      "https://openalex.org/W3035005301",
+      "https://openalex.org/W3093872269",
+      "https://openalex.org/W3154939278",
+      "https://openalex.org/W3208124108",
+      "https://openalex.org/W4281257753",
+      "https://openalex.org/W4320071046",
+      "https://openalex.org/W4321611368"
+    ],
+    "referenced_works_count": "19",
+    "related_works": [
+      "https://openalex.org/W4386754830",
+      "https://openalex.org/W3177246040",
+      "https://openalex.org/W3161737000",
+      "https://openalex.org/W3024904294",
+      "https://openalex.org/W3017102189",
+      "https://openalex.org/W2783039089",
+      "https://openalex.org/W2620695543",
+      "https://openalex.org/W2241002068",
+      "https://openalex.org/W1566816009",
+      "https://openalex.org/W1551434206"
+    ],
+    "summary_stats": {
+      "2yr_cited_by_count": "0",
+      "cited_by_count": "19"
+    },
+    "sustainable_development_goals": [
+      {
+        "display_name": "Partnerships for the goals",
+        "id": "https://metadata.un.org/sdg/17",
+        "score": "0.42"
+      }
+    ],
+    "title": "Open access research outputs receive more diverse citations",
+    "topics": [
+      {
+        "display_name": "Bibliometric Analysis and Research Evaluation",
+        "domain": {
+          "display_name": "Social Sciences",
+          "id": "https://openalex.org/domains/2"
+        },
+        "field": {
+          "display_name": "Decision Sciences",
+          "id": "https://openalex.org/fields/18"
+        },
+        "id": "https://openalex.org/T10102",
+        "score": "0.9994",
+        "subfield": {
+          "display_name": "Statistics, Probability and Uncertainty",
+          "id": "https://openalex.org/subfields/1804"
+        }
+      },
+      {
+        "display_name": "Methods for Evidence Synthesis in Research",
+        "domain": {
+          "display_name": "Social Sciences",
+          "id": "https://openalex.org/domains/2"
+        },
+        "field": {
+          "display_name": "Decision Sciences",
+          "id": "https://openalex.org/fields/18"
+        },
+        "id": "https://openalex.org/T10206",
+        "score": "0.9689",
+        "subfield": {
+          "display_name": "Statistics, Probability and Uncertainty",
+          "id": "https://openalex.org/subfields/1804"
+        }
+      },
+      {
+        "display_name": "Preprints in Scientific Communication",
+        "domain": {
+          "display_name": "Social Sciences",
+          "id": "https://openalex.org/domains/2"
+        },
+        "field": {
+          "display_name": "Decision Sciences",
+          "id": "https://openalex.org/fields/18"
+        },
+        "id": "https://openalex.org/T13607",
+        "score": "0.9533",
+        "subfield": {
+          "display_name": "Information Systems and Management",
+          "id": "https://openalex.org/subfields/1802"
+        }
+      }
+    ],
+    "topics_count": "3",
+    "type": "article",
+    "type_crossref": "journal-article",
+    "type_id": "https://openalex.org/work-types/article",
+    "updated_date": "2024-11-06 07:16:58.730503 UTC",
+    "versions": []
+  }
+]

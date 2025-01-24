@@ -254,7 +254,7 @@ SELECT
 
   -- Data to send back to DMP tool
   STRUCT(
-    {{ dataset_id }}.strip_html(titles[SAFE_OFFSET(0)].title) AS title,
+    {{ dataset_id }}.remove_markup(titles[SAFE_OFFSET(0)].title) AS title,
     {{ dataset_id }}.parts_to_date_string(parse_datacite_date(dates, created)) AS publication_date,
     normalise_type(types.resourceTypeGeneral) AS type,
     (SELECT ARRAY_AGG(
@@ -276,8 +276,8 @@ SELECT
   STRUCT(
     {{ dataset_id }}.date_parts_to_date(parse_datacite_date(dates, datacite.created)) AS publication_date,
     {{ dataset_id }}.create_content(
-      {{ dataset_id }}.strip_html(ARRAY_TO_STRING(ARRAY(SELECT t.title FROM UNNEST(titles) AS t), " ")),
-      {{ dataset_id }}.strip_html(ARRAY_TO_STRING(ARRAY(SELECT d.description FROM UNNEST(descriptions) AS d), " "))
+      {{ dataset_id }}.remove_markup(ARRAY_TO_STRING(ARRAY(SELECT t.title FROM UNNEST(titles) AS t), " ")),
+      {{ dataset_id }}.remove_markup(ARRAY_TO_STRING(ARRAY(SELECT d.description FROM UNNEST(descriptions) AS d), " "))
     ) AS content,
 
     -- Affiliations

@@ -2,9 +2,11 @@
 Astronomer.io based Apache Airflow workflows for matching academic works to DMPTool DMPs using the Academic Observatory 
 BigQuery datasets.
 
-## Dependencies
-Install the Astro CLI: https://www.astronomer.io/docs/astro/cli/install-cli
+## Requirements
+* Astro CLI: https://www.astronomer.io/docs/astro/cli/install-cli
+* gcloud CLI: https://cloud.google.com/sdk/docs/install
 
+## Installation
 Clone the project and enter the `dmptool-workflows` directory:
 ```bash
 git clone --branch feature/dmp-works-matching git@github.com:CDLUC3/dmsp_api_prototype.git
@@ -22,28 +24,11 @@ Install Python dependencies:
 pip install git+https://github.com/The-Academic-Observatory/observatory-platform.git@feature/astro_kubernetes --constraint https://raw.githubusercontent.com/apache/airflow/constraints-2.7.3/constraints-no-providers-3.10.txt
 ```
 
-## Local Development Setup
-Add the following to your `.env` file:
-```bash
-GOOGLE_APPLICATION_CREDENTIALS=/usr/local/airflow/gcloud/application_default_credentials.json
-```
+## Config
+The workflow is configured via a config file stored as an Apache Airflow variable. It is often easier to work in YAML 
+and then convert it to JSON.
 
-Add `docker-compose.override.yml` to the root of this project and customise the path to the Google Cloud credentials file:
-```commandline
-version: "3.1"
-services:
-  scheduler:
-    volumes:
-      - /path/to/host/google-application-credentials.json:/usr/local/airflow/gcloud/application_default_credentials.json:ro
-  webserver:
-    volumes:
-      - /path/to/host/google-application-credentials.json:/usr/local/airflow/gcloud/application_default_credentials.json:ro
-  triggerer:
-    volumes:
-      - /path/to/host/google-application-credentials.json:/usr/local/airflow/gcloud/application_default_credentials.json:ro
-```
-
-Customise the `workflow-config.yaml` file:
+`workflow-config.yaml` file:
 ```yaml
 cloud_workspaces:
   - workspace: &dmptool_dev
@@ -65,6 +50,31 @@ Convert `workflow-config.yaml` to JSON:
 yq -o=json '.workflows' workflows-config.yaml | jq -c .
 ```
 
+## Local Development
+The following instructions show how to run the workflow locally.
+
+### Setup
+Add the following to your `.env` file:
+```bash
+GOOGLE_APPLICATION_CREDENTIALS=/usr/local/airflow/gcloud/application_default_credentials.json
+```
+
+Add `docker-compose.override.yml` to the root of this project and customise the path to the Google Cloud credentials file:
+```commandline
+version: "3.1"
+services:
+  scheduler:
+    volumes:
+      - /path/to/host/google-application-credentials.json:/usr/local/airflow/gcloud/application_default_credentials.json:ro
+  webserver:
+    volumes:
+      - /path/to/host/google-application-credentials.json:/usr/local/airflow/gcloud/application_default_credentials.json:ro
+  triggerer:
+    volumes:
+      - /path/to/host/google-application-credentials.json:/usr/local/airflow/gcloud/application_default_credentials.json:ro
+```
+
+
 Create or add the following to `airflow_settings.yaml`, making sure to paste the JSON output from above into the 
 WORKFLOWS variable_value:
 ```yaml
@@ -77,7 +87,7 @@ airflow:
       variable_value: REPLACE WITH WORKFLOWS JSON
 ```
 
-## Running Airflow locally
+### Running Airflow locally
 Run the following command:
 ```bash
 astro dev start
@@ -85,7 +95,7 @@ astro dev start
 
 Then open the Airflow UI and run the workflow at: http://localhost:8080
 
-## Running the Queries
+### Running the Queries
 You may also run or generate the queries. Customise the project IDs and the shard date (the shard date of the dmps_raw
 table). Add `--dry-run` to just generate the SQL queries and not run them.
 ```bash
@@ -94,5 +104,76 @@ export PYTHONPATH=/path/to/dmptool-workflows/dags:$PYTHONPATH
 python3 run_queries.py ao-project-id my-project-id YYYY-MM-DD
 ```
 
-## Deploy
-TODO
+### Running tests
+Make sure that the `dags` folder is on your Python path:
+```bash
+export PYTHONPATH=/path/to/dmptool-workflows/dags:$PYTHONPATH
+```
+
+Set the following environment variables:
+* GOOGLE_APPLICATION_CREDENTIALS: as described above.
+* TEST_GCP_PROJECT_ID: Google Cloud project ID for testing.
+* TEST_GCP_DATA_LOCATION: the Google Cloud Storage and BigQuery data location.
+
+Your service account needs the same permissions as granted in `./bin/setup-gcloud-project.sh`. 
+
+Run tests:
+```bash
+python -m unittest discover
+```
+
+## Deployment
+Deploying the project consists of:
+* Creating and configuring a Google Cloud project.
+* Creating and configuring an Astronomer.io Apache Airflow deployment.
+* Attaching a Customer Managed Service Account to your Astronomer.io deployment.
+* Deploy Airflow workflows.
+
+### Create Google Cloud Project
+Create your Google Cloud project:
+```bash
+gcloud projects create my-project-id --name="My Project Name"
+```
+
+Configure your Google Cloud project with the following script:
+```bash
+(cd bin && ./setup-gcloud-project.sh my-project-id my-bucket-name)
+```
+
+Copy the "DMP Airflow Service Account" ID printed by this script.
+
+### Create Astronomer.io Deployment
+Switch to the Astronomer.io workspace that you want to work in:
+```bash
+astro workspace switch
+```
+
+Create your Astro deployment. Note that you may need to update or customise some of the variables, such as 
+runtime_version, workspace_name and alert_emails.
+```bash
+astro deployment create --deployment-file ./bin/deployment.yaml
+```
+
+Create Apache Airflow Variables, customising the value for the WORKFLOWS key. Your Airflow instance needs to be out
+of hibernation to run the `airflow-variable create` and `connection create` commands.
+```bash
+astro deployment variable create GOOGLE_CLOUD_PROJECT=my-project-id
+astro deployment airflow-variable create --key DATA_PATH --value /home/astro/data
+astro deployment airflow-variable create --key WORKFLOWS --value '[{"dag_id":"dmp_match_workflow","name":"DMP Match Workflow","class_name":"dmptool_workflows.dmp_match_workflow.workflow","cloud_workspace":{...}}]'
+astro deployment connection create --conn-id dmptool_api_credentials --conn-type http --login my-client-secret --password my-client-password
+```
+
+### Customer Managed Identity
+Attach the "DMP Airflow Service Account" to your Astro deployment as a "Customer Managed Identity".
+
+Follow the steps here: https://www.astronomer.io/docs/astro/authorize-deployments-to-your-cloud/#attach-a-service-account-to-your-deployment
+
+Use the "DMP Airflow Service Account" email printed by the `setup-gcloud-project.sh` script.
+
+Step 6 is not necessary.
+
+### Deploy Airflow Workflows
+Deploy workflows:
+```bash
+astro deploy
+```

@@ -228,8 +228,14 @@ aggregated AS (
     SUM(CASE WHEN entity_type = 'funder_name' THEN match_count ELSE 0 END) AS funder_name_count,
     SUM(CASE WHEN entity_type = 'affiliation_name' THEN match_count ELSE 0 END) AS affiliation_name_count,
     SUM(
-      IF(entity_type = 'grant_id', match_count * 100, 0) +
-      IF(entity_type = 'funder_opportunity_id', match_count * 10, 0) +
+      -- Treat grant_id and funder_opportunity_id the same
+      -- If both are a match, then the maximum score of them combined is 100
+      -- If only one field is a match, then the maximum score is also 100
+      LEAST(
+        IF(entity_type = 'grant_id', match_count * 100, 0) +
+        IF(entity_type = 'funder_opportunity_id', match_count * 100, 0),
+        100
+      ) +
       IF(entity_type = 'person_id', match_count * 5, 0) +
       IF(entity_type = 'funder_id', match_count * 1, 0) +
       IF(entity_type = 'affiliation_id', match_count * 1, 0) +

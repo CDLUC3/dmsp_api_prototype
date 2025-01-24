@@ -68,9 +68,10 @@ AS (
 );
 
 
-CREATE OR REPLACE FUNCTION {{ dataset_id }}.strip_html(input STRING)
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.remove_markup(input STRING)
 RETURNS STRING AS (
-  REGEXP_REPLACE(REPLACE(REPLACE(input, '&lt;', '<'), '&gt;', '>'),r'<[^>]*>','')
+  -- Remove HTML and quotation marks
+  REGEXP_REPLACE(REGEXP_REPLACE(REPLACE(REPLACE(input, '&lt;', '<'), '&gt;', '>'), r'<[^>]*>',''), r'[\'"]', '')
 );
 
 CREATE OR REPLACE FUNCTION {{ dataset_id }}.normalise_name(input STRING)
@@ -177,4 +178,40 @@ LANGUAGE js AS """
   }
 
   return title + ' ' + abstract;
+""";
+
+CREATE OR REPLACE FUNCTION {{ dataset_id }}.revert_inverted_index(input STRUCT<keys ARRAY<STRING>, values ARRAY<STRING>>)
+RETURNS STRING
+LANGUAGE js AS """
+  function getPositions(value) {
+    return value.split(",").map((v) => parseInt(v.trim()));
+  }
+
+  function revertInvertedIndex(invertedIndex) {
+      let keys = invertedIndex["keys"];
+      let values = invertedIndex["values"];
+      let abstract = [];
+      for (let i = 0; i < keys.length; i++) {
+          let word = keys[i];
+          let positions = getPositions(values[i]);
+
+          // Insert words into array, in JavaScript the array extends automatically
+          for (const p of positions) {
+              abstract[p] = word;
+          }
+      }
+
+      abstract = abstract.join(" ").trim();
+      if(abstract == ""){
+        abstract = null;
+      }
+
+      return abstract;
+  }
+
+  if(input == null || input.keys == null || input.values == null || input.keys.length === 0 || input.values.length === 0 || input.keys.length !== input.values.length){
+    return null;
+  }
+
+  return revertInvertedIndex(input);
 """;

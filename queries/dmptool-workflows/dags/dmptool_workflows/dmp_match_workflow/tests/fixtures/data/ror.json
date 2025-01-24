@@ -1,0 +1,221 @@
+[
+  {
+    "id": "https://ror.org/02n415q13",
+    "name": "Curtin University",
+    "email_address": null,
+    "ip_addresses": [],
+    "established": "1986",
+    "types": [
+      "Education"
+    ],
+    "relationships": [
+      {
+        "id": "https://ror.org/05sd1pp77",
+        "label": "International Centre for Radio Astronomy Research",
+        "type": "Child"
+      },
+      {
+        "id": "https://ror.org/00jjz9s23",
+        "label": "Digitisation Centre of Western Australia",
+        "type": "Related"
+      },
+      {
+        "id": "https://ror.org/024jkkf40",
+        "label": "Australian Centre for Excellence in Antarctic Science",
+        "type": "Related"
+      }
+    ],
+    "addresses": [
+      {
+        "lat": "-31.95224",
+        "lng": "115.8614",
+        "state": null,
+        "state_code": null,
+        "city": "Perth",
+        "geonames_city": {
+          "id": "2063523",
+          "city": "Perth",
+          "geonames_admin1": {
+            "name": null,
+            "id": null,
+            "ascii_name": null,
+            "code": null
+          },
+          "geonames_admin2": {
+            "name": null,
+            "id": null,
+            "ascii_name": null,
+            "code": null
+          },
+          "license": {
+            "attribution": "Data from geonames.org under a CC-BY 3.0 license",
+            "license": "http://creativecommons.org/licenses/by/3.0/"
+          },
+          "nuts_level1": {
+            "name": null,
+            "code": null
+          },
+          "nuts_level2": {
+            "name": null,
+            "code": null
+          },
+          "nuts_level3": {
+            "name": null,
+            "code": null
+          }
+        },
+        "postcode": null,
+        "primary": "false",
+        "line": null,
+        "country_geonames_id": null
+      }
+    ],
+    "links": [
+      "https://www.curtin.edu.au"
+    ],
+    "aliases": [
+      "Curtin University of Technology"
+    ],
+    "acronyms": [],
+    "status": "active",
+    "wikipedia_url": "http://en.wikipedia.org/wiki/Curtin_University",
+    "labels": [],
+    "country": {
+      "country_name": "Australia",
+      "country_code": "AU"
+    },
+    "external_ids": {
+      "ISNI": {
+        "preferred": null,
+        "all": [
+          "0000 0004 0375 4078"
+        ]
+      },
+      "OrgRef": null,
+      "Wikidata": {
+        "preferred": null,
+        "all": [
+          "Q1145497"
+        ]
+      },
+      "GRID": {
+        "preferred": "grid.1032.0",
+        "all": "grid.1032.0"
+      },
+      "FundRef": {
+        "preferred": null,
+        "all": [
+          "501100001797"
+        ]
+      },
+      "CNRS": null,
+      "HESA": null,
+      "UCAS": null,
+      "UKPRN": null,
+      "LinkedIn": null,
+      "Ringgold": null
+    }
+  },
+  {
+    "id": "https://ror.org/051z6e826",
+    "name": "Arcadia Fund",
+    "email_address": null,
+    "ip_addresses": [],
+    "established": "2001",
+    "types": [
+      "Nonprofit"
+    ],
+    "relationships": [
+      {
+        "id": "https://ror.org/017d4c820",
+        "label": "Lund Trust",
+        "type": "Related"
+      }
+    ],
+    "addresses": [
+      {
+        "lat": "51.50853",
+        "lng": "-0.12574",
+        "state": null,
+        "state_code": null,
+        "city": "London",
+        "geonames_city": {
+          "id": "2643743",
+          "city": "London",
+          "geonames_admin1": {
+            "name": "England",
+            "id": "6269131",
+            "ascii_name": "England",
+            "code": "GB.ENG"
+          },
+          "geonames_admin2": {
+            "name": "Greater London",
+            "id": "2648110",
+            "ascii_name": "Greater London",
+            "code": "GB.ENG.GLA"
+          },
+          "license": {
+            "attribution": "Data from geonames.org under a CC-BY 3.0 license",
+            "license": "http://creativecommons.org/licenses/by/3.0/"
+          },
+          "nuts_level1": {
+            "name": null,
+            "code": null
+          },
+          "nuts_level2": {
+            "name": null,
+            "code": null
+          },
+          "nuts_level3": {
+            "name": null,
+            "code": null
+          }
+        },
+        "postcode": null,
+        "primary": "false",
+        "line": null,
+        "country_geonames_id": "2635167"
+      }
+    ],
+    "links": [
+      "https://www.arcadiafund.org.uk/"
+    ],
+    "aliases": [
+      "Lisbet Rausing Charitable Fund"
+    ],
+    "acronyms": [],
+    "status": "active",
+    "wikipedia_url": "",
+    "labels": [],
+    "country": {
+      "country_name": "United Kingdom",
+      "country_code": "GB"
+    },
+    "external_ids": {
+      "ISNI": {
+        "preferred": null,
+        "all": [
+          "0000 0004 6425 8422"
+        ]
+      },
+      "OrgRef": null,
+      "Wikidata": null,
+      "GRID": {
+        "preferred": "grid.497360.f",
+        "all": "grid.497360.f"
+      },
+      "FundRef": {
+        "preferred": "100012088",
+        "all": [
+          "100012088"
+        ]
+      },
+      "CNRS": null,
+      "HESA": null,
+      "UCAS": null,
+      "UKPRN": null,
+      "LinkedIn": null,
+      "Ringgold": null
+    }
+  }
+]
