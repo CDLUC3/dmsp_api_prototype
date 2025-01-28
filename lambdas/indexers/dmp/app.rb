@@ -267,7 +267,16 @@ module Functions
         project_dates = _getProjectDates(project: project)
 
         funding = project.fetch('funding', {}).fetch('L', [{}]).first.fetch('M', {})
-        doc = people.merge(_extract_funding(hash: funding, logger:))
+        funding_entry = _extract_funding(hash: funding, logger:)
+        # Only include the funding entry if it has data
+        doc = {}
+        if funding_entry.is_a?(Hash)
+          entry = funding_entry[:funding]&.first
+          if entry && (entry[:grant_id] != nil || entry[:funding_opportunity_id] != nil ||
+            entry.fetch(:funder, {})[:id] != nil || entry.fetch(:funder, {})[:name])
+            doc = people.merge(funding_entry)
+          end
+        end
         doc = doc.merge(_repos_to_os_doc_parts(datasets: hash.fetch('dataset', {}).fetch('L', [])))
 
         doc = doc.merge({
