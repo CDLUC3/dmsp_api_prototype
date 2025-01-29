@@ -267,7 +267,16 @@ module Functions
         project_dates = _getProjectDates(project: project)
 
         funding = project.fetch('funding', {}).fetch('L', [{}]).first.fetch('M', {})
-        doc = people.merge(_extract_funding(hash: funding, logger:))
+        funding_entry = _extract_funding(hash: funding, logger:)
+        # Only include the funding entry if it has data
+        doc = {}
+        if funding_entry.is_a?(Hash)
+          entry = funding_entry[:funding]&.first
+          if entry && (entry[:grant_id] != nil || entry[:funding_opportunity_id] != nil ||
+            entry.fetch(:funder, {})[:id] != nil || entry.fetch(:funder, {})[:name])
+            doc = people.merge(funding_entry)
+          end
+        end
         doc = doc.merge(_repos_to_os_doc_parts(datasets: hash.fetch('dataset', {}).fetch('L', [])))
 
         doc = doc.merge({
@@ -283,6 +292,9 @@ module Functions
           registered: hash.fetch('registered', {})['S']&.to_s&.split('T')&.first&.to_s
         })
         logger.debug(message: 'New OpenSearch Document', details: { document: doc }) unless visibility == 'public'
+
+        doc = _cleanup_data(hash: doc)
+
         return doc unless visibility == 'public'
 
         # Attach the narrative PDF if the plan is public
@@ -290,6 +302,25 @@ module Functions
         doc[:narrative_url] = _extract_narrative(works:, logger:)&.to_s
         logger.debug(message: 'New OpenSearch Document', details: { document: doc })
         doc
+      end
+
+      # Remove empty objects from arrays and booleans from text fields
+      def _cleanup_data(hash:)
+        out = {}
+        hash.each do |key, val|
+          if val.is_a?(String)
+            out[key] = val.strip == '' ? nil : val.strip
+          elsif val.is_a?(Array)
+            # Its an array so recursively clean it and then ignore nulls and duplicates
+            out[key] = val.map { |entry| entry.respond_to?(:keys) ? _cleanup_data(hash: entry) : entry&.strip }.compact.uniq
+          elsif val.respond_to?(:keys)
+            # Its an object so recursively clean it
+            out[key] = _cleanup_data(hash: val)
+          else
+            out[key] = nil
+          end
+        end
+        out
       end
 
       # Fetch the project start and end dates
@@ -358,14 +389,17 @@ module Functions
         id = hash.fetch('funder_id', {}).fetch('M', {}).fetch('identifier', {})['S']
         id = id&.gsub('https://doi.org/10.13039/', '')&.gsub('https://ror.org/', '')&.to_s
         {
-          funder_ids: [id],
-          funders: [_prep_org_name(text: hash.fetch('name', {})['S'])],
-          funder_opportunity_ids: [
-            hash.fetch('dmproadmap_funding_opportunity_id', {})['S']&.downcase&.strip,
-            hash.fetch('dmproadmap_project_number', {})['S']&.downcase&.strip
-          ].compact.uniq,
-          grant_ids: [_process_grant_id(id: hash.fetch('grant_id', {}).fetch('M', {}).fetch('identifier', {})['S'])],
-          funding_status: hash.fetch('funding_status', {}).fetch('S', 'planned')&.to_s
+          funding: [
+            {
+              status: hash.fetch('funding_status', {}).fetch('S', 'planned')&.to_s,
+              grant_id: hash.fetch('grant_id', {}).fetch('M', {}).fetch('identifier', {})['S']&.strip,
+              funding_opportunity_id: hash.fetch('dmproadmap_funding_opportunity_id', {}).fetch('M', {}).fetch('identifier', {})['S']&.strip,
+              funder: {
+                name: _prep_org_name(text: hash.fetch('name', {})['S']),
+                id: id
+              }
+            }
+          ]
         }
       end
 
@@ -422,14 +456,14 @@ module Functions
         people.each do |person|
           parts[:people] << person[:name] unless person[:name].nil?
           parts[:people] << person[:email] unless person[:email].nil?
-          parts[:people_ids] << person[:id] unless person[:id].nil?
+          parts[:people_ids] << person[:id].gsub(/\s/, '') unless person[:id].nil?
           parts[:affiliations] << person[:affiliation] unless person[:affiliation].nil?
           parts[:affiliation_ids] << person[:affiliation_id] unless person[:affiliation_id].nil?
         end
         parts
       end
 
-      # Retreive all of the repositories defined for the research outputs
+      # Retrieve all of the repositories defined for the research outputs
       def _repos_to_os_doc_parts(datasets:)
         parts = { repos: [], repo_ids: [] }
         return parts unless datasets.is_a?(Array) && datasets.any?
