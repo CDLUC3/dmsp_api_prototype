@@ -4,20 +4,11 @@
       "0000-0002-0068-716X",
       "0000-0001-6551-8140"
     ],
-    "funders": [
-      "curtin university research office",
-      "curtin university faculty of humanities",
-      "arcadia a charitable fund of lisbet rausing & peter baldwin"
-    ],
     "affiliation_ids": [
       "00dmfq477"
     ],
     "narrative_url": "https://dmphub.uc3prd.cdlib.net/narratives/0000000000000000.pdf",
     "project_end": "2030-01-01",
-    "funder_ids": [
-      "051z6e826",
-      "00dmfq477"
-    ],
     "visibility": "public",
     "created": "2020-03-01",
     "affiliations": [
@@ -29,11 +20,53 @@
     ],
     "dmp_id": "doi.org/10.48321/000000",
     "registered": "2022-09-26",
-    "grant_ids": [
-      "360G-ArcadiaFund-4191"
+    "funding": [
+      {
+        "status": "Planned",
+        "funder": {
+          "id": "051z6e826",
+          "name": "Arcadia Fund"
+        },
+        "funder_opportunity_id": null,
+        "grant_id": "360G-ArcadiaFund-4191"
+      },
+      {
+        "status": "Planned",
+        "funder": {
+          "id": "051z6e826",
+          "name": "Arcadia Fund"
+        },
+        "funder_opportunity_id": null,
+        "grant_id": "360G-ArcadiaFund-4191"
+      },
+      {
+        "status": "Planned",
+        "funder": {
+          "id": "02n415q13",
+          "name": "Curtin University"
+        },
+        "funder_opportunity_id": null,
+        "grant_id": null
+      },
+      {
+        "status": "Planned",
+        "funder": {
+          "id": null,
+          "name": "curtin university research office"
+        },
+        "funder_opportunity_id": null,
+        "grant_id": null
+      },
+      {
+        "status": "Planned",
+        "funder": {
+          "id": null,
+          "name": "curtin university faculty of humanities"
+        },
+        "funder_opportunity_id": null,
+        "grant_id": null
+      }
     ],
-    "funder_opportunity_ids": [],
-    "funding_status": "planned",
     "project_start": "2020-01-01",
     "people": [
       "cameron neylon",

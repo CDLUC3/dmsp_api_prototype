@@ -91,23 +91,42 @@
   },
   {
     "mode": "REPEATED",
-    "name": "funders",
-    "type": "STRING"
-  },
-  {
-    "mode": "REPEATED",
-    "name": "funder_ids",
-    "type": "STRING"
-  },
-  {
-    "mode": "REPEATED",
-    "name": "funder_opportunity_ids",
-    "type": "STRING"
-  },
-  {
-    "mode": "REPEATED",
-    "name": "grant_ids",
-    "type": "STRING"
+    "name": "funding",
+    "type": "RECORD",
+    "fields": [
+      {
+        "mode": "NULLABLE",
+        "name": "status",
+        "type": "STRING"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "funder",
+        "type": "RECORD",
+        "fields": [
+          {
+            "mode": "NULLABLE",
+            "name": "id",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "name",
+            "type": "STRING"
+          }
+        ]
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "funder_opportunity_id",
+        "type": "STRING"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "grant_id",
+        "type": "STRING"
+      }
+    ]
   },
   {
     "mode": "REPEATED",

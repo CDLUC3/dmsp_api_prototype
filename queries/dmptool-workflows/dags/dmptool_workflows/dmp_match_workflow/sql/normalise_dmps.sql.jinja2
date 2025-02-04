@@ -136,22 +136,26 @@ funder_index AS (
     dmp_id,
     ARRAY_AGG(DISTINCT funder_id) AS funder_ids
   FROM (
-    SELECT dmp_id, funder_id as funder_id
-    FROM `{{ dmps_raw_table_id }}` as dmps, UNNEST(dmps.funder_ids) AS funder_id
+    -- Collects all IDS specified in DMPs
+    SELECT dmp_id, fund.funder.id as funder_id
+    FROM `{{ dmps_raw_table_id }}` as dmps, UNNEST(dmps.funding) AS fund
+    WHERE fund.funder.id IS NOT NULL
 
     UNION ALL
 
+    -- Selects all Fundref IDs that can be matched to ROR IDs from the DMPs
     SELECT dmp_id, fundref_index.fundref_id as funder_id
-    FROM `{{ dmps_raw_table_id }}` as dmps, UNNEST(dmps.funder_ids) AS funder_id
-    LEFT JOIN fundref_index ON funder_id = fundref_index.ror_id
-    WHERE fundref_index.fundref_id IS NOT NULL
+    FROM `{{ dmps_raw_table_id }}` as dmps, UNNEST(dmps.funding) AS fund
+    LEFT JOIN fundref_index ON fund.funder.id = fundref_index.ror_id
+    WHERE fundref_index.fundref_id IS NOT NULL AND fund.funder.id IS NOT NULL
 
     UNION ALL
 
+    -- Selects all ROR IDs that can be matched to Fundref IDs from the DMPs
     SELECT dmp_id, fundref_index.ror_id as funder_id
-    FROM `{{ dmps_raw_table_id }}` as dmps, UNNEST(dmps.funder_ids) AS funder_id
-    LEFT JOIN fundref_index ON funder_id = fundref_index.fundref_id
-    WHERE fundref_index.ror_id IS NOT NULL
+    FROM `{{ dmps_raw_table_id }}` as dmps, UNNEST(dmps.funding) AS fund
+    LEFT JOIN fundref_index ON fund.funder.id = fundref_index.fundref_id
+    WHERE fundref_index.ror_id IS NOT NULL AND fund.funder.id IS NOT NULL
   )
   GROUP BY dmp_id
 ),
@@ -169,11 +173,10 @@ normalised AS (
     (SELECT ARRAY_AGG(remove_empty_strings(affiliation) IGNORE NULLS) FROM UNNEST(dmps.affiliations) AS affiliation) AS affiliations,
     (SELECT ARRAY_AGG(remove_empty_strings(affiliation_id) IGNORE NULLS) FROM UNNEST(dmps.affiliation_ids) AS affiliation_id) AS affiliation_ids,
 
-    (SELECT ARRAY_AGG(remove_empty_strings(funder) IGNORE NULLS) FROM UNNEST(dmps.funders) AS funder) AS funders,
+    (SELECT ARRAY_AGG(remove_empty_strings(fund.funder.name) IGNORE NULLS) FROM UNNEST(dmps.funding) AS fund) AS funders,
     funder_index.funder_ids, -- Add additional Funder IDS from Crossref Fundref list of Funder IDs
-    (SELECT ARRAY_AGG(remove_empty_strings(funder_opportunity_id) IGNORE NULLS) FROM UNNEST(dmps.funder_opportunity_ids) AS funder_opportunity_id) AS funder_opportunity_ids,
-
-    (SELECT ARRAY_AGG(extract_grant_id(grant_id) IGNORE NULLS) FROM UNNEST(dmps.grant_ids) AS grant_id) AS grant_ids,
+    (SELECT ARRAY_AGG(remove_empty_strings(fund.funder_opportunity_id) IGNORE NULLS) FROM UNNEST(dmps.funding) AS fund) AS funder_opportunity_ids,
+    (SELECT ARRAY_AGG(extract_grant_id(fund.grant_id) IGNORE NULLS) FROM UNNEST(dmps.funding) AS fund) AS grant_ids,
 
     -- Contains email addresses and peoples names are a mix of given family and family, given
     (SELECT ARRAY_AGG(remove_empty_strings(person) IGNORE NULLS) FROM UNNEST(dmps.people) AS person) AS people,
