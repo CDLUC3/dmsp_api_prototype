@@ -11,18 +11,18 @@ interactions:
       User-Agent:
       - python-requests/2.31.0
     method: GET
-    uri: https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/?ids=39747675%2C38286823%2C38096378&format=json&idtype=pmid&tool=dmptool-match-workflows&email=agent%40observatory.academy&versions=no
+    uri: https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/?ids=39747675%2C38286823%2C38096378&format=json&idtype=pmid&tool=dmptool-match-workflows&versions=no
   response:
     body:
-      string: "{\n \"status\": \"ok\",\n \"responseDate\": \"2025-01-23 22:50:07\",\n
-        \"request\": \"ids=39747675%2C38286823%2C38096378;format=json;idtype=pmid;tool=dmptool-match-workflows;email=agent%40observatory.academy;versions=no\",\n
-        \"records\": [\n   {\n    \"pmcid\": \"PMC10874502\",\n    \"pmid\": \"38096378\",\n
-        \   \"doi\": \"10.1021/acs.jproteome.3c00430\",\n    \"live\": \"false\",\n
-        \   \"release-date\": \"2025-02-02\"\n   },\n   {\n    \"pmcid\": \"PMC10990768\",\n
-        \   \"pmid\": \"38286823\",\n    \"doi\": \"10.1021/jasms.3c00435\",\n    \"live\":
-        \"false\",\n    \"release-date\": \"2025-04-03\"\n   },\n   {\n    \"pmid\":
-        \"39747675\",\n    \"live\": \"false\",\n    \"status\": \"error\",\n    \"errmsg\":
-        \"invalid article id\"\n   }\n ]\n}\n"
+      string: "{\n \"status\": \"ok\",\n \"responseDate\": \"2025-02-03 19:42:06\",\n
+        \"request\": \"ids=39747675%2C38286823%2C38096378;format=json;idtype=pmid;tool=dmptool-match-workflows;versions=no\",\n
+        \"warning\": \"no e-mail provided\",\n \"records\": [\n   {\n    \"pmcid\":
+        \"PMC10874502\",\n    \"pmid\": \"38096378\",\n    \"doi\": \"10.1021/acs.jproteome.3c00430\"\n
+        \  },\n   {\n    \"pmcid\": \"PMC10990768\",\n    \"pmid\": \"38286823\",\n
+        \   \"doi\": \"10.1021/jasms.3c00435\",\n    \"live\": \"false\",\n    \"release-date\":
+        \"2025-04-03\"\n   },\n   {\n    \"pmid\": \"39747675\",\n    \"live\": \"false\",\n
+        \   \"status\": \"error\",\n    \"errmsg\": \"invalid article id\"\n   }\n
+        ]\n}\n"
     headers:
       Access-Control-Allow-Headers:
       - Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With
@@ -36,14 +36,12 @@ interactions:
       - Keep-Alive
       Content-Encoding:
       - gzip
-      Content-Length:
-      - '351'
       Content-Security-Policy:
       - upgrade-insecure-requests
       Content-Type:
       - application/json; charset=ISO-8859-1
       Date:
-      - Fri, 24 Jan 2025 03:50:07 GMT
+      - Tue, 04 Feb 2025 00:42:06 GMT
       Keep-Alive:
       - timeout=1, max=10
       Referrer-Policy:
@@ -52,6 +50,8 @@ interactions:
       - Apache
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
       Vary:
       - Accept-Encoding
       X-UA-Compatible:
@@ -73,17 +73,17 @@ interactions:
       User-Agent:
       - python-requests/2.31.0
     method: GET
-    uri: https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/?ids=10990768%2C10874502%2C10908861&format=json&idtype=pmcid&tool=dmptool-match-workflows&email=agent%40observatory.academy&versions=no
+    uri: https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/?ids=10990768%2C10874502%2C10908861&format=json&idtype=pmcid&tool=dmptool-match-workflows&versions=no
   response:
     body:
-      string: "{\n \"status\": \"ok\",\n \"responseDate\": \"2025-01-23 22:50:08\",\n
-        \"request\": \"ids=10990768%2C10874502%2C10908861;format=json;idtype=pmcid;tool=dmptool-match-workflows;email=agent%40observatory.academy;versions=no\",\n
-        \"records\": [\n   {\n    \"pmcid\": \"PMC10990768\",\n    \"pmid\": \"38286823\",\n
-        \   \"doi\": \"10.1021/jasms.3c00435\",\n    \"live\": \"false\",\n    \"release-date\":
-        \"2025-04-03\"\n   },\n   {\n    \"pmcid\": \"PMC10874502\",\n    \"pmid\":
-        \"38096378\",\n    \"doi\": \"10.1021/acs.jproteome.3c00430\",\n    \"live\":
-        \"false\",\n    \"release-date\": \"2025-02-02\"\n   },\n   {\n    \"pmcid\":
-        \"PMC10908861\",\n    \"pmid\": \"38431639\",\n    \"doi\": \"10.1038/s41467-024-46240-9\"\n
+      string: "{\n \"status\": \"ok\",\n \"responseDate\": \"2025-02-03 19:42:06\",\n
+        \"request\": \"ids=10990768%2C10874502%2C10908861;format=json;idtype=pmcid;tool=dmptool-match-workflows;versions=no\",\n
+        \"warning\": \"no e-mail provided\",\n \"records\": [\n   {\n    \"pmcid\":
+        \"PMC10990768\",\n    \"pmid\": \"38286823\",\n    \"doi\": \"10.1021/jasms.3c00435\",\n
+        \   \"live\": \"false\",\n    \"release-date\": \"2025-04-03\"\n   },\n   {\n
+        \   \"pmcid\": \"PMC10874502\",\n    \"pmid\": \"38096378\",\n    \"doi\":
+        \"10.1021/acs.jproteome.3c00430\"\n   },\n   {\n    \"pmcid\": \"PMC10908861\",\n
+        \   \"pmid\": \"38431639\",\n    \"doi\": \"10.1038/s41467-024-46240-9\"\n
         \  }\n ]\n}\n"
     headers:
       Access-Control-Allow-Headers:
@@ -99,13 +99,13 @@ interactions:
       Content-Encoding:
       - gzip
       Content-Length:
-      - '343'
+      - '333'
       Content-Security-Policy:
       - upgrade-insecure-requests
       Content-Type:
       - application/json; charset=ISO-8859-1
       Date:
-      - Fri, 24 Jan 2025 03:50:08 GMT
+      - Tue, 04 Feb 2025 00:42:06 GMT
       Keep-Alive:
       - timeout=1, max=10
       Referrer-Policy:

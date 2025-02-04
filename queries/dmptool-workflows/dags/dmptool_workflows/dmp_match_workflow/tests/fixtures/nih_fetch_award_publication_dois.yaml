@@ -37,15 +37,16 @@ interactions:
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Fri, 24 Jan 2025 03:50:09 GMT
+      - Tue, 04 Feb 2025 00:42:25 GMT
       Server:
       - nginx
       Set-Cookie:
-      - AWSALB=R0GXH5EX4LONsJuhGwQrgbSn9HbcS4KSzfJ06h9VrSOXxzUBtzNMyugyhNZGb8JcQY3dtkEZkMKHUST52LVYUwn/7h3Xr3uFrEHBOBwUkGsS0cZm95ar6W9GykK4;
-        Expires=Fri, 31 Jan 2025 03:50:09 GMT; Path=/
-      - AWSALBCORS=R0GXH5EX4LONsJuhGwQrgbSn9HbcS4KSzfJ06h9VrSOXxzUBtzNMyugyhNZGb8JcQY3dtkEZkMKHUST52LVYUwn/7h3Xr3uFrEHBOBwUkGsS0cZm95ar6W9GykK4;
-        Expires=Fri, 31 Jan 2025 03:50:09 GMT; Path=/; SameSite=None; Secure
+      - AWSALB=C6RtDjm1cX3gO8cK3t94JxF5DZoqKpgk6jZT/YvCrnj8XJ7lHhH12Padp2C4ncBPWCcs/mMqJgzbGovM9tQvyZJ5QiQteefFgBU1HblvqGoCxNXkbvO8WzhV1VkM;
+        Expires=Tue, 11 Feb 2025 00:42:25 GMT; Path=/
+      - AWSALBCORS=C6RtDjm1cX3gO8cK3t94JxF5DZoqKpgk6jZT/YvCrnj8XJ7lHhH12Padp2C4ncBPWCcs/mMqJgzbGovM9tQvyZJ5QiQteefFgBU1HblvqGoCxNXkbvO8WzhV1VkM;
+        Expires=Tue, 11 Feb 2025 00:42:25 GMT; Path=/; SameSite=None; Secure
       Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
       - max-age=31536000; includeSubDomains; preload;
       X-Content-Type-Options:
       - nosniff
@@ -56,7 +57,7 @@ interactions:
       X-Rate-Limit-Remaining:
       - '199'
       X-Rate-Limit-Reset:
-      - '2025-01-24T03:51:09.9832639Z'
+      - '2025-02-04T00:43:25.8169879Z'
       X-XSS-Protection:
       - 1; mode=block
       - 1; mode=block
@@ -75,13 +76,14 @@ interactions:
       User-Agent:
       - python-requests/2.31.0
     method: GET
-    uri: https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/?ids=39458976&format=json&idtype=pmid&tool=dmptool-workflow&email=agent%40observatory.academy&versions=no
+    uri: https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/?ids=39458976&format=json&idtype=pmid&tool=dmptool-workflow&versions=no
   response:
     body:
-      string: "{\n \"status\": \"ok\",\n \"responseDate\": \"2025-01-23 22:50:10\",\n
-        \"request\": \"ids=39458976;format=json;idtype=pmid;tool=dmptool-workflow;email=agent%40observatory.academy;versions=no\",\n
-        \"records\": [\n   {\n    \"pmcid\": \"PMC11509978\",\n    \"pmid\": \"39458976\",\n
-        \   \"doi\": \"10.3390/ph17101335\"\n   }\n ]\n}\n"
+      string: "{\n \"status\": \"ok\",\n \"responseDate\": \"2025-02-03 19:42:26\",\n
+        \"request\": \"ids=39458976;format=json;idtype=pmid;tool=dmptool-workflow;versions=no\",\n
+        \"warning\": \"no e-mail provided\",\n \"records\": [\n   {\n    \"pmcid\":
+        \"PMC11509978\",\n    \"pmid\": \"39458976\",\n    \"doi\": \"10.3390/ph17101335\"\n
+        \  }\n ]\n}\n"
     headers:
       Access-Control-Allow-Headers:
       - Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With
@@ -96,13 +98,13 @@ interactions:
       Content-Encoding:
       - gzip
       Content-Length:
-      - '234'
+      - '230'
       Content-Security-Policy:
       - upgrade-insecure-requests
       Content-Type:
       - application/json; charset=ISO-8859-1
       Date:
-      - Fri, 24 Jan 2025 03:50:10 GMT
+      - Tue, 04 Feb 2025 00:42:26 GMT
       Keep-Alive:
       - timeout=1, max=10
       Referrer-Policy:
