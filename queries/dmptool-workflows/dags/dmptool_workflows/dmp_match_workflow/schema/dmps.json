@@ -118,7 +118,7 @@
       },
       {
         "mode": "NULLABLE",
-        "name": "funder_opportunity_id",
+        "name": "funding_opportunity_id",
         "type": "STRING"
       },
       {

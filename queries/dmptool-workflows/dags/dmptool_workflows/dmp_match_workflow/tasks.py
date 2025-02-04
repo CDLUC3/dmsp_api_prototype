@@ -318,7 +318,6 @@ def add_dataset_release(
     entity_id: str = DATASET_API_ENTITY_ID,
 ):
     api = DatasetAPI(bq_project_id=bq_project_id, bq_dataset_id=api_bq_dataset_id)
-    api.seed_db()
     now = pendulum.now()
     dataset_release = DatasetRelease(
         dag_id=dag_id,

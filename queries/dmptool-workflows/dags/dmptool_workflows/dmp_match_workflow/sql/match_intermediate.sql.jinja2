@@ -18,10 +18,10 @@ WITH dmps_unnested_ids AS (
     project_start,
     project_end,
     entity,
-    'funder_opportunity_id' AS entity_type
+    'funding_opportunity_id' AS entity_type
   FROM
     `{{ dmps_norm_table_id }}` AS dmps,
-    UNNEST(dmps.funder_opportunity_ids) AS entity
+    UNNEST(dmps.funding_opportunity_ids) AS entity
 
   UNION ALL
 
@@ -112,7 +112,7 @@ match_unnested_ids AS (
     match.doi,
     match_data.publication_date,
     entity,
-    'funder_opportunity_id' AS entity_type
+    'funding_opportunity_id' AS entity_type
   FROM
     `{{ match_norm_table_id }}` AS match,
     UNNEST(match.match_data.grant_ids) AS entity
@@ -220,7 +220,7 @@ aggregated AS (
     dmp_doi,
     match_doi,
     SUM(CASE WHEN entity_type = 'grant_id' THEN match_count ELSE 0 END) AS grant_id_count,
-    SUM(CASE WHEN entity_type = 'funder_opportunity_id' THEN match_count ELSE 0 END) AS funder_opportunity_id_count,
+    SUM(CASE WHEN entity_type = 'funding_opportunity_id' THEN match_count ELSE 0 END) AS funding_opportunity_id_count,
     SUM(CASE WHEN entity_type = 'person_id' THEN match_count ELSE 0 END) AS person_id_count,
     SUM(CASE WHEN entity_type = 'funder_id' THEN match_count ELSE 0 END) AS funder_id_count,
     SUM(CASE WHEN entity_type = 'affiliation_id' THEN match_count ELSE 0 END) AS affiliation_id_count,
@@ -228,12 +228,12 @@ aggregated AS (
     SUM(CASE WHEN entity_type = 'funder_name' THEN match_count ELSE 0 END) AS funder_name_count,
     SUM(CASE WHEN entity_type = 'affiliation_name' THEN match_count ELSE 0 END) AS affiliation_name_count,
     SUM(
-      -- Treat grant_id and funder_opportunity_id the same
+      -- Treat grant_id and funding_opportunity_id the same
       -- If both are a match, then the maximum score of them combined is 100
       -- If only one field is a match, then the maximum score is also 100
       LEAST(
         IF(entity_type = 'grant_id', match_count * 100, 0) +
-        IF(entity_type = 'funder_opportunity_id', match_count * 100, 0),
+        IF(entity_type = 'funding_opportunity_id', match_count * 100, 0),
         100
       ) +
       IF(entity_type = 'person_id', match_count * 5, 0) +
@@ -254,7 +254,7 @@ SELECT
     STRUCT(
       match_doi,
       grant_id_count,
-      funder_opportunity_id_count,
+      funding_opportunity_id_count,
       person_id_count,
       funder_id_count,
       affiliation_id_count,

@@ -170,7 +170,7 @@ SELECT
     -- Funder IDs
     (SELECT ARRAY_AGG(DISTINCT funder_id IGNORE NULLS) FROM UNNEST(funders.funder_ids) AS funder_id WHERE funder_id IS NOT NULL) AS funder_ids,
 
-    -- ARRAY<STRING>[] AS funder_opportunity_ids,
+    -- ARRAY<STRING>[] AS funding_opportunity_ids,
 
     -- Grant IDs
     (SELECT ARRAY_AGG(DISTINCT LOWER(TRIM(grant.award_id)) IGNORE NULLS) FROM UNNEST(grants) AS grant WHERE grant.award_id IS NOT NULL) AS grant_ids,

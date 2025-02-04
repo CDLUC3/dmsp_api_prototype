@@ -175,7 +175,7 @@ normalised AS (
 
     (SELECT ARRAY_AGG(remove_empty_strings(fund.funder.name) IGNORE NULLS) FROM UNNEST(dmps.funding) AS fund) AS funders,
     funder_index.funder_ids, -- Add additional Funder IDS from Crossref Fundref list of Funder IDs
-    (SELECT ARRAY_AGG(remove_empty_strings(fund.funder_opportunity_id) IGNORE NULLS) FROM UNNEST(dmps.funding) AS fund) AS funder_opportunity_ids,
+    (SELECT ARRAY_AGG(remove_empty_strings(fund.funding_opportunity_id) IGNORE NULLS) FROM UNNEST(dmps.funding) AS fund) AS funding_opportunity_ids,
     (SELECT ARRAY_AGG(extract_grant_id(fund.grant_id) IGNORE NULLS) FROM UNNEST(dmps.funding) AS fund) AS grant_ids,
 
     -- Contains email addresses and peoples names are a mix of given family and family, given
@@ -200,7 +200,7 @@ SELECT
   affiliation_ids,
   ARRAY(SELECT value FROM UNNEST(funders) AS value ORDER BY value) AS funders,
   funder_ids,
-  funder_opportunity_ids,
+  funding_opportunity_ids,
   grant_ids,
   ARRAY(SELECT value FROM UNNEST(people) AS value ORDER BY value) AS people,
   people_ids
