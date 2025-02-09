@@ -153,7 +153,7 @@ SELECT
       COALESCE(
         NULLIF(TRIM({{ dataset_id }}.remove_markup({{ dataset_id }}.revert_inverted_index(openalex.abstract_inverted_index))), ''),
         NULLIF(TRIM({{ dataset_id }}.remove_markup(crossref.abstract)), ''),
-        NULLIF(TRIM({{ dataset_id }}.remove_markup(ARRAY_TO_STRING(ARRAY(SELECT d.description FROM UNNEST(datacite.descriptions) AS d), " "))), ''),
+        NULLIF(TRIM({{ dataset_id }}.remove_markup(ARRAY_TO_STRING(ARRAY(SELECT d.description FROM UNNEST(datacite.attributes.descriptions) AS d), " "))), ''),
         NULL
       ) -- Choose abstracts from OpenAlex first, then Crossref, then DataCite.
     ) AS content,
@@ -184,5 +184,5 @@ SELECT
 FROM openalex
 LEFT JOIN funders ON funders.id = openalex.id
 LEFT JOIN `{{ crossref_metadata_table_id }}` as crossref ON {{ dataset_id }}.normalise_doi(crossref.doi) = openalex.doi
-LEFT JOIN `{{ datacite_table_id }}` as datacite ON {{ dataset_id }}.normalise_doi(datacite.doi) = openalex.doi
+LEFT JOIN `{{ datacite_table_id }}` as datacite ON {{ dataset_id }}.normalise_doi(datacite.id) = openalex.doi
 ORDER BY match_data.publication_date DESC
