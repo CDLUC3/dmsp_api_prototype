@@ -62,9 +62,10 @@ if ARGV.length >= 3
     '../../harvesters/harvestable_dmps',
     '../../harvesters/datacite',
     # '../../harvesters/ror',
-    '../../indexers/dmp' #,
+    '../../indexers/dmp',
     # '../../indexers/typeahead',
-    # '../../../sam'
+    '../../utilities/citer',
+    '../../utilities/ezid_publisher'
   ]
   #
   # DON'T FORGET TO: Add an entry to the Sceptre config for lambda-iam.yaml and lambda-vpc.yaml for this Layer!
