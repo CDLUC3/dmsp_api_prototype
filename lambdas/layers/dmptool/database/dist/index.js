@@ -32,6 +32,10 @@ const deserializeDynamoItem = (item) => {
                 }
             });
         }
+        else if (type === 'NULL') {
+            // Handle NULL type
+            unmarshalledItem[key] = null;
+        }
         else {
             // Handle primitive types (e.g., S, N, BOOL)
             unmarshalledItem[key] = rawValue;

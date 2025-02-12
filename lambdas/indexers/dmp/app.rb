@@ -293,7 +293,7 @@ module Functions
         })
         logger.debug(message: 'New OpenSearch Document', details: { document: doc }) unless visibility == 'public'
 
-        doc = _cleanup_data(hash: doc)
+        doc = _cleanup_data(hash: doc, logger: logger)
 
         return doc unless visibility == 'public'
 
@@ -305,21 +305,30 @@ module Functions
       end
 
       # Remove empty objects from arrays and booleans from text fields
-      def _cleanup_data(hash:)
+      def _cleanup_data(hash:, logger:)
         out = {}
         hash.each do |key, val|
-          if val.is_a?(String)
+          if key == 'featured'
+            # featured is a boolean so convert it to a 1 or 0
+            out[key] = val == '1' ? 1 : 0
+          elsif val.is_a?(String)
+            # Its a string so remove any HTML markup and convert it to a null if empty
             out[key] = val.strip == '' ? nil : val.strip
+          elsif val.is_a?(TrueClass) || val.is_a?(FalseClass)
+            # Its a boolean so convert it to a null
+            out[key] = nil
           elsif val.is_a?(Array)
             # Its an array so recursively clean it and then ignore nulls and duplicates
-            out[key] = val.map { |entry| entry.respond_to?(:keys) ? _cleanup_data(hash: entry) : entry&.strip }.compact.uniq
+            out[key] = val.map { |entry| entry.respond_to?(:keys) ? _cleanup_data(hash: entry, logger: logger) : entry&.strip }.compact.uniq
           elsif val.respond_to?(:keys)
             # Its an object so recursively clean it
-            out[key] = _cleanup_data(hash: val)
+            out[key] = _cleanup_data(hash: val, logger: logger)
           else
+            # Its something else so just set it to null
             out[key] = nil
           end
         end
+        # logger&.warn(message: 'Record Cleanup', details: out)
         out
       end
 
@@ -484,7 +493,7 @@ module Functions
             host_id = host.fetch('dmproadmap_host_id', {}).fetch('M', {}).fetch('identifier', {})['S']&.to_s
             parts[:repo_ids] << host_id
             # Include a cn entry for the re3data id without the full URL
-            parts[:repo_ids] << host_id.gsub(re3url, '') if host_id.start_with?(re3url)
+            parts[:repo_ids] << host_id.gsub(re3url, '') if host_id&.start_with?(re3url)
           end
         end
 

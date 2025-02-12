@@ -124,14 +124,20 @@ Once you are happy with the changes, copy the final code from the console and pa
 
 You should then run `ruby sam_build_deploy.rb [env] true true [log_level]`.
 
-**Updating gem dependencies**
-You will need to update the versions of gems managed by other parties (e.g. aws) on a fairly frequent basis. To do this you should.
+**Updating dependencies (gem and JS)**
+You will need to update the versions of gems and JS packages managed by other parties (e.g. aws) on a fairly frequent basis. To do this you should:
 
-Navigate to `lambdas/layers/` directory and then in both the `api` and `baseline` directories you will need to do the following:
-- Update the gems: `bundle update`
-- Build and deploy the Layer and all dependent Lambda Functions: `ruby sam_build_deploy.rb [env] true true [log_level]`
-
-For JS based Lambda functions, you will need to navigate to the function directory and run `npm run build` to install all of the dependencies and build a minified `index.js`
+- Navigate to the `landing_page/` directory and run `npm upgrade` and then deploy the changes by running `ruby build_deploy.rb [env]`
+- Navigate to the `gems/` directory and update the gem dependencies for each one. To do this:
+  - delete the current `*.gem` file
+  - run `bundle update` to update all dependencies
+  - open the `lib/[gem_name]/version.rb` and increment the number
+  - rebuild the gem by running `gem build [gem_name].gemspec`
+  - publish the gem by running `gem push [new_gemfile_name]`
+- Navigate to `lambdas/layers/` directory and then update each layer:
+  - Navigate to `lambdas/layers/baseline` and run `ruby sam_build_deploy.rb [env] true true [log_level]`. This will deploy the Layer and then each individual Lambda that uses it
+  - Navigate to `lambdas/layers/dmptool` and within each of the subdirectories run `./build_deploy.sh [env]`
+  - Navigate to the `lambdas/layers/api` and run `ruby sam_build_deploy.rb [env] true true [log_level]`.
 
 **Modifying the DMP Landing page**
 The DMP ID landing page is a static React JS webspage that makes an API call to the API Gateway to fetch the JSON for the DMP ID. The JSON is then used to render the page.

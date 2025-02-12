@@ -34,6 +34,8 @@ export const handler: Handler = async (event: ScheduledEvent, context: Context) 
 
     // Fetch all of the registered DMPs
     const items = await getAllDMPIndexItems();
+
+    // Log a sample of one of the DMPs
     const sampleItem = items.length > 0 ? items[Math.round(items.length / 2)] : undefined;
     logger.debug({ sampleDMP: sampleItem }, `DMP count: ${items.length}.`);
 
