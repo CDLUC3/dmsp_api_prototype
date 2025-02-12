@@ -36,7 +36,7 @@ interface ClientProfileContact {
 
 // Function to deserialize DynamoDB items. For example `{ "variableA": { "S": "value" } }` to `variableA`
 // to make it easier to work with. This function is recursive and will handle "M" and "L" item types
-const deserializeDynamoItem = (item): object => {
+const deserializeDynamoItem = (item: any): object => {
   const unmarshalledItem = {};
 
   for (const key in item) {
@@ -63,6 +63,9 @@ const deserializeDynamoItem = (item): object => {
         }
       });
 
+    } else if (type === 'NULL') {
+      // Handle NULL type
+      unmarshalledItem[key] = null;
     } else {
       // Handle primitive types (e.g., S, N, BOOL)
       unmarshalledItem[key] = rawValue;
