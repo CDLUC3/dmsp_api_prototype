@@ -35,18 +35,8 @@ export const handler: Handler = async (event: ScheduledEvent, context: Context) 
     // Fetch all of the registered DMPs
     const items = await getAllDMPIndexItems();
 
-    // Convert any boolean values (except 'featured') in the items to null
-    for (const item in items) {
-      Object.keys(item).forEach((key) => {
-        if (key !== 'featured' && typeof item[key] === 'boolean') {
-          item[key] = null;
-        }
-      });
-    }
-
     // Log a sample of one of the DMPs
-    // const sampleItem = items.length > 0 ? items[Math.round(items.length / 2)] : undefined;
-    const sampleItem = items[0];
+    const sampleItem = items.length > 0 ? items[Math.round(items.length / 2)] : undefined;
     logger.debug({ sampleDMP: sampleItem }, `DMP count: ${items.length}.`);
 
     // Split the DMPs into manageable chunks
