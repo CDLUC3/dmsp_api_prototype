@@ -29,20 +29,30 @@ class DMPDataset:
         self.release_date = release_date
 
     @property
-    def dmps_raw(self):
+    def dmps_raw_table_id(self):
         return bq.bq_sharded_table_id(self.project_id, self.dataset_id, "dmps_raw", self.release_date)
 
     @property
-    def normalised(self):
+    def normalised_table_id(self):
         return bq.bq_sharded_table_id(self.project_id, self.dataset_id, "dmps", self.release_date)
 
     @property
-    def content(self):
-        return bq.bq_sharded_table_id(self.project_id, self.dataset_id, "dmps_content", self.release_date)
+    def content_table_id(self):
+        """Returns the full content table ID. For the DMPs, a new content table is created each run.
+
+        :return: the full table id.
+        """
+
+        return bq.bq_table_id(self.project_id, self.dataset_id, "dmps_content")
 
     @property
-    def content_embeddings(self):
-        return bq.bq_sharded_table_id(self.project_id, self.dataset_id, "dmps_content_embeddings", self.release_date)
+    def embeddings_table_id(self):
+        """Returns the full content table ID.
+
+        :return: the full table id.
+        """
+
+        return bq.bq_table_id(self.project_id, self.dataset_id, "dmps_embeddings")
 
 
 class MatchDataset:
@@ -53,27 +63,35 @@ class MatchDataset:
         self.release_date = release_date
 
     @property
-    def normalised(self):
+    def normalised_table_id(self):
         return bq.bq_sharded_table_id(self.project_id, self.dataset_id, self.name, self.release_date)
 
     @property
-    def match_intermediate(self):
+    def match_intermediate_table_id(self):
         return bq.bq_sharded_table_id(
             self.project_id, self.dataset_id, f"{self.name}_match_intermediate", self.release_date
         )
 
     @property
-    def content(self):
-        return bq.bq_sharded_table_id(self.project_id, self.dataset_id, f"{self.name}_content", self.release_date)
+    def content_table_id(self):
+        """Returns the full content table ID.
+
+        :return: the full table id.
+        """
+        return bq.bq_table_id(self.project_id, self.dataset_id, f"{self.name}_content")
 
     @property
-    def content_embeddings(self):
-        return bq.bq_sharded_table_id(
-            self.project_id, self.dataset_id, f"{self.name}_content_embeddings", self.release_date
+    def embeddings_table_id(self):
+        """Returns the full content embeddings table ID.
+
+        :return: the full table id.
+        """
+        return bq.bq_table_id(
+            self.project_id, self.dataset_id, f"{self.name}_embeddings"
         )
 
     @property
-    def match(self):
+    def match_table_id(self):
         return bq.bq_sharded_table_id(self.project_id, self.dataset_id, f"{self.name}_match", self.release_date)
 
     def destination_uri(self, bucket_name: str, dag_id: str) -> str:

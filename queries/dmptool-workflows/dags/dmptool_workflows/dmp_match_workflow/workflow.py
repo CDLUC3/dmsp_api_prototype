@@ -174,9 +174,9 @@ def create_dag(dag_params: DagParams) -> DAG:
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
                 queries.normalise_dmps(
                     dataset_id=dag_params.bq_dataset_id,
-                    ror_table_id=ao_dataset.ror_dataset.ror,
-                    dmps_raw_table_id=dt_dataset.dmp_dataset.dmps_raw,
-                    dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
+                    ror_table_id=ao_dataset.ror_dataset.ror_table_id,
+                    dmps_raw_table_id=dt_dataset.dmp_dataset.dmps_raw_table_id,
+                    dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
                     dry_run=dry_run,
                 )
 
@@ -193,12 +193,12 @@ def create_dag(dag_params: DagParams) -> DAG:
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
                 queries.normalise_openalex(
                     dataset_id=dag_params.bq_dataset_id,
-                    openalex_works_table_id=ao_dataset.openalex_dataset.works,
-                    openalex_funders_table_id=ao_dataset.openalex_dataset.funders,
-                    crossref_metadata_table_id=ao_dataset.crossref_metadata_dataset.crossref_metadata,
-                    datacite_table_id=ao_dataset.datacite_dataset.datacite,
-                    dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
-                    openalex_norm_table_id=dt_dataset.openalex_match_dataset.normalised,
+                    openalex_works_table_id=ao_dataset.openalex_dataset.works_table_id,
+                    openalex_funders_table_id=ao_dataset.openalex_dataset.funders_table_id,
+                    crossref_metadata_table_id=ao_dataset.crossref_metadata_dataset.crossref_metadata_table_id,
+                    datacite_table_id=ao_dataset.datacite_dataset.datacite_table_id,
+                    dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
+                    openalex_norm_table_id=dt_dataset.openalex_match_dataset.normalised_table_id,
                     dry_run=dry_run,
                 )
 
@@ -215,11 +215,11 @@ def create_dag(dag_params: DagParams) -> DAG:
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
                 queries.normalise_crossref(
                     dataset_id=dag_params.bq_dataset_id,
-                    crossref_metadata_table_id=ao_dataset.crossref_metadata_dataset.crossref_metadata,
-                    ror_table_id=ao_dataset.ror_dataset.ror,
-                    openalex_norm_table_id=dt_dataset.openalex_match_dataset.normalised,
-                    dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
-                    crossref_norm_table_id=dt_dataset.crossref_match_dataset.normalised,
+                    crossref_metadata_table_id=ao_dataset.crossref_metadata_dataset.crossref_metadata_table_id,
+                    ror_table_id=ao_dataset.ror_dataset.ror_table_id,
+                    openalex_norm_table_id=dt_dataset.openalex_match_dataset.normalised_table_id,
+                    dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
+                    crossref_norm_table_id=dt_dataset.crossref_match_dataset.normalised_table_id,
                     dry_run=dry_run,
                 )
 
@@ -236,11 +236,11 @@ def create_dag(dag_params: DagParams) -> DAG:
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
                 queries.normalise_datacite(
                     dataset_id=dag_params.bq_dataset_id,
-                    datacite_table_id=ao_dataset.datacite_dataset.datacite,
-                    ror_table_id=ao_dataset.ror_dataset.ror,
-                    dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
-                    openalex_norm_table_id=dt_dataset.openalex_match_dataset.normalised,
-                    datacite_norm_table_id=dt_dataset.datacite_match_dataset.normalised,
+                    datacite_table_id=ao_dataset.datacite_dataset.datacite_table_id,
+                    ror_table_id=ao_dataset.ror_dataset.ror_table_id,
+                    dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
+                    openalex_norm_table_id=dt_dataset.openalex_match_dataset.normalised_table_id,
+                    datacite_norm_table_id=dt_dataset.datacite_match_dataset.normalised_table_id,
                     dry_run=dry_run,
                 )
 
@@ -251,9 +251,9 @@ def create_dag(dag_params: DagParams) -> DAG:
                 for match in dt_dataset.match_datasets:
                     queries.match_intermediate(
                         dataset_id=dag_params.bq_dataset_id,
-                        dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
-                        match_norm_table_id=match.normalised,
-                        match_intermediate_table_id=match.match_intermediate,
+                        dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
+                        match_norm_table_id=match.normalised_table_id,
+                        match_intermediate_table_id=match.match_intermediate_table_id,
                         weighted_count_threshold=weighted_count_threshold,
                         max_matches=max_matches,
                         dry_run=dry_run,
@@ -261,40 +261,37 @@ def create_dag(dag_params: DagParams) -> DAG:
                     )
 
             @task(retries=0)
-            def create_dmps_content_table(release: dict, **context):
+            def update_content_table(release: dict, **context):
+                # Insert or update new content (title + abstract) in the content table
+                # Deletes updated records from the embeddings table, so that new embeddings are generated for these records
                 release = DMPToolMatchRelease.from_dict(release)
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
-                queries.create_dmps_content_table(
-                    dataset_id=dag_params.bq_dataset_id,
-                    dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
-                    dmps_content_table_id=dt_dataset.dmp_dataset.content,
-                    dry_run=dry_run,
-                )
-
-            @task(retries=0)
-            def create_content_table(release: dict, **context):
-                release = DMPToolMatchRelease.from_dict(release)
-                dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
-                for match in dt_dataset.match_datasets:
-                    queries.create_match_content_table(
+                for dataset in dt_dataset.all_datasets:
+                    match_intermediate_table_id = (
+                        None if dataset.name == "dmps" else dataset.match_intermediate_table_id
+                    )
+                    queries.update_content_table(
                         dataset_id=dag_params.bq_dataset_id,
-                        match_norm_table_id=match.normalised,
-                        match_intermediate_table_id=match.match_intermediate,
-                        match_content_table_id=match.content,
+                        dataset_name=dataset.name,
+                        content_table_id=dataset.content_table_id,
+                        embeddings_table_id=dataset.embeddings_table_id,
+                        norm_table_id=dataset.normalised_table_id,
+                        match_intermediate_table_id=match_intermediate_table_id,
                         dry_run=dry_run,
-                        dry_run_id=match.name,
+                        dry_run_id=dataset.name,
                     )
 
             @task(retries=0)
-            def generate_embeddings(release: dict, **context):
+            def update_embeddings(release: dict, **context):
+                # Generate embeddings for new or updated records in the content table
                 release = DMPToolMatchRelease.from_dict(release)
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
                 for match in dt_dataset.all_datasets:
-                    queries.generate_embeddings(
+                    queries.update_embeddings(
                         dataset_id=dag_params.bq_dataset_id,
-                        content_table_id=match.content,
+                        content_table_id=match.content_table_id,
                         embedding_model_id=embedding_model_id,
-                        embeddings_table_id=match.content_embeddings,
+                        embeddings_table_id=match.embeddings_table_id,
                         dry_run=dry_run,
                         dry_run_id=match.name,
                     )
@@ -306,12 +303,12 @@ def create_dag(dag_params: DagParams) -> DAG:
                 for match in dt_dataset.match_datasets:
                     queries.match_vector_search(
                         dataset_id=dag_params.bq_dataset_id,
-                        match_intermediate_table_id=match.match_intermediate,
-                        match_norm_table_id=match.normalised,
-                        dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
-                        match_embeddings_table_id=match.content_embeddings,
-                        dmps_embeddings_table_id=dt_dataset.dmp_dataset.content_embeddings,
-                        match_table_id=match.match,
+                        match_intermediate_table_id=match.match_intermediate_table_id,
+                        match_norm_table_id=match.normalised_table_id,
+                        dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
+                        match_embeddings_table_id=match.embeddings_table_id,
+                        dmps_embeddings_table_id=dt_dataset.dmp_dataset.embeddings_table_id,
+                        match_table_id=match.match_table_id,
                         dry_run=dry_run,
                         dry_run_id=match.name,
                     )
@@ -323,9 +320,8 @@ def create_dag(dag_params: DagParams) -> DAG:
             task_normalise_crossref = normalise_crossref(release)
             task_normalise_datacite = normalise_datacite(release)
             task_match_intermediate = match_intermediate(release)
-            task_create_dmps_content_table = create_dmps_content_table(release)
-            task_create_content_table = create_content_table(release)
-            task_generate_embeddings = generate_embeddings(release)
+            task_update_content_table = update_content_table(release)
+            task_update_embeddings = update_embeddings(release)
             task_match_vector_search = match_vector_search(release)
 
             (
@@ -336,9 +332,8 @@ def create_dag(dag_params: DagParams) -> DAG:
                 >> task_normalise_crossref
                 >> task_normalise_datacite
                 >> task_match_intermediate
-                >> task_create_dmps_content_table
-                >> task_create_content_table
-                >> task_generate_embeddings
+                >> task_update_content_table
+                >> task_update_embeddings
                 >> task_match_vector_search
             )
 

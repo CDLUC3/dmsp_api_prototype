@@ -186,29 +186,33 @@ def create_dmps_content_table(
     )
 
 
-def create_match_content_table(
+def update_content_table(
     *,
     dataset_id: str,
-    match_norm_table_id: str,
-    match_intermediate_table_id: str,
-    match_content_table_id: str,
+    dataset_name: str,
+    content_table_id: str,
+    embeddings_table_id: str,
+    norm_table_id: str,
+    match_intermediate_table_id: Optional[str],  # Not used for generating content for DMP dataset
     dry_run: bool = False,
     dry_run_id: Optional[str] = None,
     bq_client: bigquery.Client = None,
 ):
     run_sql_template(
-        "create_match_content_table",
+        "update_content_table",
         dataset_id,
-        dry_run=dry_run,
-        dry_run_id=dry_run_id,
-        match_norm_table_id=match_norm_table_id,
+        dataset_name=dataset_name,
+        content_table_id=content_table_id,
+        embeddings_table_id=embeddings_table_id,
+        norm_table_id=norm_table_id,
         match_intermediate_table_id=match_intermediate_table_id,
-        match_content_table_id=match_content_table_id,
         bq_client=bq_client,
+        dry_run = dry_run,
+        dry_run_id = dry_run_id,
     )
 
 
-def generate_embeddings(
+def update_embeddings(
     *,
     dataset_id: str,
     content_table_id: str,
@@ -219,7 +223,7 @@ def generate_embeddings(
     bq_client: bigquery.Client = None,
 ):
     run_sql_template(
-        "generate_embeddings",
+        "update_embeddings",
         dataset_id,
         dry_run=dry_run,
         dry_run_id=dry_run_id,

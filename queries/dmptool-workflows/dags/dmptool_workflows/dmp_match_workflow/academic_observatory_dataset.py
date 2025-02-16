@@ -35,7 +35,7 @@ class RORDataset:
         self.bq_client = bq_client
 
     @cached_property
-    def ror(self):
+    def ror_table_id(self):
         return bq.bq_select_latest_table(bq.bq_table_id(self.project_id, self.dataset_id, "ror"), client=self.bq_client)
 
 
@@ -51,11 +51,11 @@ class OpenAlexDataset:
         self.bq_client = bq_client
 
     @property
-    def works(self):
+    def works_table_id(self):
         return bq.bq_table_id(self.project_id, self.dataset_id, "works")
 
     @property
-    def funders(self):
+    def funders_table_id(self):
         return bq.bq_table_id(self.project_id, self.dataset_id, "funders")
 
 
@@ -71,7 +71,7 @@ class CrossrefMetadataDataset:
         self.bq_client = bq_client
 
     @cached_property
-    def crossref_metadata(self):
+    def crossref_metadata_table_id(self):
         return bq.bq_select_latest_table(
             bq.bq_table_id(self.project_id, self.dataset_id, "crossref_metadata"), client=self.bq_client
         )
@@ -89,7 +89,7 @@ class DataCiteDataset:
         self.bq_client = bq_client
 
     @cached_property
-    def datacite(self):
+    def datacite_table_id(self):
         return bq.bq_select_latest_table(
             bq.bq_table_id(self.project_id, self.dataset_id, "datacite"), client=self.bq_client
         )

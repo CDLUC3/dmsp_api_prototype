@@ -16,10 +16,10 @@ from dmptool_workflows.dmp_match_workflow.academic_observatory_dataset import Ac
 from dmptool_workflows.dmp_match_workflow.dmptool_api import DMPToolAPI
 from dmptool_workflows.dmp_match_workflow.dmptool_dataset import DMPDataset, DMPToolDataset
 from dmptool_workflows.dmp_match_workflow.queries import (
-    create_match_content_table,
     create_dmps_content_table,
     create_embedding_model,
-    generate_embeddings,
+    update_content_table,
+    update_embeddings,
     match_intermediate,
     match_vector_search,
     normalise_crossref,
@@ -120,8 +120,8 @@ def fetch_dmps(
 
     # Load BigQuery table
     dmp_dataset = DMPDataset(project_id, bq_dataset_id, release.snapshot_date)
-    table_id = dmp_dataset.dmps_raw
-    uri = gcs.gcs_blob_uri(bucket_name, "*.jsonl.gz")
+    table_id = dmp_dataset.dmps_raw_table_id
+    uri = gcs.gcs_blob_uri(bucket_name, gcs.gcs_blob_name_from_path(os.path.join(release.dmps_folder, "*.jsonl.gz")))
     success = bq.bq_load_table(
         uri=uri,
         table_id=table_id,
@@ -164,40 +164,40 @@ def create_dmp_matches(
     # Normalise datasets
     normalise_dmps(
         dataset_id=dataset_id,
-        ror_table_id=ao_dataset.ror_dataset.ror,
-        dmps_raw_table_id=dt_dataset.dmp_dataset.dmps_raw,
-        dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
+        ror_table_id=ao_dataset.ror_dataset.ror_table_id,
+        dmps_raw_table_id=dt_dataset.dmp_dataset.dmps_raw_table_id,
+        dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
         dry_run=dry_run,
         bq_client=bq_client,
     )
     normalise_openalex(
         dataset_id=dataset_id,
-        openalex_works_table_id=ao_dataset.openalex_dataset.works,
-        openalex_funders_table_id=ao_dataset.openalex_dataset.funders,
-        crossref_metadata_table_id=ao_dataset.crossref_metadata_dataset.crossref_metadata,
-        datacite_table_id=ao_dataset.datacite_dataset.datacite,
-        dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
-        openalex_norm_table_id=dt_dataset.openalex_match_dataset.normalised,
+        openalex_works_table_id=ao_dataset.openalex_dataset.works_table_id,
+        openalex_funders_table_id=ao_dataset.openalex_dataset.funders_table_id,
+        crossref_metadata_table_id=ao_dataset.crossref_metadata_dataset.crossref_metadata_table_id,
+        datacite_table_id=ao_dataset.datacite_dataset.datacite_table_id,
+        dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
+        openalex_norm_table_id=dt_dataset.openalex_match_dataset.normalised_table_id,
         dry_run=dry_run,
         bq_client=bq_client,
     )
     normalise_crossref(
         dataset_id=dataset_id,
-        crossref_metadata_table_id=ao_dataset.crossref_metadata_dataset.crossref_metadata,
-        ror_table_id=ao_dataset.ror_dataset.ror,
-        openalex_norm_table_id=dt_dataset.openalex_match_dataset.normalised,
-        dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
-        crossref_norm_table_id=dt_dataset.crossref_match_dataset.normalised,
+        crossref_metadata_table_id=ao_dataset.crossref_metadata_dataset.crossref_metadata_table_id,
+        ror_table_id=ao_dataset.ror_dataset.ror_table_id,
+        openalex_norm_table_id=dt_dataset.openalex_match_dataset.normalised_table_id,
+        dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
+        crossref_norm_table_id=dt_dataset.crossref_match_dataset.normalised_table_id,
         dry_run=dry_run,
         bq_client=bq_client,
     )
     normalise_datacite(
         dataset_id=dataset_id,
-        datacite_table_id=ao_dataset.datacite_dataset.datacite,
-        ror_table_id=ao_dataset.ror_dataset.ror,
-        dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
-        openalex_norm_table_id=dt_dataset.openalex_match_dataset.normalised,
-        datacite_norm_table_id=dt_dataset.datacite_match_dataset.normalised,
+        datacite_table_id=ao_dataset.datacite_dataset.datacite_table_id,
+        ror_table_id=ao_dataset.ror_dataset.ror_table_id,
+        dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
+        openalex_norm_table_id=dt_dataset.openalex_match_dataset.normalised_table_id,
+        datacite_norm_table_id=dt_dataset.datacite_match_dataset.normalised_table_id,
         dry_run=dry_run,
         bq_client=bq_client,
     )
@@ -206,9 +206,9 @@ def create_dmp_matches(
     for match in dt_dataset.match_datasets:
         match_intermediate(
             dataset_id=dataset_id,
-            dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
-            match_norm_table_id=match.normalised,
-            match_intermediate_table_id=match.match_intermediate,
+            dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
+            match_norm_table_id=match.normalised_table_id,
+            match_intermediate_table_id=match.match_intermediate_table_id,
             weighted_count_threshold=weighted_count_threshold,
             max_matches=max_matches,
             dry_run=dry_run,
@@ -219,17 +219,17 @@ def create_dmp_matches(
     # Generate content tables
     create_dmps_content_table(
         dataset_id=dataset_id,
-        dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
-        dmps_content_table_id=dt_dataset.dmp_dataset.content,
+        dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
+        dmps_content_table_id=dt_dataset.dmp_dataset.content_table_id,
         dry_run=dry_run,
         bq_client=bq_client,
     )
     for match in dt_dataset.match_datasets:
-        create_match_content_table(
+        update_content_table(
             dataset_id=dataset_id,
-            match_norm_table_id=match.normalised,
-            match_intermediate_table_id=match.match_intermediate,
-            match_content_table_id=match.content,
+            match_norm_table_id=match.normalised_table_id,
+            match_intermediate_table_id=match.match_intermediate_table_id,
+            content_table_id=match.content_table_id,
             dry_run=dry_run,
             dry_run_id=match.name,
             bq_client=bq_client,
@@ -237,11 +237,11 @@ def create_dmp_matches(
 
     # Generate embeddings for intermediate matches
     for match in dt_dataset.all_datasets:
-        generate_embeddings(
+        update_embeddings(
             dataset_id=dataset_id,
-            content_table_id=match.content,
+            content_table_id=match.content_table_id,
             embedding_model_id=embedding_model_id,
-            embeddings_table_id=match.content_embeddings,
+            embeddings_table_id=match.embeddings_table_id,
             dry_run=dry_run,
             dry_run_id=match.name,
             bq_client=bq_client,
@@ -251,12 +251,12 @@ def create_dmp_matches(
     for match in dt_dataset.match_datasets:
         match_vector_search(
             dataset_id=dataset_id,
-            match_intermediate_table_id=match.match_intermediate,
-            match_norm_table_id=match.normalised,
-            dmps_norm_table_id=dt_dataset.dmp_dataset.normalised,
-            match_embeddings_table_id=match.content_embeddings,
-            dmps_embeddings_table_id=dt_dataset.dmp_dataset.content_embeddings,
-            match_table_id=match.match,
+            match_intermediate_table_id=match.match_intermediate_table_id,
+            match_norm_table_id=match.normalised_table_id,
+            dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
+            match_embeddings_table_id=match.embeddings_table_id,
+            dmps_embeddings_table_id=dt_dataset.dmp_dataset.embeddings_table_id,
+            match_table_id=match.match_table_id,
             dry_run=dry_run,
             dry_run_id=match.name,
             bq_client=bq_client,
@@ -274,10 +274,10 @@ def export_matches(
 ):
     dt_dataset = DMPToolDataset(project_id, dataset_id, release_date)
     for match in dt_dataset.match_datasets:
-        table_id = match.match
+        table_id = match.match_table_id
         destination_uri = match.destination_uri(bucket_name, dag_id)
         state = bq.bq_export_table(
-            table_id=match.match, file_type="jsonl.gz", destination_uri=destination_uri, client=bq_client
+            table_id=match.match_table_id, file_type="jsonl.gz", destination_uri=destination_uri, client=bq_client
         )
         if not state:
             raise AirflowException(f"export_matches: error exporting {table_id} to {destination_uri}")
