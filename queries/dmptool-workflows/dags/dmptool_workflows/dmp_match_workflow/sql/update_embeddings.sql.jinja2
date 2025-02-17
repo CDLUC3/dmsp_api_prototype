@@ -27,9 +27,9 @@ DECLARE key_columns DEFAULT ARRAY['doi', 'updated'];
 -- *** Updating the fields below is optional ***
 -- The number of rows to process per child job. A larger value will reduce the overhead of multiple
 -- child jobs, but needs to be small enough to complete in a single job run.
-DECLARE batch_size DEFAULT 40000;
+DECLARE batch_size DEFAULT 80000;
 -- The time to wait before the script terminates
-DECLARE termination_time_secs DEFAULT(1 * 60 * 10);
+DECLARE termination_time_secs DEFAULT(1 * 60 * 30);
 -- An optional where clause to apply to the source table
 DECLARE where_clause DEFAULT 'TRUE';
 -- The columns to project from the source table to the target table

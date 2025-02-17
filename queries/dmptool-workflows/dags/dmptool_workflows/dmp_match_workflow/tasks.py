@@ -18,8 +18,6 @@ from dmptool_workflows.dmp_match_workflow.dmptool_dataset import DMPDataset, DMP
 from dmptool_workflows.dmp_match_workflow.queries import (
     create_dmps_content_table,
     create_embedding_model,
-    update_content_table,
-    update_embeddings,
     match_intermediate,
     match_vector_search,
     normalise_crossref,
@@ -27,10 +25,13 @@ from dmptool_workflows.dmp_match_workflow.queries import (
     normalise_dmps,
     normalise_openalex,
     run_sql_template,
+    update_content_table,
+    update_embeddings,
 )
 from dmptool_workflows.dmp_match_workflow.release import DMPToolMatchRelease
 
 DATASET_API_ENTITY_ID = "dmp_match"
+DATE_FORMAT = "%Y-%m-%d"
 
 
 def create_bq_dataset(
@@ -224,14 +225,17 @@ def create_dmp_matches(
         dry_run=dry_run,
         bq_client=bq_client,
     )
-    for match in dt_dataset.match_datasets:
+    for dataset in dt_dataset.all_datasets:
+        match_intermediate_table_id = None if dataset.name == "dmps" else dataset.match_intermediate_table_id
         update_content_table(
             dataset_id=dataset_id,
-            match_norm_table_id=match.normalised_table_id,
-            match_intermediate_table_id=match.match_intermediate_table_id,
-            content_table_id=match.content_table_id,
+            dataset_name=dataset.name,
+            content_table_id=dataset.content_table_id,
+            embeddings_table_id=dataset.embeddings_table_id,
+            norm_table_id=dataset.normalised_table_id,
+            match_intermediate_table_id=match_intermediate_table_id,
             dry_run=dry_run,
-            dry_run_id=match.name,
+            dry_run_id=dataset.name,
             bq_client=bq_client,
         )
 
@@ -263,6 +267,10 @@ def create_dmp_matches(
         )
 
 
+def make_export_file_name(release_date: pendulum.Date, source: str) -> str:
+    return f"coki-{source}_{release_date.strftime(DATE_FORMAT)}_*.jsonl.gz"
+
+
 def export_matches(
     *,
     dag_id: str,
@@ -270,12 +278,15 @@ def export_matches(
     dataset_id: str,
     release_date: pendulum.Date,
     bucket_name: str,
+    export_folder_blob_name: str,
     bq_client: bigquery.Client = None,
 ):
     dt_dataset = DMPToolDataset(project_id, dataset_id, release_date)
     for match in dt_dataset.match_datasets:
         table_id = match.match_table_id
-        destination_uri = match.destination_uri(bucket_name, dag_id)
+        destination_uri = gcs.gcs_blob_uri(
+            bucket_name, f"{export_folder_blob_name}/{make_export_file_name(release_date, match.name)}"
+        )
         state = bq.bq_export_table(
             table_id=match.match_table_id, file_type="jsonl.gz", destination_uri=destination_uri, client=bq_client
         )
@@ -287,16 +298,18 @@ def submit_matches(
     *,
     dmptool_api: DMPToolAPI,
     bucket_name: str,
-    bucket_prefix: str,
+    export_folder_blob_name: str,
     export_folder: str,
     gcs_client: storage.Client = None,
 ):
     # Download files from bucket
     success = gcs.gcs_download_blobs(
-        bucket_name=bucket_name, prefix=bucket_prefix, destination_path=export_folder, client=gcs_client
+        bucket_name=bucket_name, prefix=export_folder_blob_name, destination_path=export_folder, client=gcs_client
     )
     if not success:
-        raise AirflowException(f"submit_matches: failed to download files from bucket {bucket_name}/{bucket_prefix}")
+        raise AirflowException(
+            f"submit_matches: failed to download files from bucket {gcs.gcs_blob_uri(bucket_name, export_folder_blob_name)}"
+        )
 
     # List files
     file_paths = list_files(export_folder, r"^.*\.jsonl\.gz$")

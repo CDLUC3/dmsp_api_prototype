@@ -9,12 +9,13 @@ from observatory_platform.airflow.airflow import on_failure_callback
 from observatory_platform.airflow.tasks import check_dependencies
 from observatory_platform.airflow.workflow import CloudWorkspace
 from observatory_platform.dataset_api import DatasetAPI
+from observatory_platform.google.gcs import gcs_blob_name_from_path
 
 import dmptool_workflows.dmp_match_workflow.queries as queries
 import dmptool_workflows.dmp_match_workflow.tasks as tasks
 from dmptool_workflows.dmp_match_workflow.academic_observatory_dataset import AcademicObservatoryDataset
 from dmptool_workflows.dmp_match_workflow.dmptool_api import DMPToolAPI, get_dmptool_api_creds
-from dmptool_workflows.dmp_match_workflow.dmptool_dataset import DMPToolDataset, make_prefix
+from dmptool_workflows.dmp_match_workflow.dmptool_dataset import DMPToolDataset
 from dmptool_workflows.dmp_match_workflow.release import DMPToolMatchRelease
 
 
@@ -342,12 +343,14 @@ def create_dag(dag_params: DagParams) -> DAG:
             """Export matches to Google Cloud Storage bucket"""
 
             release = DMPToolMatchRelease.from_dict(release)
+
             tasks.export_matches(
                 dag_id=dag_params.dag_id,
                 project_id=dag_params.cloud_workspace.output_project_id,
                 dataset_id=dag_params.bq_dataset_id,
                 release_date=release.snapshot_date,
                 bucket_name=dag_params.cloud_workspace.download_bucket,
+                export_folder_blob_name=gcs_blob_name_from_path(release.export_folder),
             )
 
         @task
@@ -360,7 +363,7 @@ def create_dag(dag_params: DagParams) -> DAG:
             tasks.submit_matches(
                 dmptool_api=dmptool_api,
                 bucket_name=dag_params.cloud_workspace.download_bucket,
-                bucket_prefix=make_prefix(dag_params.dag_id, release.snapshot_date),
+                export_folder_blob_name=gcs_blob_name_from_path(release.export_folder),
                 export_folder=release.export_folder,
             )
 

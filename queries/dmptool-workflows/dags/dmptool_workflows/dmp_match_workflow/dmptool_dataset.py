@@ -3,8 +3,6 @@ import os
 import observatory_platform.google.bigquery as bq
 import pendulum
 
-DATE_FORMAT = "%Y-%m-%d"
-
 
 class DMPToolDataset:
     def __init__(self, project_id: str, dataset_id: str, release_date: pendulum.Date):
@@ -86,26 +84,11 @@ class MatchDataset:
 
         :return: the full table id.
         """
-        return bq.bq_table_id(
-            self.project_id, self.dataset_id, f"{self.name}_embeddings"
-        )
+        return bq.bq_table_id(self.project_id, self.dataset_id, f"{self.name}_embeddings")
 
     @property
     def match_table_id(self):
         return bq.bq_sharded_table_id(self.project_id, self.dataset_id, f"{self.name}_match", self.release_date)
 
-    def destination_uri(self, bucket_name: str, dag_id: str) -> str:
-        return make_destination_uri(bucket_name, dag_id, self.release_date, self.name)
-
     def local_file_path(self, download_folder: str) -> str:
         return os.path.join(download_folder, f"{self.name}.jsonl.gz")
-
-
-def make_destination_uri(bucket_name: str, dag_id: str, release_date: pendulum.Date, source: str) -> str:
-    prefix = make_prefix(dag_id, release_date)
-    return f"gs://{bucket_name}/{prefix}/coki-{source}_{release_date.strftime(DATE_FORMAT)}_*.jsonl.gz"
-
-
-def make_prefix(dag_id: str, release_date: pendulum.Date) -> str:
-    date_str = release_date.strftime(DATE_FORMAT)
-    return f"{dag_id}_{date_str}"
