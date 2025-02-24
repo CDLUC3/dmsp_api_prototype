@@ -2,15 +2,13 @@ import logging
 import os
 import urllib.request
 
-import observatory_platform.google.bigquery as bq
-import observatory_platform.google.gcs as gcs
 import pendulum
 from airflow import AirflowException
 from google.cloud import bigquery, storage
 from google.cloud.bigquery import SourceFormat
-from observatory_platform.dataset_api import DatasetAPI, DatasetRelease
-from observatory_platform.files import list_files
 
+import observatory_platform.google.bigquery as bq
+import observatory_platform.google.gcs as gcs
 from dmptool_workflows.config import project_path
 from dmptool_workflows.dmp_match_workflow.academic_observatory_dataset import AcademicObservatoryDataset
 from dmptool_workflows.dmp_match_workflow.dmptool_api import DMPToolAPI
@@ -29,6 +27,8 @@ from dmptool_workflows.dmp_match_workflow.queries import (
     update_embeddings,
 )
 from dmptool_workflows.dmp_match_workflow.release import DMPToolMatchRelease
+from observatory_platform.dataset_api import DatasetAPI, DatasetRelease
+from observatory_platform.files import list_files
 
 DATASET_API_ENTITY_ID = "dmp_match"
 DATE_FORMAT = "%Y-%m-%d"

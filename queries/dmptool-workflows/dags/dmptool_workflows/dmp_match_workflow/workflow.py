@@ -5,11 +5,6 @@ from typing import Union
 import pendulum
 from airflow import DAG
 from airflow.decorators import dag, task, task_group
-from observatory_platform.airflow.airflow import on_failure_callback
-from observatory_platform.airflow.tasks import check_dependencies
-from observatory_platform.airflow.workflow import CloudWorkspace
-from observatory_platform.dataset_api import DatasetAPI
-from observatory_platform.google.gcs import gcs_blob_name_from_path
 
 import dmptool_workflows.dmp_match_workflow.queries as queries
 import dmptool_workflows.dmp_match_workflow.tasks as tasks
@@ -17,6 +12,11 @@ from dmptool_workflows.dmp_match_workflow.academic_observatory_dataset import Ac
 from dmptool_workflows.dmp_match_workflow.dmptool_api import DMPToolAPI, get_dmptool_api_creds
 from dmptool_workflows.dmp_match_workflow.dmptool_dataset import DMPToolDataset
 from dmptool_workflows.dmp_match_workflow.release import DMPToolMatchRelease
+from observatory_platform.airflow.airflow import on_failure_callback
+from observatory_platform.airflow.tasks import check_dependencies
+from observatory_platform.airflow.workflow import CloudWorkspace
+from observatory_platform.dataset_api import DatasetAPI
+from observatory_platform.google.gcs import gcs_blob_name_from_path
 
 
 class DagParams:
@@ -148,6 +148,9 @@ def create_dag(dag_params: DagParams) -> DAG:
             weighted_count_threshold = dag_params.weighted_count_threshold
             max_matches = dag_params.max_matches
             dry_run = dag_params.dry_run
+            bq_query_labels = {
+                "dag_id": dag_params.dag_id,
+            }
 
             @task(retries=0)
             def create_shared_functions(release: dict, **context):
@@ -155,11 +158,13 @@ def create_dag(dag_params: DagParams) -> DAG:
 
             @task(retries=0)
             def create_embedding_model(release: dict, **context):
+
                 queries.create_embedding_model(
                     dataset_id=dag_params.bq_dataset_id,
                     embedding_model_id=embedding_model_id,
                     vertex_ai_model_id=vertex_ai_model_id,
                     dry_run=dry_run,
+                    bq_query_labels=bq_query_labels,
                 )
 
             @task(retries=0)
@@ -179,6 +184,7 @@ def create_dag(dag_params: DagParams) -> DAG:
                     dmps_raw_table_id=dt_dataset.dmp_dataset.dmps_raw_table_id,
                     dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
                     dry_run=dry_run,
+                    bq_query_labels=bq_query_labels,
                 )
 
             @task(retries=0)
@@ -201,6 +207,7 @@ def create_dag(dag_params: DagParams) -> DAG:
                     dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
                     openalex_norm_table_id=dt_dataset.openalex_match_dataset.normalised_table_id,
                     dry_run=dry_run,
+                    bq_query_labels=bq_query_labels,
                 )
 
             @task(retries=0)
@@ -222,6 +229,7 @@ def create_dag(dag_params: DagParams) -> DAG:
                     dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
                     crossref_norm_table_id=dt_dataset.crossref_match_dataset.normalised_table_id,
                     dry_run=dry_run,
+                    bq_query_labels=bq_query_labels,
                 )
 
             @task(retries=0)
@@ -243,6 +251,7 @@ def create_dag(dag_params: DagParams) -> DAG:
                     openalex_norm_table_id=dt_dataset.openalex_match_dataset.normalised_table_id,
                     datacite_norm_table_id=dt_dataset.datacite_match_dataset.normalised_table_id,
                     dry_run=dry_run,
+                    bq_query_labels=bq_query_labels,
                 )
 
             @task(retries=0)
@@ -252,6 +261,7 @@ def create_dag(dag_params: DagParams) -> DAG:
                 for match in dt_dataset.match_datasets:
                     queries.match_intermediate(
                         dataset_id=dag_params.bq_dataset_id,
+                        dataset_name=match.name,
                         dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
                         match_norm_table_id=match.normalised_table_id,
                         match_intermediate_table_id=match.match_intermediate_table_id,
@@ -259,6 +269,7 @@ def create_dag(dag_params: DagParams) -> DAG:
                         max_matches=max_matches,
                         dry_run=dry_run,
                         dry_run_id=match.name,
+                        bq_query_labels=bq_query_labels,
                     )
 
             @task(retries=0)
@@ -280,6 +291,7 @@ def create_dag(dag_params: DagParams) -> DAG:
                         match_intermediate_table_id=match_intermediate_table_id,
                         dry_run=dry_run,
                         dry_run_id=dataset.name,
+                        bq_query_labels=bq_query_labels,
                     )
 
             @task(retries=0)
@@ -290,11 +302,13 @@ def create_dag(dag_params: DagParams) -> DAG:
                 for match in dt_dataset.all_datasets:
                     queries.update_embeddings(
                         dataset_id=dag_params.bq_dataset_id,
+                        dataset_name=match.name,
                         content_table_id=match.content_table_id,
                         embedding_model_id=embedding_model_id,
                         embeddings_table_id=match.embeddings_table_id,
                         dry_run=dry_run,
                         dry_run_id=match.name,
+                        bq_query_labels=bq_query_labels,
                     )
 
             @task(retries=0)
@@ -304,6 +318,7 @@ def create_dag(dag_params: DagParams) -> DAG:
                 for match in dt_dataset.match_datasets:
                     queries.match_vector_search(
                         dataset_id=dag_params.bq_dataset_id,
+                        dataset_name=match.name,
                         match_intermediate_table_id=match.match_intermediate_table_id,
                         match_norm_table_id=match.normalised_table_id,
                         dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
@@ -312,6 +327,7 @@ def create_dag(dag_params: DagParams) -> DAG:
                         match_table_id=match.match_table_id,
                         dry_run=dry_run,
                         dry_run_id=match.name,
+                        bq_query_labels=bq_query_labels,
                     )
 
             task_create_shared_functions = create_shared_functions(release)

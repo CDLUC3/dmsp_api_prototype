@@ -1,10 +1,10 @@
 from typing import Optional
 
-import observatory_platform.google.bigquery as bq
 from google.cloud import bigquery
-from observatory_platform.jinja2_utils import render_template
 
+import observatory_platform.google.bigquery as bq
 from dmptool_workflows.config import project_path
+from observatory_platform.jinja2_utils import render_template
 
 
 def run_sql_template(
@@ -13,8 +13,10 @@ def run_sql_template(
     dry_run: bool = False,
     dry_run_id: Optional[str] = None,
     bq_client: bigquery.Client = None,
+    bq_query_labels: dict = None,
     **context,
 ):
+
     template_path = project_path("dmp_match_workflow", "sql", f"{template_name}.sql.jinja2")
     sql = render_template(template_path, dataset_id=dataset_id, **context)
     print(sql)
@@ -25,7 +27,18 @@ def run_sql_template(
             f.write(sql)
     else:
         print(f"running query from template: {template_path}")
-        bq.bq_run_query(sql, client=bq_client)
+        job_config = None
+        if bq_query_labels is not None:
+            job_config = bigquery.QueryJobConfig(labels=bq_query_labels)
+        bq.bq_run_query(sql, client=bq_client, job_config=job_config)
+
+
+def merge_labels(labels_a: dict | None, labels_b: dict | None):
+    if labels_a is None:
+        labels_a = {}
+    if labels_b is None:
+        labels_b = {}
+    return {**labels_a, **labels_b}
 
 
 def create_embedding_model(
@@ -35,14 +48,17 @@ def create_embedding_model(
     vertex_ai_model_id: str,
     dry_run: bool = False,
     bq_client: bigquery.Client = None,
+    bq_query_labels: dict = None,
 ):
+    template_name = "embedding_model"
     run_sql_template(
-        "embedding_model",
+        template_name,
         dataset_id,
         dry_run=dry_run,
         embedding_model_id=embedding_model_id,
         vertex_ai_model_id=vertex_ai_model_id,
         bq_client=bq_client,
+        bq_query_labels=merge_labels(bq_query_labels, {"query_id": template_name}),
     )
 
 
@@ -54,15 +70,18 @@ def normalise_dmps(
     dmps_norm_table_id: str,
     dry_run: bool = False,
     bq_client: bigquery.Client = None,
+    bq_query_labels: dict = None,
 ):
+    template_name = "normalise_dmps"
     run_sql_template(
-        "normalise_dmps",
+        template_name,
         dataset_id,
         dry_run=dry_run,
         ror_table_id=ror_table_id,
         dmps_raw_table_id=dmps_raw_table_id,
         dmps_norm_table_id=dmps_norm_table_id,
         bq_client=bq_client,
+        bq_query_labels=merge_labels(bq_query_labels, {"dataset": "dmps", "query_id": template_name}),
     )
 
 
@@ -77,9 +96,11 @@ def normalise_openalex(
     openalex_norm_table_id: str,
     dry_run: bool = False,
     bq_client: bigquery.Client = None,
+    bq_query_labels: dict = None,
 ):
+    template_name = "normalise_openalex"
     run_sql_template(
-        "normalise_openalex",
+        template_name,
         dataset_id,
         dry_run=dry_run,
         openalex_works_table_id=openalex_works_table_id,
@@ -89,6 +110,7 @@ def normalise_openalex(
         dmps_norm_table_id=dmps_norm_table_id,
         openalex_norm_table_id=openalex_norm_table_id,
         bq_client=bq_client,
+        bq_query_labels=merge_labels(bq_query_labels, {"dataset": "openalex", "query_id": template_name}),
     )
 
 
@@ -102,9 +124,11 @@ def normalise_crossref(
     crossref_norm_table_id: str,
     dry_run: bool = False,
     bq_client: bigquery.Client = None,
+    bq_query_labels: dict = None,
 ):
+    template_name = "normalise_crossref"
     run_sql_template(
-        "normalise_crossref",
+        template_name,
         dataset_id,
         dry_run=dry_run,
         crossref_metadata_table_id=crossref_metadata_table_id,
@@ -113,6 +137,7 @@ def normalise_crossref(
         dmps_norm_table_id=dmps_norm_table_id,
         crossref_norm_table_id=crossref_norm_table_id,
         bq_client=bq_client,
+        bq_query_labels=merge_labels(bq_query_labels, {"dataset": "crossref_metadata", "query_id": template_name}),
     )
 
 
@@ -126,9 +151,11 @@ def normalise_datacite(
     datacite_norm_table_id: str,
     dry_run: bool = False,
     bq_client: bigquery.Client = None,
+    bq_query_labels: dict = None,
 ):
+    template_name = "normalise_datacite"
     run_sql_template(
-        "normalise_datacite",
+        template_name,
         dataset_id,
         dry_run=dry_run,
         datacite_table_id=datacite_table_id,
@@ -137,12 +164,14 @@ def normalise_datacite(
         openalex_norm_table_id=openalex_norm_table_id,
         datacite_norm_table_id=datacite_norm_table_id,
         bq_client=bq_client,
+        bq_query_labels=merge_labels(bq_query_labels, {"dataset": "datacite", "query_id": template_name}),
     )
 
 
 def match_intermediate(
     *,
     dataset_id: str,
+    dataset_name: str,
     dmps_norm_table_id: str,
     match_norm_table_id: str,
     match_intermediate_table_id: str,
@@ -151,9 +180,11 @@ def match_intermediate(
     dry_run: bool = False,
     dry_run_id: Optional[str] = None,
     bq_client: bigquery.Client = None,
+    bq_query_labels: dict = None,
 ):
+    template_name = "match_intermediate"
     run_sql_template(
-        "match_intermediate",
+        template_name,
         dataset_id,
         dry_run=dry_run,
         dry_run_id=dry_run_id,
@@ -163,6 +194,7 @@ def match_intermediate(
         weighted_count_threshold=weighted_count_threshold,
         max_matches=max_matches,
         bq_client=bq_client,
+        bq_query_labels=merge_labels(bq_query_labels, {"dataset": dataset_name, "query_id": template_name}),
     )
 
 
@@ -174,15 +206,18 @@ def create_dmps_content_table(
     dry_run: bool = False,
     dry_run_id: Optional[str] = None,
     bq_client: bigquery.Client = None,
+    bq_query_labels: dict = None,
 ):
+    template_name = "dmps_content_table"
     run_sql_template(
-        "dmps_content_table",
+        template_name,
         dataset_id,
         dry_run=dry_run,
         dry_run_id=dry_run_id,
         dmps_norm_table_id=dmps_norm_table_id,
         dmps_content_table_id=dmps_content_table_id,
         bq_client=bq_client,
+        bq_query_labels=merge_labels(bq_query_labels, {"dataset": "dmps", "query_id": template_name}),
     )
 
 
@@ -197,9 +232,11 @@ def update_content_table(
     dry_run: bool = False,
     dry_run_id: Optional[str] = None,
     bq_client: bigquery.Client = None,
+    bq_query_labels: dict = None,
 ):
+    template_name = "update_content_table"
     run_sql_template(
-        "update_content_table",
+        template_name,
         dataset_id,
         dataset_name=dataset_name,
         content_table_id=content_table_id,
@@ -207,23 +244,27 @@ def update_content_table(
         norm_table_id=norm_table_id,
         match_intermediate_table_id=match_intermediate_table_id,
         bq_client=bq_client,
-        dry_run = dry_run,
-        dry_run_id = dry_run_id,
+        dry_run=dry_run,
+        dry_run_id=dry_run_id,
+        bq_query_labels=merge_labels(bq_query_labels, {"dataset": dataset_name, "query_id": template_name}),
     )
 
 
 def update_embeddings(
     *,
     dataset_id: str,
+    dataset_name: str,
     content_table_id: str,
     embedding_model_id: str,
     embeddings_table_id: str,
     dry_run: bool = False,
     dry_run_id: Optional[str] = None,
     bq_client: bigquery.Client = None,
+    bq_query_labels: dict = None,
 ):
+    template_name = "update_embeddings"
     run_sql_template(
-        "update_embeddings",
+        template_name,
         dataset_id,
         dry_run=dry_run,
         dry_run_id=dry_run_id,
@@ -231,12 +272,14 @@ def update_embeddings(
         embedding_model_id=embedding_model_id,
         embeddings_table_id=embeddings_table_id,
         bq_client=bq_client,
+        bq_query_labels=merge_labels(bq_query_labels, {"dataset": dataset_name, "query_id": template_name}),
     )
 
 
 def match_vector_search(
     *,
     dataset_id: str,
+    dataset_name: str,
     match_intermediate_table_id: str,
     match_norm_table_id: str,
     dmps_norm_table_id: str,
@@ -246,9 +289,11 @@ def match_vector_search(
     dry_run: bool = False,
     dry_run_id: Optional[str] = None,
     bq_client: bigquery.Client = None,
+    bq_query_labels: dict = None,
 ):
+    template_name = "match_vector_search"
     run_sql_template(
-        "match_vector_search",
+        template_name,
         dataset_id,
         dry_run=dry_run,
         dry_run_id=dry_run_id,
@@ -259,4 +304,5 @@ def match_vector_search(
         dmps_embeddings_table_id=dmps_embeddings_table_id,
         match_table_id=match_table_id,
         bq_client=bq_client,
+        bq_query_labels=merge_labels(bq_query_labels, {"dataset": dataset_name, "query_id": template_name}),
     )
