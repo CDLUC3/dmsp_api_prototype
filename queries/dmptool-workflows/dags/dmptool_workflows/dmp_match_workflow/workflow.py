@@ -131,8 +131,8 @@ def create_dag(dag_params: DagParams) -> DAG:
             release = tasks.fetch_dmps(
                 dmptool_api=dmptool_api,
                 dataset_api=dataset_api,
-                dag_id=dag_params.dag_id,
-                run_id=context["run_id"],
+                dag_id=context.get("task_instance").dag_id,
+                run_id=context.get("run_id"),
                 bucket_name=dag_params.cloud_workspace.download_bucket,
                 project_id=dag_params.cloud_workspace.output_project_id,
                 bq_dataset_id=dag_params.bq_dataset_id,
@@ -148,16 +148,20 @@ def create_dag(dag_params: DagParams) -> DAG:
             weighted_count_threshold = dag_params.weighted_count_threshold
             max_matches = dag_params.max_matches
             dry_run = dag_params.dry_run
-            bq_query_labels = {
-                "dag_id": dag_params.dag_id,
-            }
 
             @task(retries=0)
             def create_shared_functions(release: dict, **context):
-                queries.run_sql_template("shared_functions", dag_params.bq_dataset_id, dry_run)
+                release = DMPToolMatchRelease.from_dict(release)
+                bq_query_labels = tasks.get_bq_query_labels(release, context)
+
+                queries.run_sql_template(
+                    "shared_functions", dag_params.bq_dataset_id, dry_run, bq_query_labels=bq_query_labels
+                )
 
             @task(retries=0)
             def create_embedding_model(release: dict, **context):
+                release = DMPToolMatchRelease.from_dict(release)
+                bq_query_labels = tasks.get_bq_query_labels(release, context)
 
                 queries.create_embedding_model(
                     dataset_id=dag_params.bq_dataset_id,
@@ -170,6 +174,8 @@ def create_dag(dag_params: DagParams) -> DAG:
             @task(retries=0)
             def normalise_dmps(release: dict, **context):
                 release = DMPToolMatchRelease.from_dict(release)
+                bq_query_labels = tasks.get_bq_query_labels(release, context)
+
                 ao_dataset = AcademicObservatoryDataset(
                     ao_project_id,
                     ror_dataset_id=dag_params.bq_ror_dataset_id,
@@ -178,6 +184,7 @@ def create_dag(dag_params: DagParams) -> DAG:
                     datacite_dataset_id=dag_params.bq_datacite_dataset_id,
                 )
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
+
                 queries.normalise_dmps(
                     dataset_id=dag_params.bq_dataset_id,
                     ror_table_id=ao_dataset.ror_dataset.ror_table_id,
@@ -190,6 +197,8 @@ def create_dag(dag_params: DagParams) -> DAG:
             @task(retries=0)
             def normalise_openalex(release: dict, **context):
                 release = DMPToolMatchRelease.from_dict(release)
+                bq_query_labels = tasks.get_bq_query_labels(release, context)
+
                 ao_dataset = AcademicObservatoryDataset(
                     ao_project_id,
                     ror_dataset_id=dag_params.bq_ror_dataset_id,
@@ -198,6 +207,7 @@ def create_dag(dag_params: DagParams) -> DAG:
                     datacite_dataset_id=dag_params.bq_datacite_dataset_id,
                 )
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
+
                 queries.normalise_openalex(
                     dataset_id=dag_params.bq_dataset_id,
                     openalex_works_table_id=ao_dataset.openalex_dataset.works_table_id,
@@ -213,6 +223,8 @@ def create_dag(dag_params: DagParams) -> DAG:
             @task(retries=0)
             def normalise_crossref(release: dict, **context):
                 release = DMPToolMatchRelease.from_dict(release)
+                bq_query_labels = tasks.get_bq_query_labels(release, context)
+
                 ao_dataset = AcademicObservatoryDataset(
                     ao_project_id,
                     ror_dataset_id=dag_params.bq_ror_dataset_id,
@@ -221,6 +233,7 @@ def create_dag(dag_params: DagParams) -> DAG:
                     datacite_dataset_id=dag_params.bq_datacite_dataset_id,
                 )
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
+
                 queries.normalise_crossref(
                     dataset_id=dag_params.bq_dataset_id,
                     crossref_metadata_table_id=ao_dataset.crossref_metadata_dataset.crossref_metadata_table_id,
@@ -235,6 +248,8 @@ def create_dag(dag_params: DagParams) -> DAG:
             @task(retries=0)
             def normalise_datacite(release: dict, **context):
                 release = DMPToolMatchRelease.from_dict(release)
+                bq_query_labels = tasks.get_bq_query_labels(release, context)
+
                 ao_dataset = AcademicObservatoryDataset(
                     ao_project_id,
                     ror_dataset_id=dag_params.bq_ror_dataset_id,
@@ -257,6 +272,8 @@ def create_dag(dag_params: DagParams) -> DAG:
             @task(retries=0)
             def match_intermediate(release: dict, **context):
                 release = DMPToolMatchRelease.from_dict(release)
+                bq_query_labels = tasks.get_bq_query_labels(release, context)
+
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
                 for match in dt_dataset.match_datasets:
                     queries.match_intermediate(
@@ -277,6 +294,8 @@ def create_dag(dag_params: DagParams) -> DAG:
                 # Insert or update new content (title + abstract) in the content table
                 # Deletes updated records from the embeddings table, so that new embeddings are generated for these records
                 release = DMPToolMatchRelease.from_dict(release)
+                bq_query_labels = tasks.get_bq_query_labels(release, context)
+
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
                 for dataset in dt_dataset.all_datasets:
                     match_intermediate_table_id = (
@@ -298,6 +317,8 @@ def create_dag(dag_params: DagParams) -> DAG:
             def update_embeddings(release: dict, **context):
                 # Generate embeddings for new or updated records in the content table
                 release = DMPToolMatchRelease.from_dict(release)
+                bq_query_labels = tasks.get_bq_query_labels(release, context)
+
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
                 for match in dt_dataset.all_datasets:
                     queries.update_embeddings(
@@ -314,6 +335,8 @@ def create_dag(dag_params: DagParams) -> DAG:
             @task(retries=0)
             def match_vector_search(release: dict, **context):
                 release = DMPToolMatchRelease.from_dict(release)
+                bq_query_labels = tasks.get_bq_query_labels(release, context)
+
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
                 for match in dt_dataset.match_datasets:
                     queries.match_vector_search(
@@ -361,7 +384,7 @@ def create_dag(dag_params: DagParams) -> DAG:
             release = DMPToolMatchRelease.from_dict(release)
 
             tasks.export_matches(
-                dag_id=dag_params.dag_id,
+                dag_id=context.get("task_instance").dag_id,
                 project_id=dag_params.cloud_workspace.output_project_id,
                 dataset_id=dag_params.bq_dataset_id,
                 release_date=release.snapshot_date,
@@ -389,8 +412,8 @@ def create_dag(dag_params: DagParams) -> DAG:
 
             release = DMPToolMatchRelease.from_dict(release)
             tasks.add_dataset_release(
-                dag_id=dag_params.dag_id,
-                run_id=context["run_id"],
+                dag_id=context.get("task_instance").dag_id,
+                run_id=context.get("run_id"),
                 snapshot_date=release.snapshot_date,
                 bq_project_id=dag_params.cloud_workspace.output_project_id,
                 api_bq_dataset_id=dag_params.api_bq_dataset_id,

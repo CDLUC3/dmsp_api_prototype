@@ -4,6 +4,12 @@ from unittest.mock import patch
 
 import pendulum
 from airflow.models import Connection
+
+from dmptool_workflows.config import project_path, TestConfig
+from dmptool_workflows.dmp_match_workflow.dmptool_api import DMPToolAPI
+from dmptool_workflows.dmp_match_workflow.release import DMPToolMatchRelease
+from dmptool_workflows.dmp_match_workflow.tasks import DATASET_API_ENTITY_ID
+from dmptool_workflows.dmp_match_workflow.workflow import create_dag, DagParams
 from observatory_platform.airflow.release import DATE_TIME_FORMAT
 from observatory_platform.airflow.workflow import Workflow
 from observatory_platform.dataset_api import DatasetAPI
@@ -11,12 +17,6 @@ from observatory_platform.files import save_jsonl_gz
 from observatory_platform.google.bigquery import bq_find_schema
 from observatory_platform.sandbox.sandbox_environment import SandboxEnvironment
 from observatory_platform.sandbox.test_utils import bq_load_tables, SandboxTestCase, Table
-
-from dmptool_workflows.config import project_path, TestConfig
-from dmptool_workflows.dmp_match_workflow.dmptool_api import DMPToolAPI
-from dmptool_workflows.dmp_match_workflow.release import DMPToolMatchRelease
-from dmptool_workflows.dmp_match_workflow.tasks import DATASET_API_ENTITY_ID
-from dmptool_workflows.dmp_match_workflow.workflow import create_dag, DagParams
 
 
 class TestDMPToolWorkflow(SandboxTestCase):
@@ -126,18 +126,13 @@ class TestDMPToolWorkflow(SandboxTestCase):
                 run_id: str,
                 entity_id: str = DATASET_API_ENTITY_ID,
             ):
-                release = DMPToolMatchRelease(
-                    dag_id=dag_id,
-                    run_id=run_id,
-                    snapshot_date=dmp_snapshot_date,
-                )
+                file_name = f"coki-dmps_{dmp_snapshot_date.format('YYYY-MM-DD')}_1.jsonl.gz"
+                release = DMPToolMatchRelease(dag_id=dag_id, run_id=run_id, snapshot_date=dmp_snapshot_date)
                 input_file = os.path.join(
                     project_path("dmp_match_workflow", "tests", "fixtures", "data"), "dmps_raw.json"
                 )
                 data = load_json(input_file)
-                file_path = os.path.join(
-                    release.dmps_folder, f"coki-dmps_{dmp_snapshot_date.format('YYYY-MM-DD')}_1.jsonl.gz"
-                )
+                file_path = os.path.join(release.dmps_folder, file_name)
                 save_jsonl_gz(file_path, data)
                 return [file_path], release
 

@@ -34,6 +34,25 @@ DATASET_API_ENTITY_ID = "dmp_match"
 DATE_FORMAT = "%Y-%m-%d"
 
 
+def normalise_airflow_run_id(run_id: str) -> str:
+    # https://cloud.google.com/bigquery/docs/labels-intro#requirements
+    # Example:
+    #   from: scheduled__2025-02-23T12:00:00+00:00
+    #   to: scheduled__2025-02-23T12-00-00_00-00
+
+    normalised = run_id.lower()
+    normalised = normalised.replace(":", "-")
+    normalised = normalised.replace("+", "_")
+    return normalised
+
+
+def get_bq_query_labels(release: DMPToolMatchRelease, context: dict) -> dict:
+    dag_id = context.get("task_instance").dag_id
+    run_id = normalise_airflow_run_id(context.get("run_id"))
+    release_date = release.snapshot_date.to_date_string()
+    return {"dag_id": dag_id, "run_id": run_id, "release_date": release_date}
+
+
 def create_bq_dataset(
     *,
     project_id: str,
@@ -89,6 +108,7 @@ def download_dmps(
         dag_id=dag_id,
         run_id=run_id,
         snapshot_date=release_date,
+        file_names=[file_name for file_name, file_url in latest_files],
     )
     file_paths = []
     for file_name, file_url in latest_files:
