@@ -4,8 +4,7 @@ from google.cloud import bigquery
 
 import observatory_platform.google.bigquery as bq
 from dmptool_workflows.config import project_path
-from dmptool_workflows.dmp_match_workflow.tasks import DMP
-from dmptool_workflows.dmp_match_workflow.types import Fund, Funder
+from dmptool_workflows.dmp_match_workflow.types import DMP, Fund, Funder
 from observatory_platform.jinja2_utils import render_template
 
 

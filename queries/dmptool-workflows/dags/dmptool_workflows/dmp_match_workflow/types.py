@@ -16,7 +16,7 @@ class DMP:
         return {
             "dmp_id": self.dmp_id,
             "funding": [fund.to_dict() for fund in self.funding],
-            "awards": [award.to_dict() for award in self.awards]
+            "awards": [award.to_dict() for award in self.awards],
         }
 
 
@@ -30,7 +30,7 @@ class Fund:
         return {
             "funder": self.funder.to_dict(),
             "funding_opportunity_id": self.funding_opportunity_id,
-            "grant_id": self.grant_id
+            "grant_id": self.grant_id,
         }
 
 
@@ -41,23 +41,7 @@ class Award:
     funded_works: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict:
-        return {
-            "funder": self.funder.to_dict(),
-            "award_id": self.award_id.to_dict(),
-            "funded_works": self.funded_works
-        }
-
-
-@dataclass
-class Identifier:
-    id: str
-    type: str
-
-    def to_dict(self) -> Dict:
-        return {
-            "id": self.id,
-            "type": self.type,
-        }
+        return {"funder": self.funder.to_dict(), "award_id": self.award_id.to_dict(), "funded_works": self.funded_works}
 
 
 @dataclass(kw_only=True)
@@ -69,15 +53,4 @@ class Funder:
         return {
             "id": self.id,
             "name": self.name,
-        }
-
-@dataclass
-class IdentifierPart:
-    value: str
-    type: str
-
-    def to_dict(self) -> Dict:
-        return {
-            "value": self.value,
-            "type": self.type,
         }

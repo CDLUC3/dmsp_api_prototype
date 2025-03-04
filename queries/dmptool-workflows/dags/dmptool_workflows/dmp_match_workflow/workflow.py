@@ -131,7 +131,7 @@ def create_dag(dag_params: DagParams) -> DAG:
             release = tasks.fetch_dmps(
                 dmptool_api=dmptool_api,
                 dataset_api=dataset_api,
-                dag_id=context.get("task_instance").dag_id,
+                dag_id=context.get("dag").dag_id,
                 run_id=context.get("run_id"),
                 bucket_name=dag_params.cloud_workspace.download_bucket,
                 project_id=dag_params.cloud_workspace.output_project_id,
@@ -172,11 +172,11 @@ def create_dag(dag_params: DagParams) -> DAG:
                 )
 
             @task()
-            def enrich_funder_data(release: dict, **contex):
+            def enrich_funder_data(release: dict, **context):
                 release = DMPToolMatchRelease.from_dict(release)
                 bq_query_labels = tasks.get_bq_query_labels(release, context)
                 dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
-                tasks.enrich_funder_data(dmps_raw_table_id=dt_dataset.dmp_dataset.dmps_raw_table_id)
+                tasks.enrich_funder_data(dmps_raw_table_id=dt_dataset.dmp_dataset.dmps_raw_table_id, dmps_awards_table_id=dt_dataset.dmp_dataset.dmps_awards_table_id)
 
             @task(retries=0)
             def normalise_dmps(release: dict, **context):
@@ -364,6 +364,7 @@ def create_dag(dag_params: DagParams) -> DAG:
 
             task_create_shared_functions = create_shared_functions(release)
             task_create_embedding_model = create_embedding_model(release)
+            task_enrich_funder_data = enrich_funder_data(release)
             task_normalise_dmps = normalise_dmps(release)
             task_normalise_openalex = normalise_openalex(release)
             task_normalise_crossref = normalise_crossref(release)
@@ -376,6 +377,7 @@ def create_dag(dag_params: DagParams) -> DAG:
             (
                 task_create_shared_functions
                 >> task_create_embedding_model
+                >> task_enrich_funder_data
                 >> task_normalise_dmps
                 >> task_normalise_openalex
                 >> task_normalise_crossref
@@ -393,7 +395,7 @@ def create_dag(dag_params: DagParams) -> DAG:
             release = DMPToolMatchRelease.from_dict(release)
 
             tasks.export_matches(
-                dag_id=context.get("task_instance").dag_id,
+                dag_id=context.get("dag").dag_id,
                 project_id=dag_params.cloud_workspace.output_project_id,
                 dataset_id=dag_params.bq_dataset_id,
                 release_date=release.snapshot_date,
@@ -421,7 +423,7 @@ def create_dag(dag_params: DagParams) -> DAG:
 
             release = DMPToolMatchRelease.from_dict(release)
             tasks.add_dataset_release(
-                dag_id=context.get("task_instance").dag_id,
+                dag_id=context.get("dag").dag_id,
                 run_id=context.get("run_id"),
                 snapshot_date=release.snapshot_date,
                 bq_project_id=dag_params.cloud_workspace.output_project_id,

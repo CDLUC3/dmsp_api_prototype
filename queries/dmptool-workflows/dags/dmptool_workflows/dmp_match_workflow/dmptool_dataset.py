@@ -31,6 +31,10 @@ class DMPDataset:
         return bq.bq_sharded_table_id(self.project_id, self.dataset_id, "dmps_raw", self.release_date)
 
     @property
+    def dmps_awards_table_id(self):
+        return bq.bq_sharded_table_id(self.project_id, self.dataset_id, "dmps_awards", self.release_date)
+
+    @property
     def normalised_table_id(self):
         return bq.bq_sharded_table_id(self.project_id, self.dataset_id, "dmps", self.release_date)
 

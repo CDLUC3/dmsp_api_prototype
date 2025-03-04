@@ -10,7 +10,6 @@ from dmptool_workflows.dmp_match_workflow.funder_apis import (
     NIHProjectDetails,
     nsf_fetch_org_id,
 )
-from dmptool_workflows.dmp_match_workflow.types import Identifier, IdentifierPart
 
 T = TypeVar("T", bound="FunderID")
 
@@ -62,6 +61,10 @@ class FunderID(ABC):
 
         return True
 
+    def __hash__(self):
+        values = [getattr(self, field) for field in self.fields]
+        return hash(tuple(values))
+
     def __repr__(self):
         class_name = self.__class__.__name__
         attrs = ", ".join(f"{field}={getattr(self, field)!r}" for field in self.fields)
@@ -78,12 +81,35 @@ class FunderID(ABC):
         }
 
 
+@dataclass
+class Identifier:
+    id: str
+    type: str
+
+    def to_dict(self) -> Dict:
+        return {
+            "id": self.id,
+            "type": self.type,
+        }
+
+
+@dataclass
+class IdentifierPart:
+    value: str
+    type: str
+
+    def to_dict(self) -> Dict:
+        return {
+            "value": self.value,
+            "type": self.type,
+        }
+
+
 class NIHAwardID(FunderID):
     ror_id = "01cwqze88"
 
     def __init__(
         self,
-        *,
         text: str,
         application_type: Optional[str] = None,
         activity_code: Optional[str] = None,
@@ -112,7 +138,7 @@ class NIHAwardID(FunderID):
         additional funds have been awarded.
         """
 
-        super(NIHAwardID).__init__(
+        super().__init__(
             text,
             [
                 "text",
@@ -261,13 +287,13 @@ def parse_nih_award_id(text: str | None) -> Optional[NIHAwardID]:
                 other_suffixes = match.group("other_suffixes")  # R1
 
     return NIHAwardID(
+        original_text,
         application_type=application_type,
         activity_code=activity_code,
         institute_code=institute_code,
         serial_number=serial_number,
         support_year=support_year,
         other_suffixes=other_suffixes,
-        text=original_text,
     )
 
 
@@ -306,11 +332,10 @@ def nih_awards_generate_variants(award_id: NIHAwardID) -> Set[str]:
     return variants
 
 
-@dataclass
 class NSFAwardID(FunderID):
     ror_id = "021nxhr62"
 
-    def __init__(self, *, text: str, org_id: Optional[str] = None, award_id: Optional[str] = None):
+    def __init__(self, text: str, org_id: Optional[str] = None, award_id: Optional[str] = None):
         """Construct an NSF Award ID.
 
         :param org: NSF org ID, e.g. IOS, CBET etc.
@@ -318,7 +343,7 @@ class NSFAwardID(FunderID):
         :param text: the original text it was parsed from.
         """
 
-        super(NSFAwardID).__init__(text, ["text", "org_id", "award_id"])
+        super().__init__(text, ["text", "org_id", "award_id"])
         self.org_id = org_id
         self.award_id = award_id
         self.discovered_ids: List[Identifier] = []
@@ -374,7 +399,7 @@ def parse_nsf_award_id(text: str | None) -> Optional[NSFAwardID]:
     # https://www.nsf.gov/awardsearch/showAward?AWD_ID=2234213&HistoricalAwards=false
     match = re.search(r"AWD_ID=(?P<award_id>\d+)", text)
     if match:
-        return NSFAwardID(award_id=match.group("award_id"), text=original_text)
+        return NSFAwardID(original_text, award_id=match.group("award_id"))
 
     # Fixup common typos and errors
     text = text.replace("NSF-", "")
@@ -384,11 +409,11 @@ def parse_nsf_award_id(text: str | None) -> Optional[NSFAwardID]:
     # Try to parse org_id and award_id together
     match = re.search(r"(?P<org_id>[A-Z]{3,4})(?P<award_id>\d{7})", text)
     if match:
-        return NSFAwardID(org_id=match.group("org_id"), award_id=match.group("award_id"), text=original_text)
+        return NSFAwardID(original_text, org_id=match.group("org_id"), award_id=match.group("award_id"))
 
     # Try to parse 7 digit award_id by itself
     match = re.search(r"\d{7}", text)
     if match:
-        return NSFAwardID(award_id=match.group(), text=original_text)
+        return NSFAwardID(original_text, award_id=match.group())
 
     return None

@@ -58,7 +58,7 @@ def normalise_airflow_run_id(run_id: str) -> str:
 
 
 def get_bq_query_labels(release: DMPToolMatchRelease, context: dict) -> dict:
-    dag_id = context.get("task_instance").dag_id
+    dag_id = context.get("dag").dag_id
     run_id = normalise_airflow_run_id(context.get("run_id"))
     release_date = release.snapshot_date.to_date_string()
     return {"dag_id": dag_id, "run_id": run_id, "release_date": release_date}
@@ -119,7 +119,6 @@ def download_dmps(
         dag_id=dag_id,
         run_id=run_id,
         snapshot_date=release_date,
-        file_names=[file_name for file_name, file_url in latest_files],
     )
     file_paths = []
     for file_name, file_url in latest_files:
@@ -170,7 +169,7 @@ def fetch_dmps(
 def enrich_funder_data(
     *,
     dmps_raw_table_id: str,
-    dmp_awards_table_id: str,
+    dmps_awards_table_id: str,
     bq_client: bigquery.Client = None,
     **context,
 ):
@@ -186,13 +185,13 @@ def enrich_funder_data(
     # Upload table
     records = [dmp.to_dict() for dmp in dmps]
     success = bq.bq_load_from_memory(
-        table_id=dmp_awards_table_id,
+        table_id=dmps_awards_table_id,
         records=records,
         schema_file_path=project_path("dmp_match_workflow", "schema", "dmp_awards.json"),
         client=bq_client,
     )
     if not success:
-        raise AirflowException(f"enrich_funder_data: error loading {dmp_awards_table_id}")
+        raise AirflowException(f"enrich_funder_data: error loading {dmps_awards_table_id}")
 
 
 def parse_and_add_awards(dmps: list[DMP]):
@@ -265,15 +264,16 @@ def parse_award_ids(funder_id: str, funding_opportunity_id: str | None, grant_id
     if parser:
         inputs = [funding_opportunity_id, grant_id]
         for text in inputs:
-            # Handle cases where multiple awards specified, for example:
-            # U19 AI111143; U19 AI111143
-            # Lead 2126792, 2126793, 2126794, 2126795, 2126796, 2126797, 2126798, 2126799
-            # Then parse each part
-            parts = re.split(r"[;,]]", text)
-            for part in parts:
-                award_id = parser.parse(part)
-                if award_id is not None:
-                    award_ids.add(award_id)
+            if text is not None:
+                # Handle cases where multiple awards specified, for example:
+                # U19 AI111143; U19 AI111143
+                # Lead 2126792, 2126793, 2126794, 2126795, 2126796, 2126797, 2126798, 2126799
+                # Then parse each part
+                parts = re.split(r"[;,]", text)
+                for part in parts:
+                    award_id = parser.parse(part)
+                    if award_id is not None:
+                        award_ids.add(award_id)
 
     return list(award_ids)
 
