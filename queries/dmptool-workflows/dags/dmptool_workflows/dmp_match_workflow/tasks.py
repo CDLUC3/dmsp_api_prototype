@@ -25,7 +25,7 @@ from dmptool_workflows.dmp_match_workflow.funder_ids import FunderID, NIHAwardID
 from dmptool_workflows.dmp_match_workflow.queries import (
     create_dmps_content_table,
     create_embedding_model,
-    get_dmps_funding,
+    get_dmp_funding,
     match_intermediate,
     match_vector_search,
     normalise_crossref,
@@ -175,7 +175,7 @@ def enrich_funder_data(
     **context,
 ):
     # Fetch rows including dmp_id and funding columns
-    dmps = get_dmps_funding(dmps_raw_table_id=dmps_raw_table_id, bq_client=bq_client)
+    dmps = get_dmp_funding(dmps_raw_table_id=dmps_raw_table_id, bq_client=bq_client)
 
     # Parse and add awards data structure
     parse_and_add_awards(dmps)

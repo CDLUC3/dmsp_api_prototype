@@ -18,8 +18,9 @@ T = TypeVar("T", bound="FunderID")
 class FunderID(ABC):
     ror_id: str = None  # The funders ROR ID
 
-    def __init__(self, text: str):
+    def __init__(self, text: str, fields: List[str]):
         self.text = text
+        self.fields = fields
         self.discovered_ids = []
 
     @abstractmethod
@@ -43,10 +44,28 @@ class FunderID(ABC):
         """The canonical identifier as a string"""
         raise NotImplementedError("Please implement")
 
-    @abstractmethod
     def parts(self) -> List[IdentifierPart]:
         """The parts that make up the ID"""
-        raise NotImplementedError("Please implement")
+        parts = []
+        for field in self.fields:
+            value = getattr(self, field)
+            parts.append(IdentifierPart(value, field.upper()))
+        return parts
+
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+
+        for field in self.fields:
+            if getattr(self, field) != getattr(other, field):
+                return False
+
+        return True
+
+    def __repr__(self):
+        class_name = self.__class__.__name__
+        attrs = ", ".join(f"{field}={getattr(self, field)!r}" for field in self.fields)
+        return f"{class_name}({attrs})"
 
     def to_dict(self) -> Dict:
         """Converts the funder ID into a dict to load into BigQuery"""
@@ -93,7 +112,18 @@ class NIHAwardID(FunderID):
         additional funds have been awarded.
         """
 
-        super(NIHAwardID).__init__(text)
+        super(NIHAwardID).__init__(
+            text,
+            [
+                "text",
+                "application_type",
+                "activity_code",
+                "institute_code",
+                "serial_number",
+                "support_year",
+                "other_suffixes",
+            ],
+        )
 
         self.application_type = application_type
         self.activity_code = activity_code
@@ -101,44 +131,8 @@ class NIHAwardID(FunderID):
         self.serial_number = serial_number
         self.support_year = support_year
         self.other_suffixes = other_suffixes
-        self.text = text
         self.nih_project_details: List[NIHProjectDetails] = []
         self.discovered_ids: List[Identifier] = []
-
-    def __eq__(self, other):
-        if isinstance(other, NIHAwardID):
-            return (
-                self.application_type == other.application_type
-                and self.activity_code == other.activity_code
-                and self.institute_code == other.institute_code
-                and self.serial_number == other.serial_number
-                and self.support_year == other.support_year
-                and self.other_suffixes == other.other_suffixes
-            )
-        return False
-
-    def __str__(self):
-        # TODO: could turn this into a data class and get this for free?
-        parts = []
-        if self.application_type:
-            parts.append(f"application_type={self.application_type}")
-
-        if self.activity_code:
-            parts.append(f"activity_code={self.activity_code}")
-
-        if self.institute_code:
-            parts.append(f"institute_code={self.institute_code}")
-
-        if self.serial_number:
-            parts.append(f"serial_number={self.serial_number}")
-
-        if self.support_year:
-            parts.append(f"support_year={self.support_year}")
-
-        if self.other_suffixes:
-            parts.append(f"other_suffixes={self.other_suffixes}")
-
-        return f"NIHAwardID({', '.join(parts)})"
 
     def identifier_string(self) -> str:
         """The canonical identifier as a string"""
@@ -166,31 +160,6 @@ class NIHAwardID(FunderID):
                 parts.append(self.other_suffixes)
 
         return "".join(parts)
-
-    def parts(self) -> List[IdentifierPart]:
-        """The parts that make up the ID"""
-
-        parts = []
-
-        if self.application_type:
-            parts.append(IdentifierPart(self.application_type, "APPLICATION_TYPE"))
-
-        if self.activity_code:
-            parts.append(IdentifierPart(self.activity_code, "ACTIVITY_CODE"))
-
-        if self.institute_code:
-            parts.append(IdentifierPart(self.institute_code, "INSTITUTION_CODE"))
-
-        if self.serial_number:
-            parts.append(IdentifierPart(self.serial_number, "SERIAL_NUMBER"))
-
-        if self.support_year:
-            parts.append(IdentifierPart(self.support_year, "SUPPORT_YEAR"))
-
-        if self.other_suffixes:
-            parts.append(IdentifierPart(self.other_suffixes, "OTHER_SUFFIXES"))
-
-        return parts
 
     def generate_variants(self) -> List[str]:
         all_award_ids = [self] + [NIHAwardID.parse(detail.project_num) for detail in self.nih_project_details]
@@ -349,26 +318,10 @@ class NSFAwardID(FunderID):
         :param text: the original text it was parsed from.
         """
 
-        super(NSFAwardID).__init__(text)
+        super(NSFAwardID).__init__(text, ["text", "org_id", "award_id"])
         self.org_id = org_id
         self.award_id = award_id
         self.discovered_ids: List[Identifier] = []
-
-    def __eq__(self, other):
-        if isinstance(other, NSFAwardID):
-            return self.org_id == other.org_id and self.award_id == other.award_id
-        return False
-
-    def __str__(self):
-        # TODO: could turn this into a data class and get this for free?
-        parts = []
-        if self.org_id:
-            parts.append(f"org_id={self.org_id}")
-
-        if self.award_id:
-            parts.append(f"award_id={self.award_id}")
-
-        return f"NSFAwardID({', '.join(parts)})"
 
     def generate_variants(self):
         variants = []
@@ -404,19 +357,6 @@ class NSFAwardID(FunderID):
             return f"{self.org_id}-{self.award_id}"
 
         return str(self.award_id)
-
-    def parts(self) -> List[IdentifierPart]:
-        """The parts that make up the ID"""
-
-        parts = []
-
-        if self.org_id:
-            parts.append(IdentifierPart(self.org_id, "ORG_ID"))
-
-        if self.award_id:
-            parts.append(IdentifierPart(self.award_id, "AWARD_ID"))
-
-        return parts
 
     @staticmethod
     def parse(text: str | None) -> Optional[NSFAwardID]:

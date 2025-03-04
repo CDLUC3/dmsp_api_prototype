@@ -64,7 +64,7 @@ def create_embedding_model(
     )
 
 
-def get_dmps_funding(
+def get_dmp_funding(
     *,
     dmps_raw_table_id: str,
     bq_client: bigquery.Client = None,
