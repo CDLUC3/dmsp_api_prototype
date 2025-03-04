@@ -171,8 +171,17 @@ def create_dag(dag_params: DagParams) -> DAG:
                     bq_query_labels=bq_query_labels,
                 )
 
+            @task()
+            def enrich_funder_data(release: dict, **contex):
+                release = DMPToolMatchRelease.from_dict(release)
+                bq_query_labels = tasks.get_bq_query_labels(release, context)
+                dt_dataset = DMPToolDataset(dmps_project_id, dag_params.bq_dataset_id, release.snapshot_date)
+                tasks.enrich_funder_data(dmps_raw_table_id=dt_dataset.dmp_dataset.dmps_raw_table_id)
+
             @task(retries=0)
             def normalise_dmps(release: dict, **context):
+                # TODO: update to use new funder info
+
                 release = DMPToolMatchRelease.from_dict(release)
                 bq_query_labels = tasks.get_bq_query_labels(release, context)
 

@@ -1,9 +1,11 @@
-from typing import Optional
+from typing import Dict, List, Optional
 
 from google.cloud import bigquery
 
 import observatory_platform.google.bigquery as bq
 from dmptool_workflows.config import project_path
+from dmptool_workflows.dmp_match_workflow.tasks import DMP
+from dmptool_workflows.dmp_match_workflow.types import Fund, Funder
 from observatory_platform.jinja2_utils import render_template
 
 
@@ -60,6 +62,56 @@ def create_embedding_model(
         bq_client=bq_client,
         bq_query_labels=merge_labels(bq_query_labels, {"query_id": template_name}),
     )
+
+
+def get_dmps_funding(
+    *,
+    dmps_raw_table_id: str,
+    bq_client: bigquery.Client = None,
+    bq_query_labels: dict = None,
+) -> List[DMP]:
+    job_config = None
+    if bq_query_labels is not None:
+        job_config = bigquery.QueryJobConfig(labels=bq_query_labels)
+
+    # Select data
+    rows = bq.bq_run_query(
+        f"SELECT dmp_id, funding FROM `{dmps_raw_table_id}`", client=bq_client, job_config=job_config
+    )
+
+    # Convert to list of DMPs
+    dmps = parse_dmps(rows)
+
+    return dmps
+
+
+def parse_dmps(dmps_raw: List[Dict]) -> List[DMP]:
+    """Parse the raw DMPs table into DMP objects.
+
+    :param dmps_raw: the raw DMPs table.
+    :return: a list of DMP objects.
+    """
+
+    dmps = []
+    for dmp in dmps_raw:
+        dmp_id = dmp.get("dmp_id")
+        funding = []
+        for fund in dmp.get("funding", []):
+            funder = fund.get("funder", {})
+            funder_id = funder.get("id")
+            funder_name = funder.get("name")
+            funding_opportunity_id = fund.get("funding_opportunity_id")
+            grant_id = fund.get("grant_id")
+            funding.append(
+                Fund(
+                    funder=Funder(id=funder_id, name=funder_name),
+                    funding_opportunity_id=funding_opportunity_id,
+                    grant_id=grant_id,
+                )
+            )
+        dmps.append(DMP(dmp_id=dmp_id, funding=funding))
+
+    return dmps
 
 
 def normalise_dmps(

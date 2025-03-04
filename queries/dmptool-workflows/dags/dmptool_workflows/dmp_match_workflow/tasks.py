@@ -1,6 +1,10 @@
+from __future__ import annotations
+
 import logging
 import os
+import re
 import urllib.request
+from typing import Dict, Type
 
 import pendulum
 from airflow import AirflowException
@@ -13,9 +17,15 @@ from dmptool_workflows.config import project_path
 from dmptool_workflows.dmp_match_workflow.academic_observatory_dataset import AcademicObservatoryDataset
 from dmptool_workflows.dmp_match_workflow.dmptool_api import DMPToolAPI
 from dmptool_workflows.dmp_match_workflow.dmptool_dataset import DMPDataset, DMPToolDataset
+from dmptool_workflows.dmp_match_workflow.funder_apis import (
+    nih_fetch_award_publication_dois,
+    nsf_fetch_award_publication_dois,
+)
+from dmptool_workflows.dmp_match_workflow.funder_ids import FunderID, NIHAwardID, NSFAwardID
 from dmptool_workflows.dmp_match_workflow.queries import (
     create_dmps_content_table,
     create_embedding_model,
+    get_dmps_funding,
     match_intermediate,
     match_vector_search,
     normalise_crossref,
@@ -27,6 +37,7 @@ from dmptool_workflows.dmp_match_workflow.queries import (
     update_embeddings,
 )
 from dmptool_workflows.dmp_match_workflow.release import DMPToolMatchRelease
+from dmptool_workflows.dmp_match_workflow.types import Award, DMP
 from observatory_platform.dataset_api import DatasetAPI, DatasetRelease
 from observatory_platform.files import list_files
 
@@ -154,6 +165,117 @@ def fetch_dmps(
         raise AirflowException(f"fetch_dmps: error loading {table_id}")
 
     return release
+
+
+def enrich_funder_data(
+    *,
+    dmps_raw_table_id: str,
+    dmp_awards_table_id: str,
+    bq_client: bigquery.Client = None,
+    **context,
+):
+    # Fetch rows including dmp_id and funding columns
+    dmps = get_dmps_funding(dmps_raw_table_id=dmps_raw_table_id, bq_client=bq_client)
+
+    # Parse and add awards data structure
+    parse_and_add_awards(dmps)
+
+    # Fetch additional award information
+    fetch_additional_award_data(dmps)
+
+    # Upload table
+    records = [dmp.to_dict() for dmp in dmps]
+    success = bq.bq_load_from_memory(
+        table_id=dmp_awards_table_id,
+        records=records,
+        schema_file_path=project_path("dmp_match_workflow", "schema", "dmp_awards.json"),
+        client=bq_client,
+    )
+    if not success:
+        raise AirflowException(f"enrich_funder_data: error loading {dmp_awards_table_id}")
+
+
+def parse_and_add_awards(dmps: list[DMP]):
+    """Add award field to DMP objects in place.
+
+    :param dmps: a list of DMP objects
+    :return: None.
+    """
+
+    logging.info(f"parse_and_add_awards: parsing and updating awards for {len(dmps)} DMPs")
+
+    for dmp in dmps:
+        awards: list[Award] = []
+
+        for funding in dmp.funding:
+            # Parse award IDs
+            award_ids = []
+            if funding.funder.id is not None:
+                award_ids = parse_award_ids(funding.funder.id, funding.funding_opportunity_id, funding.grant_id)
+
+            # Add awards
+            for award_id in award_ids:
+                awards.append(Award(funder=funding.funder, award_id=award_id))
+
+            # Update awards
+            dmp.awards = awards
+
+
+def fetch_additional_award_data(dmps: list[DMP]):
+    logging.info(f"fetch_additional_award_data: fetching additional award data for {len(dmps)} DMPs")
+
+    for dmp in dmps:
+        logging.info(f"{dmp.dmp_id}")
+
+        for award in dmp.awards:
+            logging.info(f"Fetching data for award", award)
+
+            logging.info(f"Fetch additional metadata for the award", award)
+            award.award_id.fetch_additional_metadata()
+
+            logging.info(f"Fetch funded works for the award", award)
+            works = []
+            award_id = award.award_id
+            if isinstance(award_id, NIHAwardID):
+                logging.info(f"Fetch works for each application ID", award_id.discovered_ids)
+                for detail in award_id.nih_project_details:
+                    logging.info(f"Fetching works for {award} with appl_id={detail.appl_id}")
+                    results = nih_fetch_award_publication_dois(detail.appl_id)
+                    works.extend(results)
+
+            # Fetch NSF award info
+            elif isinstance(award_id, NSFAwardID):
+                logging.info(f"Fetching works for {award} with award_id={award_id.award_id}")
+                results = nsf_fetch_award_publication_dois(award_id.award_id)
+                works.extend(results)
+
+            # Parse and set DOIs for funded works
+            funded_works = set()
+            for work in works:
+                doi = work.get("doi")
+                if doi is not None:
+                    funded_works.add(doi)
+            award.funded_works = list(funded_works)
+
+
+def parse_award_ids(funder_id: str, funding_opportunity_id: str | None, grant_id: str | None) -> list[FunderID]:
+    award_ids = set()
+    parser_index: Dict[str, Type[FunderID]] = {NIHAwardID.ror_id: NIHAwardID, NSFAwardID.ror_id: NSFAwardID}
+    parser = parser_index.get(funder_id)
+    if parser:
+        inputs = [funding_opportunity_id, grant_id]
+        for text in inputs:
+            # Handle cases where multiple awards specified, for example:
+            # U19 AI111143; U19 AI111143
+            # Lead 2126792, 2126793, 2126794, 2126795, 2126796, 2126797, 2126798, 2126799
+            # Then parse each part
+            parts = re.split(r"[;,]]", text)
+            for part in parts:
+                award_id = parser.parse(part)
+                if award_id is not None:
+                    award_ids.add(award_id)
+
+    return list(award_ids)
 
 
 def create_dmp_matches(

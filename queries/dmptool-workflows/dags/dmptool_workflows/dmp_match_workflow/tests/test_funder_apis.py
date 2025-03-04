@@ -13,6 +13,7 @@ from dmptool_workflows.dmp_match_workflow.funder_apis import (
     nih_core_project_to_appl_ids,
     nih_fetch_award_publication_dois,
     nsf_fetch_award_publication_dois,
+    nsf_fetch_org_id,
     parse_reference,
     pubmed_ids_to_dois,
 )
@@ -20,7 +21,7 @@ from dmptool_workflows.dmp_match_workflow.funder_apis import (
 FIXTURES_FOLDER = project_path("dmp_match_workflow", "tests", "fixtures")
 
 
-class TestFunderAPIs(unittest.TestCase):
+class TestNSFAPIs(unittest.TestCase):
     def test_nsf_fetch_award_publications(self):
         with vcr.use_cassette(os.path.join(FIXTURES_FOLDER, "nsf_fetch_award_publication_dois_1507101.yaml")):
             results = nsf_fetch_award_publication_dois("1507101")
@@ -459,6 +460,18 @@ class TestFunderAPIs(unittest.TestCase):
         doi = extract_doi("DOI10.1007/s00300-010-0947-0")
         self.assertEqual("10.1007/s00300-010-0947-0", doi)
 
+    def test_nsf_fetch_org_id(self):
+        with vcr.use_cassette(os.path.join(FIXTURES_FOLDER, "nsf_fetch_org_id.yaml")):
+            # NSF Org ID exists
+            org_id = nsf_fetch_org_id("2234213")
+            self.assertEqual("EAR", org_id)
+
+            # NSF Org ID None
+            org_id = nsf_fetch_org_id("0")
+            self.assertEqual(None, org_id)
+
+
+class TestNIHAPIs(unittest.TestCase):
     def test_nih_core_project_to_appl_ids(self):
         with vcr.use_cassette(os.path.join(FIXTURES_FOLDER, "nih_core_project_to_appl_ids.yaml")):
             results = nih_core_project_to_appl_ids("5P41GM108569-08")

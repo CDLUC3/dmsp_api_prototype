@@ -3,12 +3,16 @@ from __future__ import annotations
 import logging
 import os
 import re
+from dataclasses import dataclass
+from typing import List, Optional
 
 import requests
+from bs4 import BeautifulSoup
 from fold_to_ascii import fold
+from rapidfuzz import fuzz
+
 from observatory_platform.files import get_chunks
 from observatory_platform.url_utils import retry_session
-from rapidfuzz import fuzz
 
 
 def get_pubmed_api_email():
@@ -225,21 +229,110 @@ def extract_doi(text: str) -> str | None:
     return None
 
 
-def nih_core_project_to_appl_ids(core_project_num: str) -> list[str]:
+def nsf_fetch_org_id(award_id: str):
+    base_url = "https://www.nsf.gov/awardsearch/showAward"
+    params = {"AWD_ID": award_id}
+    org_id = None
+    try:
+        # Fetch page
+        response = retry_session().get(base_url, params=params)
+        response.raise_for_status()
+
+        # Parse page
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # Find the table row containing "NSF Org:"
+        nsf_org_row = soup.find("td", text="NSF Org:")
+
+        if nsf_org_row:
+            # Find the next sibling <td> that contains the actual NSF Org ID
+            nsf_org_td = nsf_org_row.find_next_sibling("td")
+
+            if nsf_org_td:
+                # Extract the NSF Org ID from the <a> tag or direct text
+                nsf_org_id = nsf_org_td.find("a").text if nsf_org_td.find("a") else nsf_org_td.text
+                org_id = nsf_org_id.strip().upper()
+                logging.info(f"nsf_fetch_org_id: found NSF Org ID {org_id} for Award ID {award_id}")
+            else:
+                logging.info(f"nsf_fetch_org_id: no NSF Org ID found for Award ID {award_id}")
+
+    except requests.exceptions.RequestException as e:
+        logging.error(f"An error occurred while fetching data: {e}")
+        raise
+
+    return org_id
+
+
+@dataclass
+class NIHProjectDetails:
+    appl_id: Optional[str] = None
+    project_num: Optional[str] = None
+
+
+def nih_core_project_to_appl_ids(
+    core_project_num: Optional[str] = None,
+    appl_type_code: Optional[str] = None,
+    activity_code: Optional[str] = None,
+    ic_code: Optional[str] = None,
+    serial_num: Optional[str] = None,
+    support_year: Optional[str] = None,
+    full_support_year: Optional[str] = None,
+    suffix_code: Optional[str] = None,
+) -> List[NIHProjectDetails]:
     """Get the NIH Application IDs associated with an NIH Core Project Number.
 
-    :param core_project_num: the NIH Core Project Number.
+    :param core_project_num: the NIH Core Project Number, e.g. 5UG1HD078437-07.
+    :param appl_type_code:
+    :param activity_code:
+    :param ic_code:
+    :param serial_num:
+    :param support_year:
+    :param full_support_year:
+    :param suffix_code:
     :return: the list of NIH Application IDs.
     """
 
+    criteria = {"fiscal_years": []}
+    if core_project_num is not None:
+        # Search with core_project_num
+        criteria["project_nums"] = [core_project_num]
+    else:
+        # Search with project_num_split
+        project_num_split = {}
+        if appl_type_code is not None:
+            project_num_split["appl_type_code"] = appl_type_code
+
+        if activity_code is not None:
+            project_num_split["activity_code"] = activity_code
+
+        if ic_code is not None:
+            project_num_split["ic_code"] = ic_code
+
+        if serial_num is not None:
+            project_num_split["serial_num"] = serial_num
+
+        if support_year is not None:
+            project_num_split["support_year"] = support_year
+
+        if full_support_year is not None:
+            project_num_split["full_support_year"] = full_support_year
+
+        if suffix_code is not None:
+            project_num_split["suffix_code"] = suffix_code
+
+        criteria["project_num_split"] = project_num_split
+
     try:
         base_url = "https://api.reporter.nih.gov/v2/projects/search"
-        data = {"criteria": {"project_nums": [core_project_num]}, "include_fields": ["ApplId", "ProjectNum"]}
+        data = {"criteria": criteria, "include_fields": ["ApplId", "ProjectNum"], "limit": 500}
         response = retry_session().post(base_url, json=data)
         response.raise_for_status()
         data = response.json()
         results = data.get("results", [])
-        return [result["appl_id"] for result in results]
+        return [
+            NIHProjectDetails(appl_id=result.get("appl_id"), project_num=result.get("project_num"))
+            for result in results
+        ]
 
     except requests.exceptions.RequestException as e:
         logging.error(f"nih_fetch_award_publication_dois: an error occurred while fetching data: {e}")
@@ -249,7 +342,7 @@ def nih_core_project_to_appl_ids(core_project_num: str) -> list[str]:
 def nih_fetch_award_publication_dois(appl_id: str, pubmed_api_email: str = PUBMED_API_EMAIL_ADDRESS) -> list[dict]:
     """Fetch the publications associated with an NIH award.
 
-    :param appl_id: the NIH Application ID.
+    :param appl_id: the NIH Application ID, a 7‑digit numeric identifier, .e.g 10438547.
     :param pubmed_api_email: an email address to use when calling the PubMed API.
     :return: a list of publication DOIs.
     """
