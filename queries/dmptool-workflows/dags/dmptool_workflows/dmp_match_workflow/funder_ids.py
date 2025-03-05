@@ -15,7 +15,7 @@ T = TypeVar("T", bound="FunderID")
 
 
 class FunderID(ABC):
-    ror_id: str = None  # The funders ROR ID
+    ror_ids: set = {}  # The funder ROR IDs, includes children
 
     def __init__(self, text: str, fields: List[str]):
         self.text = text
@@ -73,6 +73,7 @@ class FunderID(ABC):
     def to_dict(self) -> Dict:
         """Converts the funder ID into a dict to load into BigQuery"""
         return {
+            "ror_ids": list(self.ror_ids),
             "identifier": self.identifier_string(),
             "text": self.text,
             "parts": [part.to_dict() for part in self.parts()],
@@ -106,7 +107,7 @@ class IdentifierPart:
 
 
 class NIHAwardID(FunderID):
-    ror_id = "01cwqze88"
+    ror_ids = {"01cwqze88"}
 
     def __init__(
         self,
@@ -333,7 +334,7 @@ def nih_awards_generate_variants(award_id: NIHAwardID) -> Set[str]:
 
 
 class NSFAwardID(FunderID):
-    ror_id = "021nxhr62"
+    ror_ids: set = {"021nxhr62", "05wqqhv83"}
 
     def __init__(self, text: str, org_id: Optional[str] = None, award_id: Optional[str] = None):
         """Construct an NSF Award ID.

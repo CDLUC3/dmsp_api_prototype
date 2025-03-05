@@ -268,7 +268,10 @@ def fetch_additional_award_data(dmps: list[DMP]):
 
 def parse_award_ids(funder_id: str, funding_opportunity_id: str | None, grant_id: str | None) -> list[FunderID]:
     award_ids = set()
-    parser_index: Dict[str, Type[FunderID]] = {NIHAwardID.ror_id: NIHAwardID, NSFAwardID.ror_id: NSFAwardID}
+    parser_index: Dict[str, Type[FunderID]] = {}
+    for id_type in [NIHAwardID, NSFAwardID]:
+        for ror_id in id_type.ror_ids:
+            parser_index[ror_id] = id_type
     parser = parser_index.get(funder_id)
     if parser:
         inputs = [funding_opportunity_id, grant_id]

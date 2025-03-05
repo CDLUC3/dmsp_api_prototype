@@ -71,6 +71,11 @@
         "type": "RECORD",
         "fields": [
           {
+            "mode": "REPEATED",
+            "name": "ror_ids",
+            "type": "STRING"
+          },
+          {
             "mode": "NULLABLE",
             "name": "identifier",
             "type": "STRING"
