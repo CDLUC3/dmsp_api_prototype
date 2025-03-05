@@ -232,24 +232,29 @@ def fetch_additional_award_data(dmps: list[DMP]):
             logging.info(f"fetch_additional_award_data: fetching additional metadata for award {award.award_id.text}")
             award.award_id.fetch_additional_metadata()
 
-            logging.info(f"fetch_additional_award_data: fetching funded works for award {award.award_id.text}")
+            canonical_id = award.award_id.identifier_string()
+            logging.info(f"fetch_additional_award_data: canonical ID {canonical_id}")
+
+            logging.info(f"fetch_additional_award_data: fetching funded works for award {canonical_id}")
             works = []
             award_id = award.award_id
             if isinstance(award_id, NIHAwardID):
                 logging.info(f"fetch_additional_award_data: NIHAwardID fetch works via application IDs")
                 for detail in award_id.nih_project_details:
                     logging.info(
-                        f"fetch_additional_award_data: fetch works for {award.award_id.text} with appl_id={detail.appl_id}"
+                        f"fetch_additional_award_data: fetch works for {canonical_id} with appl_id={detail.appl_id}"
                     )
                     results = nih_fetch_award_publication_dois(detail.appl_id)
+                    logging.info(f"fetch_additional_award_data: discovered {len(results)} associated works")
                     works.extend(results)
 
             # Fetch NSF award info
             elif isinstance(award_id, NSFAwardID):
                 logging.info(
-                    f"fetch_additional_award_data: NSFAwardID fetch works for {award.award_id.text} with award_id={award_id.award_id}"
+                    f"fetch_additional_award_data: NSFAwardID fetch works for {canonical_id} with award_id={award_id.award_id}"
                 )
                 results = nsf_fetch_award_publication_dois(award_id.award_id)
+                logging.info(f"fetch_additional_award_data: discovered {len(results)} associated works")
                 works.extend(results)
 
             # Parse and set DOIs for funded works
