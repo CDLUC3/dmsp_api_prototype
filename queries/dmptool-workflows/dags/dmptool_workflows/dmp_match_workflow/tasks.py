@@ -321,6 +321,7 @@ def create_dmp_matches(
         dataset_id=dataset_id,
         ror_table_id=ao_dataset.ror_dataset.ror_table_id,
         dmps_raw_table_id=dt_dataset.dmp_dataset.dmps_raw_table_id,
+        dmps_awards_table_id=dt_dataset.dmp_dataset.dmps_awards_table_id,
         dmps_norm_table_id=dt_dataset.dmp_dataset.normalised_table_id,
         dry_run=dry_run,
         bq_client=bq_client,

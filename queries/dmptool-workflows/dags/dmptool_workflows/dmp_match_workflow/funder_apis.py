@@ -16,13 +16,13 @@ from observatory_platform.files import get_chunks
 from observatory_platform.url_utils import retry_session
 
 
-def get_pubmed_api_email():
-    email = os.getenv("PUBMED_API_EMAIL_ADDRESS")
+def get_api_mailto_address():
+    email = os.getenv("API_MAILTO_ADDRESS")
     if email is None:
-        raise ValueError(f"get_pubmed_api_email: the PUBMED_API_EMAIL_ADDRESS is not set")
+        raise ValueError(f"get_api_mailto_address: the API_MAILTO_ADDRESS is not set")
 
 
-PUBMED_API_EMAIL_ADDRESS = get_pubmed_api_email()
+API_MAILTO_ADDRESS = get_api_mailto_address()
 
 
 def nsf_fetch_award_publication_dois(award_id: str, threshold: float = 95) -> list[dict]:
@@ -71,7 +71,7 @@ def nsf_fetch_award_publication_dois(award_id: str, threshold: float = 95) -> li
         return references
 
     except requests.exceptions.RequestException as e:
-        logging.error(f"An error occurred while fetching data: {e}")
+        logging.error(f"nsf_fetch_award_publication_dois: an error occurred while fetching data: {e}")
         raise
 
 
@@ -86,7 +86,7 @@ def find_crossref_doi(title: str, journal: str, threshold: float = 95) -> str | 
     """
 
     base_url = "https://api.crossref.org/works"
-    params = {"query.title": title, "query.container-title": journal}
+    params = {"query.title": title, "query.container-title": journal, "mailto": API_MAILTO_ADDRESS}
 
     try:
         response = retry_session().get(base_url, params=params)
@@ -151,7 +151,7 @@ def find_datacite_doi(title: str, threshold: float = 95) -> str | None:
 
         return None
     except requests.exceptions.RequestException as e:
-        logging.error(f"find_crossref_doi: an error occurred while fetching data: {e}")
+        logging.error(f"find_datacite_doi: an error occurred while fetching data: {e}")
         raise
 
 
@@ -340,7 +340,7 @@ def nih_core_project_to_appl_ids(
         raise
 
 
-def nih_fetch_award_publication_dois(appl_id: str, pubmed_api_email: str = PUBMED_API_EMAIL_ADDRESS) -> list[dict]:
+def nih_fetch_award_publication_dois(appl_id: str, pubmed_api_email: str = API_MAILTO_ADDRESS) -> list[dict]:
     """Fetch the publications associated with an NIH award.
 
     :param appl_id: the NIH Application ID, a 7‑digit numeric identifier, .e.g 10438547.
@@ -389,7 +389,7 @@ def pubmed_ids_to_dois(
     idtype: str,
     versions: str | None = "no",
     tool: str = "dmptool-workflow",
-    email: str = PUBMED_API_EMAIL_ADDRESS,
+    email: str = API_MAILTO_ADDRESS,
 ) -> list[dict]:
     """Call the PubMed ID converter API to convert PubMed IDs and PMC IDs to DOIs: https://pmc.ncbi.nlm.nih.gov/tools/id-converter-api/
 
@@ -413,7 +413,7 @@ def _pubmed_ids_to_dois(
     idtype: str,
     versions: str | None = "no",
     tool="dmptool-match-workflows",
-    email: str = PUBMED_API_EMAIL_ADDRESS,
+    email: str = API_MAILTO_ADDRESS,
 ) -> list[dict]:
     # Validate parameters
     if len(ids) > 200:
