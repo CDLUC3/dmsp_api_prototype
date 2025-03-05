@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 from fold_to_ascii import fold
 from rapidfuzz import fuzz
 
+from dmptool_workflows.dmp_match_workflow.transforms import clean_doi
 from observatory_platform.files import get_chunks
 from observatory_platform.url_utils import retry_session
 
@@ -101,7 +102,7 @@ def find_crossref_doi(title: str, journal: str, threshold: float = 95) -> str | 
 
             # Accept title if similarity >= threshold
             if fuzz.ratio(title, item_title, processor=preprocess_text) >= threshold:
-                return item.get("DOI")
+                return clean_doi(item.get("DOI"))
 
         return None
     except requests.exceptions.RequestException as e:
@@ -146,7 +147,7 @@ def find_datacite_doi(title: str, threshold: float = 95) -> str | None:
                         doi = related_identifier
                         break
 
-                return doi
+                return clean_doi(doi)
 
         return None
     except requests.exceptions.RequestException as e:
@@ -225,7 +226,7 @@ def extract_doi(text: str) -> str | None:
     pattern = r"10\.[\d.]+/[^\s]+"
     match = re.search(pattern, text, re.IGNORECASE)
     if match:
-        return match.group(0).lower().strip()
+        return clean_doi(match.group(0))
     return None
 
 
@@ -257,7 +258,7 @@ def nsf_fetch_org_id(award_id: str):
                 logging.info(f"nsf_fetch_org_id: no NSF Org ID found for Award ID {award_id}")
 
     except requests.exceptions.RequestException as e:
-        logging.error(f"An error occurred while fetching data: {e}")
+        logging.error(f"nsf_fetch_org_id: an error occurred while fetching data: {e}")
         raise
 
     return org_id
@@ -450,7 +451,7 @@ def _pubmed_ids_to_dois(
         for record in records:
             pmcid = record.get("pmcid")
             pmid = record.get("pmid")
-            doi = record.get("doi")
+            doi = clean_doi(record.get("doi"))
             outputs.append(dict(pmcid=pmcid, pmid=pmid, doi=doi))
         return outputs
 

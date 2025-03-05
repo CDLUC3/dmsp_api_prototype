@@ -224,27 +224,31 @@ def fetch_additional_award_data(dmps: list[DMP]):
     logging.info(f"fetch_additional_award_data: fetching additional award data for {len(dmps)} DMPs")
 
     for dmp in dmps:
-        logging.info(f"{dmp.dmp_id}")
+        logging.info(f"fetch_additional_award_data: DMP {dmp.dmp_id}")
 
         for award in dmp.awards:
-            logging.info(f"Fetching data for award", award)
+            logging.info(f"fetch_additional_award_data: fetching data for award {award.award_id.text}")
 
-            logging.info(f"Fetch additional metadata for the award", award)
+            logging.info(f"fetch_additional_award_data: fetching additional metadata for award {award.award_id.text}")
             award.award_id.fetch_additional_metadata()
 
-            logging.info(f"Fetch funded works for the award", award)
+            logging.info(f"fetch_additional_award_data: fetching funded works for award {award.award_id.text}")
             works = []
             award_id = award.award_id
             if isinstance(award_id, NIHAwardID):
-                logging.info(f"Fetch works for each application ID", award_id.discovered_ids)
+                logging.info(f"fetch_additional_award_data: NIHAwardID fetch works via application IDs")
                 for detail in award_id.nih_project_details:
-                    logging.info(f"Fetching works for {award} with appl_id={detail.appl_id}")
+                    logging.info(
+                        f"fetch_additional_award_data: fetch works for {award.award_id.text} with appl_id={detail.appl_id}"
+                    )
                     results = nih_fetch_award_publication_dois(detail.appl_id)
                     works.extend(results)
 
             # Fetch NSF award info
             elif isinstance(award_id, NSFAwardID):
-                logging.info(f"Fetching works for {award} with award_id={award_id.award_id}")
+                logging.info(
+                    f"fetch_additional_award_data: NSFAwardID fetch works for {award.award_id.text} with award_id={award_id.award_id}"
+                )
                 results = nsf_fetch_award_publication_dois(award_id.award_id)
                 works.extend(results)
 
