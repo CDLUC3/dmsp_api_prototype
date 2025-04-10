@@ -1,47 +1,22 @@
 [
   {
-    "mode": "REPEATED",
-    "name": "repository_ids",
+    "mode": "REQUIRED",
+    "name": "PK",
     "type": "STRING"
   },
   {
-    "mode": "REPEATED",
-    "name": "grant_ids",
+    "mode": "REQUIRED",
+    "name": "SK",
     "type": "STRING"
   },
   {
-    "mode": "REPEATED",
-    "name": "funder_opportunity_ids",
-    "type": "STRING"
-  },
-  {
-    "mode": "REPEATED",
-    "name": "funders",
+    "mode": "REQUIRED",
+    "name": "dmp_id",
     "type": "STRING"
   },
   {
     "mode": "NULLABLE",
-    "name": "project_start",
-    "type": "DATE"
-  },
-  {
-    "mode": "NULLABLE",
-    "name": "dmptool_id",
-    "type": "STRING"
-  },
-  {
-    "mode": "REPEATED",
-    "name": "affiliations",
-    "type": "STRING"
-  },
-  {
-    "mode": "NULLABLE",
-    "name": "abstract",
-    "type": "STRING"
-  },
-  {
-    "mode": "REPEATED",
-    "name": "repositories",
+    "name": "narrative_url",
     "type": "STRING"
   },
   {
@@ -51,37 +26,47 @@
   },
   {
     "mode": "NULLABLE",
+    "name": "description",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "created",
+    "type": "DATE"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "modified",
+    "type": "DATE"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "registered",
+    "type": "DATE"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "project_start",
+    "type": "DATE"
+  },
+  {
+    "mode": "NULLABLE",
     "name": "project_end",
     "type": "DATE"
   },
   {
-    "mode": "REPEATED",
-    "name": "affiliation_ids",
+    "mode": "NULLABLE",
+    "name": "visibility",
     "type": "STRING"
   },
   {
     "mode": "NULLABLE",
-    "name": "dmp_visibility",
-    "type": "STRING"
-  },
-  {
-    "mode": "REPEATED",
-    "name": "funder_ids",
+    "name": "featured",
     "type": "STRING"
   },
   {
     "mode": "NULLABLE",
-    "name": "dmp_modified",
-    "type": "DATE"
-  },
-  {
-    "mode": "REPEATED",
-    "name": "people_ids",
-    "type": "STRING"
-  },
-  {
-    "mode": "NULLABLE",
-    "name": "dmp_id",
+    "name": "funding_status",
     "type": "STRING"
   },
   {
@@ -90,13 +75,67 @@
     "type": "STRING"
   },
   {
-    "mode": "NULLABLE",
-    "name": "dmp_doi_registered",
-    "type": "DATE"
+    "mode": "REPEATED",
+    "name": "people_ids",
+    "type": "STRING"
   },
   {
-    "mode": "NULLABLE",
-    "name": "dmp_created",
-    "type": "DATE"
+    "mode": "REPEATED",
+    "name": "affiliations",
+    "type": "STRING"
+  },
+  {
+    "mode": "REPEATED",
+    "name": "affiliation_ids",
+    "type": "STRING"
+  },
+  {
+    "mode": "REPEATED",
+    "name": "funding",
+    "type": "RECORD",
+    "fields": [
+      {
+        "mode": "NULLABLE",
+        "name": "status",
+        "type": "STRING"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "funder",
+        "type": "RECORD",
+        "fields": [
+          {
+            "mode": "NULLABLE",
+            "name": "id",
+            "type": "STRING"
+          },
+          {
+            "mode": "NULLABLE",
+            "name": "name",
+            "type": "STRING"
+          }
+        ]
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "funding_opportunity_id",
+        "type": "STRING"
+      },
+      {
+        "mode": "NULLABLE",
+        "name": "grant_id",
+        "type": "STRING"
+      }
+    ]
+  },
+  {
+    "mode": "REPEATED",
+    "name": "repos",
+    "type": "STRING"
+  },
+  {
+    "mode": "REPEATED",
+    "name": "repo_ids",
+    "type": "STRING"
   }
 ]
