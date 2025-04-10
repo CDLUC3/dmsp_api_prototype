@@ -1,226 +1,75 @@
 CREATE OR REPLACE TABLE `{{ match_intermediate_table_id }}` AS
 
-WITH dmps_unnested_ids AS (
+-- TODO:
+-- cluster match data on publication date, need to move this field to the top of the table
+-- TODO: perhaps do the LIKE match here, where can filter on publication date using clustering
+-- TODO: filter out any NULL award ids
+
+-- MATCH AWARD IDS
+WITH dmps_award_ids AS (
   SELECT
     dmps.doi,
     project_start,
     project_end,
-    entity,
-    'grant_id' AS entity_type
+    award_id
   FROM
     `{{ dmps_norm_table_id }}` AS dmps,
-    UNNEST(dmps.grant_ids) AS entity
-
-  UNION ALL
-
-  SELECT
-    dmps.doi,
-    project_start,
-    project_end,
-    entity,
-    'funding_opportunity_id' AS entity_type
-  FROM
-    `{{ dmps_norm_table_id }}` AS dmps,
-    UNNEST(dmps.funding_opportunity_ids) AS entity
-
-  UNION ALL
-
-  SELECT
-    dmps.doi,
-    project_start,
-    project_end,
-    entity,
-    'affiliation_id' AS entity_type
-  FROM
-    `{{ dmps_norm_table_id }}` AS dmps,
-    UNNEST(dmps.affiliation_ids) AS entity
-
-  UNION ALL
-
-  SELECT
-    dmps.doi,
-    project_start,
-    project_end,
-    entity,
-    'funder_id' AS entity_type
-  FROM
-    `{{ dmps_norm_table_id }}` AS dmps,
-    UNNEST(dmps.funder_ids) AS entity
-
-  UNION ALL
-
-  SELECT
-    dmps.doi,
-    project_start,
-    project_end,
-    entity,
-    'person_id' AS entity_type
-  FROM
-    `{{ dmps_norm_table_id }}` AS dmps,
-    UNNEST(dmps.people_ids) AS entity
+    UNNEST(dmps.award_ids) AS award_id
 ),
 
-dmps_unnested_names AS (
-  SELECT
-    dmps.doi,
-    project_start,
-    project_end,
-    entity,
-    'person_name' AS entity_type
-  FROM
-    `{{ dmps_norm_table_id }}` AS dmps,
-    UNNEST(dmps.people) AS entity
-
-  UNION ALL
-
-  SELECT
-    dmps.doi,
-    project_start,
-    project_end,
-    entity,
-    'funder_name' AS entity_type
-  FROM
-    `{{ dmps_norm_table_id }}` AS dmps,
-    UNNEST(dmps.funders) AS entity
-
-  UNION ALL
-
-  SELECT
-    dmps.doi,
-    project_start,
-    project_end,
-    entity,
-    'affiliation_name' AS entity_type
-  FROM
-    `{{ dmps_norm_table_id }}` AS dmps,
-    UNNEST(dmps.affiliations) AS entity
-),
-
-match_unnested_ids AS (
-  SELECT
-    match.doi,
-    match_data.publication_date,
-    entity,
-    'grant_id' AS entity_type
-  FROM
-    `{{ match_norm_table_id }}` AS match,
-    UNNEST(match.match_data.grant_ids) AS entity
-
-  UNION ALL
-
-  SELECT
-    match.doi,
-    match_data.publication_date,
-    entity,
-    'funding_opportunity_id' AS entity_type
-  FROM
-    `{{ match_norm_table_id }}` AS match,
-    UNNEST(match.match_data.grant_ids) AS entity
-
-  UNION ALL
-
-  SELECT
-    match.doi,
-    match_data.publication_date,
-    entity,
-    'affiliation_id' AS entity_type
-  FROM
-    `{{ match_norm_table_id }}` AS match,
-    UNNEST(match.match_data.affiliation_ids) AS entity
-
-  UNION ALL
-
-  SELECT
-    match.doi,
-    match_data.publication_date,
-    entity,
-    'funder_id' AS entity_type
-  FROM
-    `{{ match_norm_table_id }}` AS match,
-    UNNEST(match.match_data.funder_ids) AS entity
-
-  UNION ALL
-
-  SELECT
-    match.doi,
-    match_data.publication_date,
-    entity,
-    'person_id' AS entity_type
-  FROM
-    `{{ match_norm_table_id }}` AS match,
-    UNNEST(match.match_data.people_ids) AS entity
-),
-
-match_unnested_names AS (
-  SELECT
-    match.doi,
-    match_data.publication_date,
-    entity,
-    'person_name' AS entity_type
-  FROM
-    `{{ match_norm_table_id }}` AS match,
-    UNNEST(match.match_data.people) AS entity
-
-  UNION ALL
-
-  SELECT
-    match.doi,
-    match_data.publication_date,
-    entity,
-    'funder_name' AS entity_type
-  FROM
-    `{{ match_norm_table_id }}` AS match,
-    UNNEST(match.match_data.funders) AS entity
-
-  UNION ALL
-
-  SELECT
-    match.doi,
-    match_data.publication_date,
-    entity,
-    'affiliation_name' AS entity_type
-  FROM
-    `{{ match_norm_table_id }}` AS match,
-    UNNEST(match.match_data.affiliations) AS entity
-),
-
-matches_ids AS (
+matches_award_ids AS (
   SELECT
     A.doi AS dmp_doi,
     B.doi AS match_doi,
-    A.entity_type AS entity_type,
-    A.entity AS entity,
-    COUNT(A.entity) AS match_count,
-  FROM dmps_unnested_ids AS A
-  INNER JOIN match_unnested_ids AS B ON (B.publication_date BETWEEN A.project_start AND A.project_end) AND A.entity_type = B.entity_type AND A.entity = B.entity
+    "award_id" AS entity_type,
+    "" AS entity,
+    1 AS match_count
+  FROM dmps_award_ids AS A
+  INNER JOIN `{{ match_norm_table_id }}` AS B
+  ON (B.publication_date BETWEEN A.project_start AND A.project_end)
+  CROSS JOIN UNNEST(B.match_data.grant_ids) AS award_id
+  WHERE A.award_id = award_id OR award_id LIKE CONCAT('%', A.award_id, '%')
   GROUP BY dmp_doi, match_doi, entity_type, entity
 ),
 
--- This is separate so can match name based entities in a different way (e.g. with LIKE)
-matches_names AS (
+-- MATCH FUNDED WORKS
+dmps_funded_works AS (
   SELECT
-    A.doi AS dmp_doi,
+    dmps.doi AS dmp_doi,
+    project_start,
+    project_end,
+    funded_work_doi
+  FROM
+    `{{ dmps_norm_table_id }}` AS dmps,
+    UNNEST(funded_works) AS funded_work_doi
+),
+
+matches_funded_works AS (
+  SELECT
+    A.dmp_doi,
     B.doi AS match_doi,
-    A.entity_type AS entity_type,
-    A.entity,
-    COUNT(DISTINCT B.doi) AS match_count,
-  FROM dmps_unnested_names AS A
-  INNER JOIN match_unnested_names AS B ON (B.publication_date BETWEEN A.project_start AND A.project_end) AND A.entity_type = B.entity_type AND A.entity = B.entity
-  -- B.entity LIKE CONCAT('%', A.entity, '%')
-  -- Too inefficient on whole match
+    "funded_work" AS entity_type,
+    "" AS entity,
+    1 AS match_count
+  FROM dmps_funded_works AS A
+  INNER JOIN `{{ match_norm_table_id }}` AS B
+  ON (B.publication_date BETWEEN A.project_start AND A.project_end)
+  AND A.funded_work_doi = B.doi
   GROUP BY dmp_doi, match_doi, entity_type, entity
 ),
 
 matches AS (
-  SELECT * FROM matches_ids UNION ALL SELECT * FROM matches_names
+  SELECT * FROM matches_award_ids
+  UNION ALL
+  SELECT * FROM matches_funded_works
 ),
 
 aggregated AS (
   SELECT
     dmp_doi,
     match_doi,
-    SUM(CASE WHEN entity_type = 'grant_id' THEN match_count ELSE 0 END) AS grant_id_count,
-    SUM(CASE WHEN entity_type = 'funding_opportunity_id' THEN match_count ELSE 0 END) AS funding_opportunity_id_count,
+    SUM(CASE WHEN entity_type = 'award_id' THEN match_count ELSE 0 END) AS award_id_count,
+    SUM(CASE WHEN entity_type = 'funded_work' THEN match_count ELSE 0 END) AS funded_work_count,
     SUM(CASE WHEN entity_type = 'person_id' THEN match_count ELSE 0 END) AS person_id_count,
     SUM(CASE WHEN entity_type = 'funder_id' THEN match_count ELSE 0 END) AS funder_id_count,
     SUM(CASE WHEN entity_type = 'affiliation_id' THEN match_count ELSE 0 END) AS affiliation_id_count,
@@ -228,14 +77,8 @@ aggregated AS (
     SUM(CASE WHEN entity_type = 'funder_name' THEN match_count ELSE 0 END) AS funder_name_count,
     SUM(CASE WHEN entity_type = 'affiliation_name' THEN match_count ELSE 0 END) AS affiliation_name_count,
     SUM(
-      -- Treat grant_id and funding_opportunity_id the same
-      -- If both are a match, then the maximum score of them combined is 100
-      -- If only one field is a match, then the maximum score is also 100
-      LEAST(
-        IF(entity_type = 'grant_id', match_count * 100, 0) +
-        IF(entity_type = 'funding_opportunity_id', match_count * 100, 0),
-        100
-      ) +
+      IF(entity_type = 'award_id', match_count * 100, 0) +
+      IF(entity_type = 'funded_work', match_count * 20, 0) +
       IF(entity_type = 'person_id', match_count * 5, 0) +
       IF(entity_type = 'funder_id', match_count * 1, 0) +
       IF(entity_type = 'affiliation_id', match_count * 1, 0) +
@@ -253,8 +96,8 @@ SELECT
   ARRAY_AGG(
     STRUCT(
       match_doi,
-      grant_id_count,
-      funding_opportunity_id_count,
+      award_id_count,
+      funded_work_count,
       person_id_count,
       funder_id_count,
       affiliation_id_count,

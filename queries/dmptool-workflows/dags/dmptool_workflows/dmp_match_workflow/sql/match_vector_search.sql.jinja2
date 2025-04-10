@@ -35,8 +35,8 @@ matches AS (
         dataset.biblio_data,
         dataset.match_data,
         STRUCT(
-          match.grant_id_count,
-          match.funding_opportunity_id_count,
+          match.award_id_count,
+          match.funded_work_count,
           match.person_id_count,
           match.funder_id_count,
           match.affiliation_id_count,
@@ -65,9 +65,9 @@ SELECT
     dmps.affiliations,
     dmps.affiliation_ids,
     dmps.funders,
-    dmps.funder_ids,
-    dmps.funding_opportunity_ids,
-    dmps.grant_ids,
+--    dmps.funder_ids,
+    dmps.award_ids,
+    dmps.funded_works,
     dmps.people,
     dmps.people_ids
   ) AS dmp,

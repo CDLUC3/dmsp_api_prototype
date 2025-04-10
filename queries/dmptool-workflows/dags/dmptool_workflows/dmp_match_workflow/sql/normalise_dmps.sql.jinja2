@@ -241,8 +241,9 @@ SELECT
   ARRAY(SELECT value FROM UNNEST(affiliations) AS value ORDER BY value) AS affiliations,
   affiliation_ids,
   ARRAY(SELECT value FROM UNNEST(funders) AS value ORDER BY value) AS funders,
+  funder_ids,
   award_ids,
   ARRAY(SELECT value FROM UNNEST(people) AS value ORDER BY value) AS people,
   people_ids,
-  funded_work_dois
+  funded_works
 FROM normalised

@@ -95,7 +95,8 @@ LANGUAGE js AS """
   return issued || []
 """;
 
-CREATE OR REPLACE TABLE `{{ datacite_norm_table_id }}` AS
+CREATE OR REPLACE TABLE `{{ datacite_norm_table_id }}`
+CLUSTER BY publication_date AS
 
 WITH min_project_start AS (
   SELECT MIN(project_start) AS min_project_start
@@ -252,6 +253,9 @@ funder_ids AS (
 SELECT
   {{ dataset_id }}.normalise_doi(datacite.id) AS doi,
 
+  -- Clustered fields
+  {{ dataset_id }}.date_parts_to_date(parse_datacite_date(attributes.dates, attributes.created)) AS publication_date,
+
   -- Data to send back to DMP tool
   STRUCT(
     {{ dataset_id }}.remove_markup(attributes.titles[SAFE_OFFSET(0)].title) AS title,
@@ -403,4 +407,3 @@ LEFT JOIN funder_ids ON funder_ids.doi = {{ dataset_id }}.normalise_doi(datacite
 LEFT JOIN `{{ openalex_norm_table_id }}` AS openalex ON openalex.doi = {{ dataset_id }}.normalise_doi(datacite.id) -- Enrich with OpenAlex identifiers
 WHERE attributes.created IS NOT NULL AND ({{ dataset_id }}.date_parts_to_date(parse_datacite_date(attributes.dates, attributes.created)) BETWEEN (SELECT min_project_start FROM min_project_start).min_project_start AND CURRENT_DATE())
 AND attributes.types.resourceTypeGeneral NOT IN ("Journal", "ConferenceProceeding")
-ORDER BY match_data.publication_date DESC

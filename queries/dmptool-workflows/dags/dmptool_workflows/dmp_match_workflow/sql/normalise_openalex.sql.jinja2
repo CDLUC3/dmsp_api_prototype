@@ -7,7 +7,8 @@ LANGUAGE js AS """
   return {given: given, family: family};
 """;
 
-CREATE OR REPLACE TABLE `{{ openalex_norm_table_id }}` AS
+CREATE OR REPLACE TABLE `{{ openalex_norm_table_id }}`
+CLUSTER BY publication_date AS
 
 WITH min_project_start AS (
   SELECT MIN(project_start) AS min_project_start
@@ -132,6 +133,9 @@ openalex AS (
 SELECT
   openalex.doi,
 
+  -- Clustered fields
+  openalex.publication_date,
+
   STRUCT(
     {{ dataset_id }}.remove_markup(openalex.title) AS title,
     FORMAT_DATE('%Y-%m-%d', openalex.publication_date) AS publication_date,
@@ -185,4 +189,3 @@ FROM openalex
 LEFT JOIN funders ON funders.id = openalex.id
 LEFT JOIN `{{ crossref_metadata_table_id }}` as crossref ON {{ dataset_id }}.normalise_doi(crossref.doi) = openalex.doi
 LEFT JOIN `{{ datacite_table_id }}` as datacite ON {{ dataset_id }}.normalise_doi(datacite.id) = openalex.doi
-ORDER BY match_data.publication_date DESC
