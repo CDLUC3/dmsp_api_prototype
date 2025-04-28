@@ -162,11 +162,7 @@ class TransformWorker(BaseWorker):
         self.daemon = True
 
     def process_task(self, idx: int, batch: list[Path]):
-        # Transform
         log_stage("TRANSFORM", "start", idx)
-
-        #
-
         self.batch_transformer(idx, batch)
 
         # Queue output
@@ -218,7 +214,7 @@ class Pipeline:
         logging.basicConfig(level=logging.DEBUG, format="[%(asctime)s] [%(levelname)s] [%(threadName)s] %(message)s")
         self.shutdown_event = threading.Event()
         self.extract_queue = queue.Queue(maxsize=extract_queue_size)
-        self.transform_queue = queue.Queue(maxsize=transform_queue_size)  # transform_workers)
+        self.transform_queue = queue.Queue(maxsize=transform_queue_size)
         self.cleanup_queue = queue.Queue(maxsize=cleanup_queue_size)
         self.completed_queue = queue.Queue()
         self.extract_workers = [
