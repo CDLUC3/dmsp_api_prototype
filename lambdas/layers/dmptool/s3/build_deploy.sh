@@ -32,7 +32,7 @@ VERSION_ARN=$(aws lambda publish-layer-version --layer-name "dmptool-${ZIP_NAME_
 
 # Publish the new Layer ARN to SSM. The Lambda Functions fetch the value when they are built
 echo "Layer published: ${VERSION_ARN}. Updating current version in SSM ..."
-aws ssm put-parameter --name "/uc3/dmp/hub/${1}/DMPTool${LAYER_NAME}LayerArn" \
+aws ssm put-parameter --name "/uc3/dmp/tool/${1}/DMPTool${LAYER_NAME}LayerArn" \
     --value $VERSION_ARN \
     --type "String" \
     --overwrite
