@@ -284,23 +284,12 @@ def parse_args():
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    args_ = parse_args()
+    args = parse_args()
     process_files_parallel(
-        in_dir=args_.in_dir,
-        out_dir=args_.out_dir,
+        **vars(args),
         schema=SCHEMA,
         transform_func=transform,
         file_glob="**/*jsonl.gz",
         read_func=read_jsonls,
         extract_func=extract_gzip,
-        batch_size=args_.batch_size,
-        extract_workers=args_.extract_workers,
-        transform_workers=args_.transform_workers,
-        cleanup_workers=args_.cleanup_workers,
-        extract_queue_size=args_.extract_queue_size,
-        transform_queue_size=args_.transform_queue_size,
-        cleanup_queue_size=args_.cleanup_queue_size,
-        max_file_processes=args_.max_file_processes,
-        n_batches=args_.n_batches,
-        low_memory=args_.low_memory,
     )

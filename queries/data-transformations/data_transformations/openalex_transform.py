@@ -139,7 +139,7 @@ def transform_works(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         title=remove_markup(pl.col("title")),
         abstract=remove_markup(
             pl.col("abstract_inverted_index")
-            .str.replace_all(r"\n|\r|\t|\b|\f", "") # Remove some special characters
+            .str.replace_all(r"\n|\r|\t|\b|\f", "")  # Remove some special characters
             .map_elements(revert_inverted_index, return_dtype=pl.String)
         ),
         type=pl.col("type"),
@@ -147,7 +147,10 @@ def transform_works(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         container_title=pl.col("primary_location").struct.field("source").struct.field("display_name"),
         volume=pl.col("biblio").struct.field("volume"),
         issue=pl.col("biblio").struct.field("issue"),
-        page=make_page(pl.col("biblio").struct.field("first_page"), pl.col("biblio").struct.field("last_page")),
+        page=make_page(
+            pl.col("biblio").struct.field("first_page"),
+            pl.col("biblio").struct.field("last_page"),
+        ),
         publisher=pl.col("primary_location").struct.field("source").struct.field("publisher"),
         publisher_location=None,
     )
@@ -241,7 +244,11 @@ def parse_args():
         type=pathlib.Path,
         help="Path to the output directory (e.g. /path/to/openalex_transformed/works).",
     )
-    parser.add_argument("table_name", choices=["works", "funders"], help="Table name (must be 'works' or 'funders').")
+    parser.add_argument(
+        "table_name",
+        choices=["works", "funders"],
+        help="Table name (must be 'works' or 'funders').",
+    )
 
     # Common keyword arguments
     add_common_args(
@@ -261,7 +268,8 @@ def parse_args():
     # Validate
     errors = []
     if not args.in_dir.is_dir() and not validate_directory(
-        args.in_dir, ["data", "browse.html", "LICENSE.txt", "README.txt", "RELEASE_NOTES.txt"]
+        args.in_dir,
+        ["data", "browse.html", "LICENSE.txt", "README.txt", "RELEASE_NOTES.txt"],
     ):
         errors.append(f"in_dir '{args.in_dir}' is not a valid directory.")
 
@@ -275,10 +283,10 @@ def parse_args():
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG)
-    args_ = parse_args()
+    args = parse_args()
 
     # Get schema
-    table_name = args_.table_name
+    table_name = args.table_name
     schema = SCHEMAS.get(table_name, None)
     if schema is None:
         raise ValueError(f"Schema not found for table_name={table_name}")
@@ -288,23 +296,15 @@ if __name__ == "__main__":
     if transform_func is None:
         raise ValueError(f"Transform function not found for table_name={table_name}")
 
-    table_dir = args_.in_dir / "data" / table_name
+    table_dir = args.in_dir / "data" / table_name
+    args_dict = vars(args)
+    del args_dict["in_dir"]
+    del args_dict["table_name"]
     process_files_parallel(
+        **args_dict,
         in_dir=table_dir,
-        out_dir=args_.out_dir,
         schema=schema,
         transform_func=transform_func,
         file_glob="**/*.gz",
         read_func=read_jsonls,
-        extract_func=extract_gzip,
-        batch_size=args_.batch_size,
-        extract_workers=args_.extract_workers,
-        transform_workers=args_.transform_workers,
-        cleanup_workers=args_.cleanup_workers,
-        extract_queue_size=args_.extract_queue_size,
-        transform_queue_size=args_.transform_queue_size,
-        cleanup_queue_size=args_.cleanup_queue_size,
-        max_file_processes=args_.max_file_processes,
-        n_batches=args_.n_batches,
-        low_memory=args_.low_memory,
     )

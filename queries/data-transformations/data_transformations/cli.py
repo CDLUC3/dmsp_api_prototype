@@ -21,55 +21,55 @@ def add_common_args(
         "--batch-size",
         type=int,
         default=batch_size,
-        help="Number of files to process per batch (must be >= 1).",
+        help="Number of files to process per batch (must be >= 1) (default: nbr of available CPUs).",
     )
     parser.add_argument(
         "--extract-workers",
         type=int,
         default=extract_workers,
-        help="Number of parallel workers for file extraction (must be >= 1).",
+        help=f"Number of parallel workers for file extraction (must be >= 1). (default: {extract_workers})",
     )
     parser.add_argument(
         "--transform-workers",
         type=int,
         default=transform_workers,
-        help="Number of parallel workers for file transformation (must be >= 1).",
+        help=f"Number of parallel workers for file transformation (must be >= 1). (default: {transform_workers})",
     )
     parser.add_argument(
         "--cleanup-workers",
         type=int,
         default=cleanup_workers,
-        help="Number of parallel workers for file cleanup (must be >= 1).",
+        help=f"Number of parallel workers for file cleanup (must be >= 1). (default: {cleanup_workers})",
     )
     parser.add_argument(
         "--extract-queue-size",
         type=int,
         default=extract_queue_size,
-        help="File extraction queue size (must be >= 0, zero is unlimited).",
+        help=f"File extraction queue size (must be >= 0, zero is unlimited). (default: {extract_queue_size})",
     )
     parser.add_argument(
         "--transform-queue-size",
         type=int,
         default=transform_queue_size,
-        help="File transform queue size (must be >= 0, zero is unlimited).",
+        help=f"File transform queue size (must be >= 0, zero is unlimited). (default: {transform_queue_size})",
     )
     parser.add_argument(
         "--cleanup-queue-size",
         type=int,
         default=cleanup_queue_size,
-        help="File cleanup queue size (must be >= 0, zero is unlimited).",
+        help=f"File cleanup queue size (must be >= 0, zero is unlimited). (default: {cleanup_queue_size})",
     )
     parser.add_argument(
         "--max-file-processes",
         type=int,
         default=max_file_processes,
-        help="Number of processes to use when extracting files in parallel (must be >= 1).",
+        help=f"Number of processes to use when extracting files in parallel (must be >= 1). (default: nbr of available CPUs)",
     )
     parser.add_argument(
         "--n-batches",
         type=int,
         default=n_batches,
-        help="Set an explicit number of batches to process (e.g. for testing purposes).",
+        help=f"Set an explicit number of batches to process (e.g. for testing purposes). (default: {n_batches})",
     )
     parser.add_argument(
         "--low-memory",
