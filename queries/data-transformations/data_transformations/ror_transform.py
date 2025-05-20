@@ -31,10 +31,11 @@ def create_ror_index(ror_df: pl.DataFrame) -> pl.DataFrame:
         .select(
             pl.col("ror_id"),
             type=pl.col("type"),
-            identifier=pl.when(pl.col("type") == "isni")
+            identifier=pl.when(pl.col("type") == "isni")  # Clean ISNIs
             .then(normalise_isni(pl.col("identifier")))
+            .when(pl.col("type") == "fundref")  # Add 10.13039 prefix to Fundref IDs
+            .then(pl.concat_str([pl.lit("10.13039/"), pl.col("identifier").str.strip_chars().str.to_lowercase()]))
             .otherwise(pl.col("identifier").str.strip_chars().str.to_lowercase()),
-            # TODO: do we need to add 10.13039 prefix to fundref IDs?
         )
     )
 

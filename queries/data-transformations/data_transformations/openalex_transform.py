@@ -33,6 +33,7 @@ SCHEMAS: Dict[str, SchemaDefinition] = {
         "abstract_inverted_index": pl.String,  # https://docs.openalex.org/api-entities/works/work-object#abstract_inverted_index
         "type": pl.String,  # https://docs.openalex.org/api-entities/works/work-object#type
         "publication_date": pl.Date,  # https://docs.openalex.org/api-entities/works/work-object#publication_date
+        "updated_date": pl.Datetime,  # https://docs.openalex.org/api-entities/works/work-object#updated_date
         "authorships": pl.List(  # https://docs.openalex.org/api-entities/works/work-object#authorships
             pl.Struct(
                 {
@@ -138,12 +139,11 @@ def transform_works(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         ids=normalise_ids(pl.col("ids"), ["doi", "mag", "openalex", "pmid", "pmcid"]),
         title=remove_markup(pl.col("title")),
         abstract=remove_markup(
-            pl.col("abstract_inverted_index")
-            .str.replace_all(r"\n|\r|\t|\b|\f", "")  # Remove some special characters
-            .map_elements(revert_inverted_index, return_dtype=pl.String)
+            pl.col("abstract_inverted_index").map_elements(revert_inverted_index, return_dtype=pl.String)
         ),
         type=pl.col("type"),
-        publication_date=pl.col("publication_date"),
+        publication_date=pl.col("publication_date"),  # e.g. 2014-06-04
+        updated_date=pl.col("updated_date"),  # e.g. 025-02-27T06:49:42.321119
         container_title=pl.col("primary_location").struct.field("source").struct.field("display_name"),
         volume=pl.col("biblio").struct.field("volume"),
         issue=pl.col("biblio").struct.field("issue"),
@@ -172,6 +172,7 @@ def transform_works(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         orcid=normalise_identifier(pl.col("author").struct.field("orcid")),
     ).unique()
     # TODO: author order?
+    # TODO: alternate author names?
 
     works_affiliations = (
         exploded_authors.select(
@@ -219,12 +220,11 @@ def transform_works(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
 
 
 def transform_funders(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
-    funders = lz.with_columns(
-        [
-            normalise_identifier(pl.col("id")).alias("id"),
-            pl.col("display_name"),
-            normalise_ids(pl.col("ids"), ["crossref", "doi", "openalex", "ror", "wikidata"]).alias("ids"),
-        ]
+    funders = lz.select(
+        id=normalise_identifier(pl.col("id")),
+        display_name=pl.col("display_name"),
+        ids=normalise_ids(pl.col("ids"), ["crossref", "doi", "openalex", "ror", "wikidata"]),
+        # TODO: remove 'entity/' from start of wikidata
     )
 
     return [("openalex_funders", funders)]

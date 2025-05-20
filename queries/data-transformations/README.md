@@ -15,12 +15,12 @@ python3 ./data_transformations/crossref_transform.py "/path/to/March 2025 Public
 
 OpenAlex Works (these are large files, so it is faster to use smaller batches):
 ```bash
-python3 ./data_transformations/openalex_transform.py /path/to/openalex-snapshot /path/to/transformed/openalex works --max-file-processes=4 --batch-size=4
+python3 ./data_transformations/openalex_transform.py /path/to/openalex-snapshot /path/to/transformed/openalex_works works --max-file-processes=4 --batch-size=4
 ```
 
 OpenAlex Funders:
 ```bash
-python3 ./data_transformations/openalex_transform.py /path/to/openalex-snapshot /path/to/transformed/openalex funders
+python3 ./data_transformations/openalex_transform.py /path/to/openalex-snapshot /path/to/transformed/openalex_funders funders
 ```
 
 DataCite:
