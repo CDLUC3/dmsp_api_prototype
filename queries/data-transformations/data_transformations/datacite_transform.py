@@ -10,11 +10,10 @@ from polars._typing import SchemaDefinition
 
 from cli import handle_errors, add_common_args, validate_common_args
 from pipeline import process_files_parallel
-from transformations import make_page, remove_markup, extract_orcid
+from transformations import make_page, remove_markup, extract_orcid, normalise_identifier, replace_with_null
 from utils import read_jsonls, validate_directory, extract_gzip
 
 logger = logging.getLogger(__name__)
-
 
 AFFILIATION_SCHEMA = pl.List(
     pl.Struct(
@@ -31,7 +30,7 @@ NAME_IDENTIFIERS_SCHEMA = pl.List(
         {
             "nameIdentifier": pl.String,
             "nameIdentifierScheme": pl.String,
-            "nameIdentifierSchemeUri": pl.String,
+            "schemeUri": pl.String,
         }
     )
 )
@@ -58,7 +57,7 @@ CREATOR_OR_CONTRIBUTOR = pl.Struct(
         #         {
         #             "nameIdentifier": pl.String,
         #             "nameIdentifierScheme": pl.String,
-        #             "nameIdentifierSchemeUri": pl.String,
+        #             "schemeUri": pl.String,
         #         }
         #     )
         # ),
@@ -70,6 +69,7 @@ SCHEMA: SchemaDefinition = {
     "attributes": pl.Struct(
         {
             "created": pl.String,  # ISO 8601 string
+            "updated": pl.String,  # ISO 8601 string
             "titles": pl.List(pl.Struct({"title": pl.String})),
             "descriptions": pl.List(pl.Struct({"description": pl.String})),
             "types": pl.Struct({"resourceTypeGeneral": pl.String}),
@@ -127,7 +127,7 @@ def parse_datacite_list(text: str | None) -> list[dict]:
 def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
     lz_cached = lz.cache()
 
-    works = lz_cached.with_columns(
+    works = lz_cached.select(
         doi=pl.col("id"),
         title=remove_markup(
             pl.col("attributes").struct.field("titles").list.eval(pl.element().struct.field("title")).list.join(" ")
@@ -143,6 +143,10 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         .struct.field("created")
         .str.strptime(pl.Datetime, format="%Y-%m-%dT%H:%M:%SZ")
         .cast(Date),  # E.g. 2018-05-06T17:23:29Z
+        updated_date=pl.col("attributes")
+        .struct.field("updated")
+        .str.strptime(pl.Datetime, format="%Y-%m-%dT%H:%M:%SZ"),
+        # E.g. 2025-01-01T00:00:01Z
         container_title=pl.col("attributes").struct.field("container").struct.field("title"),
         volume=pl.col("attributes").struct.field("container").struct.field("volume"),
         issue=pl.col("attributes").struct.field("container").struct.field("issue"),
@@ -150,15 +154,18 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
             pl.col("attributes").struct.field("container").struct.field("firstPage"),
             pl.col("attributes").struct.field("container").struct.field("lastPage"),
         ),
-        publisher=pl.col("attributes").struct.field("publisher"),
+        publisher=pl.col("attributes").struct.field("publisher").struct.field("name"),
         publisher_location=None,
+    ).with_columns(
+        title=replace_with_null(pl.col("title"), [""]),
+        abstract=replace_with_null(pl.col("abstract"), ["", ":unav", "Cover title."]),
     )
 
     # TODO: author order?
     exploded_authors = (
-        lz_cached.select(work_doi=pl.col("id"), author=pl.col("attributes").struct.field("creators"))
-        .explode("author")
-        .unnest("author")
+        lz_cached.select(work_doi=pl.col("id"), creators=pl.col("attributes").struct.field("creators"))
+        .explode("creators")
+        .unnest("creators")
         .select(
             pl.col("work_doi"),
             given_name=pl.col("givenName"),
@@ -172,33 +179,69 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         )
     )
 
-    # extract and clean ORCIDs
-    works_authors = exploded_authors.select(
-        pl.col("work_doi"),
-        pl.col("given_name"),
-        pl.col("family_name"),
-        pl.col("name"),
-        pl.col("name_type"),
-        orcid=extract_orcid(
-            pl.col("name_identifiers")
-            .filter(pl.element().struct.field("nameIdentifierScheme").str.contains("(?i)orc"))
-            .list.get(0, null_on_oob=True)
-        ),
+    # Build authors and clean their ORCID IDs
+    works_authors = (
+        exploded_authors.filter(pl.col("name_type") == "Personal")
+        .select(
+            pl.col("work_doi"),
+            pl.col("given_name"),
+            pl.col("family_name"),
+            pl.col("name"),
+            orcid=extract_orcid(
+                pl.col("name_identifiers")
+                .list.eval(
+                    pl.element().filter(pl.element().struct.field("nameIdentifierScheme").str.contains("(?i)orc"))
+                )
+                .list.first()
+                .struct.field("nameIdentifier")
+            ),
+        )
+        .filter(~pl.all_horizontal([pl.col(col).is_null() for col in ["given_name", "family_name", "name", "orcid"]]))
     )
 
-    # TODO: convert to RORs?
-    works_affiliations = (
-        exploded_authors.select(pl.col("work_doi"), name_identifiers=pl.col("name_identifiers"))
+    # Build works_affiliations using affiliation identifiers and organisation author name identifiers
+    affiliations = (
+        exploded_authors.select(pl.col("work_doi"), affiliation=pl.col("affiliation"))
+        .explode("affiliation")
+        .unnest("affiliation")
+        .select(
+            pl.col("work_doi"),
+            affiliation_identifier=normalise_identifier(pl.col("affiliationIdentifier")),
+            affiliation_identifier_scheme=pl.col("affiliationIdentifierScheme"),
+            name=pl.col("name"),
+            scheme_uri=pl.col("schemeUri"),
+            source=pl.lit("PersonalAuthorAffiliation"),
+        )
+    )
+    organisational_authors = (
+        exploded_authors.filter(pl.col("name_type") == "Organizational")
+        .select(pl.col("work_doi"), pl.col("name"), name_identifiers=pl.col("name_identifiers"))
         .explode("name_identifiers")
         .unnest("name_identifiers")
         .select(
             pl.col("work_doi"),
-            name_identifier=pl.col("nameIdentifier"),
-            name_identifier_scheme=pl.col("nameIdentifierScheme"),
-            name_identifier_scheme_uri=pl.col("nameIdentifierSchemeUri"),
+            affiliation_identifier=normalise_identifier(pl.col("nameIdentifier")),
+            affiliation_identifier_scheme=pl.col("nameIdentifierScheme"),
+            name=pl.col("name"),
+            scheme_uri=pl.col("schemeUri"),
+            source=pl.lit("OrganisationalAuthor"),
         )
     )
+    works_affiliations = (
+        pl.concat([affiliations, organisational_authors])
+        .with_columns(name=replace_with_null(pl.col("name"), ["", "none", ":unkn"]))
+        .filter(
+            ~pl.all_horizontal(
+                [
+                    pl.col(col).is_null()
+                    for col in ["affiliation_identifier", "affiliation_identifier_scheme", "name", "scheme_uri"]
+                ]
+            )
+        )
+        .unique()
+    )
 
+    # Build funders
     works_funders = (
         lz_cached.select(
             work_doi=pl.col("id"), fundingReferences=pl.col("attributes").struct.field("fundingReferences")
@@ -207,14 +250,29 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         .unnest("fundingReferences")
         .select(
             pl.col("work_doi"),
-            funder_identifier=pl.col("funderIdentifier"),
+            funder_identifier=normalise_identifier(pl.col("funderIdentifier")),
             funder_identifier_type=pl.col("funderIdentifierType"),
             funder_name=pl.col("funderName"),
             award_number=pl.col("awardNumber"),
             award_uri=pl.col("awardUri"),
         )
+        .filter(
+            ~pl.all_horizontal(
+                [
+                    pl.col(col).is_null()
+                    for col in [
+                        "funder_identifier",
+                        "funder_identifier_type",
+                        "funder_name",
+                        "award_number",
+                        "award_uri",
+                    ]
+                ]
+            )
+        )
     )
 
+    # Build relations
     works_relations = (
         lz_cached.select(
             work_doi=pl.col("id"), relatedIdentifiers=pl.col("attributes").struct.field("relatedIdentifiers")
@@ -225,16 +283,22 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
             pl.col("work_doi"),
             relation_type=pl.col("relationType"),
             related_identifier=pl.col("relatedIdentifier"),
+            # TODO: only run normalise_identifier for DOI  related_identifier_type
             related_identifier_type=pl.col("relatedIdentifierType"),
+        )
+        .filter(
+            ~pl.all_horizontal(
+                [pl.col(col).is_null() for col in ["relation_type", "related_identifier", "related_identifier_type"]]
+            )
         )
     )
 
     return [
         ("datacite_works", works),
-        ("datacite_authors", exploded_authors),
-        ("datacite_affiliations", works_affiliations),
-        ("datacite_funders", works_funders),
-        ("datacite_relations", works_relations),
+        ("datacite_works_authors", works_authors),
+        ("datacite_works_affiliations", works_affiliations),
+        ("datacite_works_funders", works_funders),
+        ("datacite_works_relations", works_relations),
     ]
 
 

@@ -105,25 +105,34 @@ SCHEMA: SchemaDefinition = {
     "publisher": pl.String,
     "publisher-location": pl.String,
     "issued": pl.Struct({"date-parts": pl.List(pl.List(pl.Int64))}),
+    "deposited": pl.Struct(  # https://github.com/crossref/rest-api-doc/blob/master/api_format.md see deposited
+        {"date-time": pl.String}
+    ),
     "relation": pl.Struct({relation_type: pl.List(RELATION_SCHEMA) for relation_type in RELATION_TYPES}),
 }
-
 
 def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
     lz_cached = lz.cache()
 
-    works = lz_cached.select(
-        doi=pl.col("DOI"),
-        title=remove_markup(pl.col("title").list.join(" ")),
-        abstract=remove_markup(pl.col("abstract")),
-        type=pl.col("type"),
-        publication_date=date_parts_to_date(pl.col("issued").struct.field("date-parts").list.get(0, null_on_oob=True)),
-        container_title=pl.col("container-title"),
-        volume=pl.col("volume"),
-        issue=pl.col("issue"),
-        page=pl.col("page"),
-        publisher=pl.col("publisher"),
-        publisher_location=pl.col("publisher-location"),
+    works = (
+        lz_cached.select(
+            doi=pl.col("DOI"),
+            title=remove_markup(pl.col("title").list.join(" ")),
+            abstract=remove_markup(pl.col("abstract")),
+            type=pl.col("type"),
+            publication_date=date_parts_to_date(
+                pl.col("issued").struct.field("date-parts").list.get(0, null_on_oob=True)
+            ),
+            updated_date=pl.col("deposited")
+            .struct.field("date-time")
+            .str.strptime(pl.Datetime, format="%Y-%m-%dT%H:%M:%SZ"),  # E.g. "2019-04-12T00:53:45Z"
+            container_title=pl.col("container-title").list.join(" "),
+            volume=pl.col("volume"),
+            issue=pl.col("issue"),
+            page=pl.col("page"),
+            publisher=pl.col("publisher"),
+            publisher_location=pl.col("publisher-location"),
+        ),
     )
 
     exploded_authors = (
@@ -161,6 +170,7 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         .explode("funder")
         .unnest("funder")
         .select(pl.col("work_doi"), name=pl.col("name"), funder_doi=pl.col("DOI"), award=pl.col("award"))
+        .explode("award")  # Creates a new row for each element in the award list
         .unique()
     )
 

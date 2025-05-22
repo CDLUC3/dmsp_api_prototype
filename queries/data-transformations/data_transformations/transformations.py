@@ -25,11 +25,16 @@ def normalise_identifier(expr: pl.Expr) -> pl.Expr:
 
 
 def normalise_isni(expr: pl.Expr) -> pl.Expr:
-    return expr.str.replace_all(" ", "").str.strip_chars()
+    return expr.str.replace_all(" ", "").str.strip_chars().str.to_lowercase()
 
 
 def extract_orcid(expr: pl.Expr) -> pl.Expr:
-    return pl.when(expr.is_not_null()).then(expr.str.extract(r"\d{4}-\d{4}-\d{4}-\d{4}")).otherwise(None)
+    # https://support.orcid.org/hc/en-us/articles/360006897674-Structure-of-the-ORCID-Identifier
+    return (
+        pl.when(expr.is_not_null())
+        .then(expr.str.to_lowercase().str.extract(r"\d{4}-\d{4}-\d{4}-[\dx]"))
+        .otherwise(None)
+    )
 
 
 def date_parts_to_date(expr: pl.Expr) -> pl.Expr:
@@ -56,3 +61,8 @@ def make_page(first_page: pl.Expr, last_page: pl.Expr) -> pl.Expr:
         .then(None)
         .otherwise(pl.concat_str([first_page, pl.lit("-"), last_page]))
     )
+
+
+def replace_with_null(expr: pl.Expr, values: list[str]) -> pl.Expr:
+    col = expr.str.strip_chars()
+    return pl.when(col.str.to_lowercase().is_in([v.lower() for v in values])).then(None).otherwise(col)
