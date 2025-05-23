@@ -5,13 +5,18 @@ import os
 import pathlib
 
 import polars as pl
+from dmpworks.transform.pipeline import process_files_parallel
+from dmpworks.transform.transforms import (
+    extract_orcid,
+    make_page,
+    normalise_identifier,
+    remove_markup,
+    replace_with_null,
+)
+from dmpworks.transform.utils_cli import add_common_args, handle_errors, validate_common_args
+from dmpworks.transform.utils_file import extract_gzip, read_jsonls, validate_directory
 from polars import Date
 from polars._typing import SchemaDefinition
-
-from cli import handle_errors, add_common_args, validate_common_args
-from pipeline import process_files_parallel
-from transformations import make_page, remove_markup, extract_orcid, normalise_identifier, replace_with_null
-from utils import read_jsonls, validate_directory, extract_gzip
 
 logger = logging.getLogger(__name__)
 
@@ -302,9 +307,7 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
     ]
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Transform DataCite to Parquet for the DMP Tool.")
-
+def setup_parser(parser: argparse.ArgumentParser) -> None:
     # Positional arguments
     parser.add_argument(
         "in_dir",
@@ -314,7 +317,7 @@ def parse_args():
     parser.add_argument(
         "out_dir",
         type=pathlib.Path,
-        help="Path to the output directory for transformed Parquet files (e.g. /path/to/datacite_transformed).",
+        help="Path to the output directory for transformed Parquet files (e.g. /path/to/parquets/datacite).",
     )
 
     # Common keyword arguments
@@ -330,7 +333,13 @@ def parse_args():
         max_file_processes=os.cpu_count(),
         n_batches=None,
     )
-    args = parser.parse_args()
+
+    # Callback function
+    parser.set_defaults(func=handle_command)
+
+
+def handle_command(args: argparse.Namespace):
+    logging.basicConfig(level=logging.DEBUG)
 
     # Validate
     errors = []
@@ -341,14 +350,8 @@ def parse_args():
         errors.append(f"out_dir '{args.out_dir}' is not a valid directory.")
 
     validate_common_args(args, errors)
-    handle_errors(parser, errors)
+    handle_errors(errors)
 
-    return args
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    args = parse_args()
     process_files_parallel(
         **vars(args),
         schema=SCHEMA,
@@ -357,3 +360,14 @@ if __name__ == "__main__":
         read_func=read_jsonls,
         extract_func=extract_gzip,
     )
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Transform DataCite to Parquet for the DMP Tool.")
+    setup_parser(parser)
+    args = parser.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,6 +1,8 @@
 import logging
+import pathlib
+from argparse import ArgumentParser, Namespace
 from itertools import chain
-from typing import Optional, List, Dict, Iterator, Generator
+from typing import Dict, Generator, Iterator, List, Optional
 
 import pendulum
 import pyarrow as pa
@@ -8,6 +10,8 @@ import pyarrow.compute as pc
 import pyarrow.dataset as ds
 from opensearchpy import OpenSearch
 from opensearchpy.helpers import parallel_bulk
+
+from dmpworks.transform.utils_cli import handle_errors
 
 
 def stream_parquet_batches(
@@ -82,7 +86,7 @@ def batch_to_work_actions(batch: pa.RecordBatch) -> Iterator[Dict]:
         yield {"_op_type": "update", "_index": "works", "_id": doc["doi"], "doc": doc, "doc_as_upsert": True}
 
 
-def os_index_upsert(
+def parallel_index_actions(
     client: OpenSearch,
     actions: Iterator[List[Dict]],
     thread_count: int = 4,
@@ -114,30 +118,55 @@ def os_index_upsert(
     logging.info(f"os_index_upsert: complete. Total: {total}, Success: {success_count}, Failures: {fail_count}")
 
 
-def os_create_index_pattern():
-    pass
+def setup_parser(parser: ArgumentParser) -> None:
+    # fmt: off
+    parser.add_argument("export", type=pathlib.Path, help="Path to the DMP Tool works hive partitioned index table export directory (e.g., /path/to/export).")
+    parser.add_argument("--host", default="localhost", help="Host address (default: localhost)")
+    parser.add_argument("--port", type=int, default=9200, help="Port number (default: 9200)")
+    parser.add_argument("--batch-size", type=int, default=1000, help="Batch size (default: 1000)")
+    parser.add_argument("--thread-count", type=int, default=4, help="Thread count (default: 4)")
+    parser.add_argument("--chunk-size", type=int, default=500, help="Chunk size (default: 500)")
+    parser.add_argument("--max-chunk-bytes", type=int, default=100 * 1024 * 1024, help="Maximum chunk size in bytes (default: 100MB)")
+    parser.add_argument("--queue-size", type=int, default=4, help="Queue size (default: 4)")
+    # fmt: on
+
+    # Callback function
+    parser.set_defaults(func=handle_command)
 
 
-def os_create_index():
-    pass
+def handle_command(args: Namespace):
+    logging.basicConfig(level=logging.INFO)
 
+    # Validate
+    errors = []
+    if not args.export.is_dir():
+        errors.append(f"export '{args.export}' is not a valid directory.")
+    handle_errors(errors)
 
-def main():
-    logging.basicConfig(level=logging.DEBUG)
-    path = "/path/to/export"
-    host = "localhost"
-    port = 9200
-    batch_size = 1000
     client = OpenSearch(
-        hosts=[{"host": host, "port": port}],
+        hosts=[{"host": args.host, "port": args.host}],
         http_compress=True,
         use_ssl=False,
         verify_certs=False,
         ssl_assert_hostname=False,
         ssl_show_warn=False,
     )
-    actions = chain.from_iterable(stream_work_actions(path, batch_size=batch_size))
-    os_index_upsert(client, actions)
+    actions = chain.from_iterable(stream_work_actions(args.export, batch_size=args.batch_size))
+    parallel_index_actions(
+        client,
+        actions,
+        thread_count=args.thread_count,
+        chunk_size=args.chunk_size,
+        max_chunk_bytes=args.max_chunk_bytes,
+        queue_size=args.queue_size,
+    )
+
+
+def main():
+    parser = ArgumentParser(description="Sync the DMP Tool Works Index Table with OpenSearch.")
+    setup_parser(parser)
+    args = parser.parse_args()
+    args.func(args)
 
 
 if __name__ == "__main__":
