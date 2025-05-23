@@ -4,9 +4,8 @@ import pathlib
 
 import polars
 import polars as pl
+from dmpworks.transform.transforms import normalise_identifier, normalise_isni
 from polars._typing import SchemaDefinition
-
-from transformations import normalise_identifier, normalise_isni
 
 SCHEMA: SchemaDefinition = {
     "id": pl.String,
@@ -40,9 +39,7 @@ def create_ror_index(ror_df: pl.DataFrame) -> pl.DataFrame:
     )
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Transform ROR to Parquet for the DMP Tool.")
-
+def setup_parser(parser: argparse.ArgumentParser) -> None:
     # Positional arguments
     parser.add_argument(
         "ror_v2_json_file",
@@ -55,14 +52,26 @@ def parse_args():
         help="Path to the output directory (e.g. /path/to/ror_transformed).",
     )
 
-    return parser.parse_args()
+    # Callback function
+    parser.set_defaults(func=handle_command)
 
 
-if __name__ == "__main__":
+def handle_command(args: argparse.Namespace):
     logging.basicConfig(level=logging.DEBUG)
-    args = parse_args()
+
     df_ror = load_ror(args.ror_v2_json_file)
     df_ror_index = create_ror_index(df_ror)
 
     out = args.out_dir / "ror.parquet"
     df_ror_index.write_parquet(out, compression="snappy")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Transform ROR to Parquet for the DMP Tool.")
+    setup_parser(parser)
+    args = parser.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()
