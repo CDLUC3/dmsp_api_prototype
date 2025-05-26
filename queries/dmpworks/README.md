@@ -3,7 +3,7 @@ The DMP Tool's related works Python package.
 
 Requirements:
 * Python 3.12
-* Docker Engine
+* Docker Engine: https://docs.docker.com/engine/install/
 
 ## Installation
 To install locally:
@@ -11,8 +11,10 @@ To install locally:
 pip install -e .
 ```
 
-Run development environment:
-
+Start development environment:
+```bash
+docker compose up
+```
 
 ## Download Data
 Data sources:
@@ -53,10 +55,10 @@ TODO
 ## Create OpenSearch Indexes
 Create the OpenSearch works index:
 ```bash
-dmpworks opensearch works works-mapping.json
+dmpworks opensearch create-index works-test works-mapping.json
 ```
 
 Sync the hive partitioned works export with the OpenSearch works index, with an optional start date:
 ```bash
-dmpworks opensearch sync-works /path/to/export --start-date 2025-01-01
+dmpworks opensearch sync-works works-test /path/to/export --start-date 2024-01-01
 ```

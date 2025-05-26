@@ -8,7 +8,7 @@ from typing import Optional
 import polars as pl
 from dmpworks.transform.pipeline import process_files_parallel
 from dmpworks.transform.transforms import make_page, normalise_identifier, remove_markup
-from dmpworks.transform.utils_cli import add_common_args, handle_errors, validate_common_args
+from dmpworks.transform.utils_cli import add_common_args, copy_dict, handle_errors, validate_common_args
 from dmpworks.transform.utils_file import read_jsonls, validate_directory
 from polars._typing import SchemaDefinition
 
@@ -251,11 +251,8 @@ def handle_command(args: argparse.Namespace):
     handle_errors(errors)
 
     table_dir = args.in_dir / "data" / "works"
-    args_dict = vars(args)
-    del args_dict["in_dir"]
-    # del args_dict["table_name"]
     process_files_parallel(
-        **args_dict,
+        **copy_dict(vars(args), ["in_dir", "command", "transform_command", "func"]),
         in_dir=table_dir,
         schema=WORKS_SCHEMA,
         transform_func=transform_works,

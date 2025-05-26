@@ -6,7 +6,7 @@ from argparse import ArgumentParser, Namespace
 import polars as pl
 from dmpworks.transform.pipeline import process_files_parallel
 from dmpworks.transform.transforms import date_parts_to_date, normalise_identifier, remove_markup
-from dmpworks.transform.utils_cli import add_common_args, handle_errors, validate_common_args
+from dmpworks.transform.utils_cli import add_common_args, copy_dict, handle_errors, validate_common_args
 from dmpworks.transform.utils_file import extract_gzip, read_jsonls, validate_directory
 from polars._typing import SchemaDefinition
 
@@ -114,25 +114,21 @@ SCHEMA: SchemaDefinition = {
 def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
     lz_cached = lz.cache()
 
-    works = (
-        lz_cached.select(
-            doi=pl.col("DOI"),
-            title=remove_markup(pl.col("title").list.join(" ")),
-            abstract=remove_markup(pl.col("abstract")),
-            type=pl.col("type"),
-            publication_date=date_parts_to_date(
-                pl.col("issued").struct.field("date-parts").list.get(0, null_on_oob=True)
-            ),
-            updated_date=pl.col("deposited")
-            .struct.field("date-time")
-            .str.strptime(pl.Datetime, format="%Y-%m-%dT%H:%M:%SZ"),  # E.g. "2019-04-12T00:53:45Z"
-            container_title=pl.col("container-title").list.join(" "),
-            volume=pl.col("volume"),
-            issue=pl.col("issue"),
-            page=pl.col("page"),
-            publisher=pl.col("publisher"),
-            publisher_location=pl.col("publisher-location"),
-        ),
+    works = lz_cached.select(
+        doi=pl.col("DOI"),
+        title=remove_markup(pl.col("title").list.join(" ")),
+        abstract=remove_markup(pl.col("abstract")),
+        type=pl.col("type"),
+        publication_date=date_parts_to_date(pl.col("issued").struct.field("date-parts").list.get(0, null_on_oob=True)),
+        updated_date=pl.col("deposited")
+        .struct.field("date-time")
+        .str.strptime(pl.Datetime, format="%Y-%m-%dT%H:%M:%SZ"),  # E.g. "2019-04-12T00:53:45Z"
+        container_title=pl.col("container-title").list.join(" "),
+        volume=pl.col("volume"),
+        issue=pl.col("issue"),
+        page=pl.col("page"),
+        publisher=pl.col("publisher"),
+        publisher_location=pl.col("publisher-location"),
     )
 
     exploded_authors = (
@@ -206,12 +202,12 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
 def setup_parser(parser: ArgumentParser) -> None:
     # Positional arguments
     parser.add_argument(
-        "in-dir",
+        "in_dir",
         type=pathlib.Path,
         help="Path to the input Crossref Metadata directory (e.g., /path/to/March 2025 Public Data File from Crossref).",
     )
     parser.add_argument(
-        "out-dir",
+        "out_dir",
         type=pathlib.Path,
         help="Path to the output directory for transformed Parquet files (e.g. /path/to/parquets/crossref_metadata).",
     )
@@ -248,7 +244,7 @@ def handle_command(args: Namespace):
     validate_common_args(args, errors)
     handle_errors(errors)
     process_files_parallel(
-        **vars(args),
+        **copy_dict(vars(args), ["command", "transform_command", "func"]),
         schema=SCHEMA,
         transform_func=transform,
         file_glob="*.jsonl.gz",

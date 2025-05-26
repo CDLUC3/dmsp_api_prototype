@@ -113,3 +113,7 @@ def handle_errors(errors: list[str]):
         for error in errors:
             print(f"error: {error}", file=sys.stderr)
         sys.exit(2)
+
+
+def copy_dict(original_dict: dict, keys_to_remove: list) -> dict:
+    return {k: v for k, v in original_dict.items() if k not in keys_to_remove}

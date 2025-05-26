@@ -7,7 +7,7 @@ import polars as pl
 from dmpworks.transform.openalex_works import normalise_ids
 from dmpworks.transform.pipeline import process_files_parallel
 from dmpworks.transform.transforms import normalise_identifier
-from dmpworks.transform.utils_cli import add_common_args, handle_errors, validate_common_args
+from dmpworks.transform.utils_cli import add_common_args, copy_dict, handle_errors, validate_common_args
 from dmpworks.transform.utils_file import read_jsonls, validate_directory
 from polars._typing import SchemaDefinition
 
@@ -49,7 +49,7 @@ def setup_parser(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "out_dir",
         type=pathlib.Path,
-        help="Path to the output directory (e.g. /path/to/parquets/openalex_works).",
+        help="Path to the output directory (e.g. /path/to/parquets/openalex_funders).",
     )
 
     # Common keyword arguments
@@ -87,12 +87,9 @@ def handle_command(args: argparse.Namespace):
     validate_common_args(args, errors)
     handle_errors(errors)
 
-    table_dir = args.in_dir / "data" / "works"
-    args_dict = vars(args)
-    del args_dict["in_dir"]
-    # del args_dict["table_name"]
+    table_dir = args.in_dir / "data" / "funders"
     process_files_parallel(
-        **args_dict,
+        **copy_dict(vars(args), ["in_dir", "command", "transform_command", "func"]),
         in_dir=table_dir,
         schema=FUNDERS_SCHEMA,
         transform_func=transform_funders,

@@ -13,7 +13,7 @@ from dmpworks.transform.transforms import (
     remove_markup,
     replace_with_null,
 )
-from dmpworks.transform.utils_cli import add_common_args, handle_errors, validate_common_args
+from dmpworks.transform.utils_cli import add_common_args, copy_dict, handle_errors, validate_common_args
 from dmpworks.transform.utils_file import extract_gzip, read_jsonls, validate_directory
 from polars import Date
 from polars._typing import SchemaDefinition
@@ -353,7 +353,7 @@ def handle_command(args: argparse.Namespace):
     handle_errors(errors)
 
     process_files_parallel(
-        **vars(args),
+        **copy_dict(vars(args), ["command", "transform_command", "func"]),
         schema=SCHEMA,
         transform_func=transform,
         file_glob="**/*jsonl.gz",

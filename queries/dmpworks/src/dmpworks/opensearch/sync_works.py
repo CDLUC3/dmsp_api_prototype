@@ -1,8 +1,9 @@
+import argparse
 import logging
 import pathlib
 from argparse import ArgumentParser, Namespace
 from itertools import chain
-from typing import Dict, Generator, Iterator, List, Optional
+from typing import Generator, Iterator, Optional
 
 import pendulum
 import pyarrow as pa
@@ -16,8 +17,8 @@ from dmpworks.transform.utils_cli import handle_errors
 
 def stream_parquet_batches(
     source,
-    start_date: Optional[pendulum.date] = None,
-    columns: Optional[List[str]] = None,
+    start_date: Optional[pendulum.Date] = None,
+    columns: Optional[list[str]] = None,
     batch_size: Optional[int] = None,
 ) -> Iterator[pa.RecordBatch]:
     dataset = ds.dataset(source, format="parquet", partitioning="hive")
@@ -42,7 +43,7 @@ def stream_parquet_batches(
 
 
 def stream_work_actions(
-    source, start_date: Optional[pendulum.date] = None, batch_size: Optional[int] = None
+    *, source, index_name: str, start_date: Optional[pendulum.date] = None, batch_size: Optional[int] = None
 ) -> Generator[Iterator[dict], None, None]:
     for batch in stream_parquet_batches(
         source,
@@ -64,10 +65,10 @@ def stream_work_actions(
             "source",
         ],
     ):
-        yield batch_to_work_actions(batch)
+        yield batch_to_work_actions(index_name=index_name, batch=batch)
 
 
-def batch_to_work_actions(batch: pa.RecordBatch) -> Iterator[Dict]:
+def batch_to_work_actions(*, index_name: str, batch: pa.RecordBatch) -> Iterator[dict]:
     # Convert date and datetimes
     batch = batch.set_column(
         batch.schema.get_field_index("publication_date"),
@@ -83,12 +84,12 @@ def batch_to_work_actions(batch: pa.RecordBatch) -> Iterator[Dict]:
     # Create actions
     docs = batch.to_pylist()
     for doc in docs:
-        yield {"_op_type": "update", "_index": "works", "_id": doc["doi"], "doc": doc, "doc_as_upsert": True}
+        yield {"_op_type": "update", "_index": index_name, "_id": doc["doi"], "doc": doc, "doc_as_upsert": True}
 
 
 def parallel_index_actions(
     client: OpenSearch,
-    actions: Iterator[List[Dict]],
+    actions: Iterator[list[dict]],
     thread_count: int = 4,
     chunk_size: int = 500,
     max_chunk_bytes: int = 100 * 1024 * 1024,
@@ -118,9 +119,18 @@ def parallel_index_actions(
     logging.info(f"os_index_upsert: complete. Total: {total}, Success: {success_count}, Failures: {fail_count}")
 
 
+def parse_date(s: str) -> pendulum.Date:
+    try:
+        return pendulum.from_format(s, "YYYY-MM-DD").date()
+    except Exception:
+        raise argparse.ArgumentTypeError(f"Not a valid date: '{s}'. Expected format: YYYY-MM-DD")
+
+
 def setup_parser(parser: ArgumentParser) -> None:
     # fmt: off
-    parser.add_argument("export", type=pathlib.Path, help="Path to the DMP Tool works hive partitioned index table export directory (e.g., /path/to/export).")
+    parser.add_argument("index_name", type=str, help="The name of the OpenSearch index to sync to (e.g., works).")
+    parser.add_argument("in_dir", type=pathlib.Path, help="Path to the DMP Tool works hive partitioned index table export directory (e.g., /path/to/export).")
+    parser.add_argument("--start-date", default=None, type=parse_date, help="Date in YYYY-MM-DD to sync records from in the export. If no date is specified then all records synced (default: None)")
     parser.add_argument("--host", default="localhost", help="Host address (default: localhost)")
     parser.add_argument("--port", type=int, default=9200, help="Port number (default: 9200)")
     parser.add_argument("--batch-size", type=int, default=1000, help="Batch size (default: 1000)")
@@ -139,19 +149,23 @@ def handle_command(args: Namespace):
 
     # Validate
     errors = []
-    if not args.export.is_dir():
-        errors.append(f"export '{args.export}' is not a valid directory.")
+    if not args.in_dir.is_dir():
+        errors.append(f"in_dir '{args.in_dir}' is not a valid directory.")
     handle_errors(errors)
 
     client = OpenSearch(
-        hosts=[{"host": args.host, "port": args.host}],
+        hosts=[{"host": args.host, "port": args.port}],
         http_compress=True,
         use_ssl=False,
         verify_certs=False,
         ssl_assert_hostname=False,
         ssl_show_warn=False,
     )
-    actions = chain.from_iterable(stream_work_actions(args.export, batch_size=args.batch_size))
+    actions = chain.from_iterable(
+        stream_work_actions(
+            source=args.in_dir, index_name=args.index_name, start_date=args.start_date, batch_size=args.batch_size
+        )
+    )
     parallel_index_actions(
         client,
         actions,
