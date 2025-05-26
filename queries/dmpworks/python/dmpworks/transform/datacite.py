@@ -1,9 +1,9 @@
 import argparse
-import json
 import logging
 import os
 import pathlib
 
+import dmpworks.polars_expr_plugin as pe
 import polars as pl
 from dmpworks.transform.pipeline import process_files_parallel
 from dmpworks.transform.transforms import (
@@ -111,24 +111,6 @@ SCHEMA: SchemaDefinition = {
 }
 
 
-def parse_datacite_list(text: str | None) -> list[dict]:
-    if text is None:
-        return []
-
-    try:
-        data = json.loads(text)
-    except json.decoder.JSONDecodeError as e:
-        logging.error(f"Error invalid JSON: text={text}, error={e}")
-        return []
-
-    if isinstance(data, dict):
-        return [data]
-    elif isinstance(data, list):
-        return data
-    else:
-        return []
-
-
 def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
     lz_cached = lz.cache()
 
@@ -177,10 +159,8 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
             family_name=pl.col("familyName"),
             name=pl.col("name"),
             name_type=pl.col("nameType"),
-            affiliation=pl.col("affiliation").map_elements(parse_datacite_list, return_dtype=AFFILIATION_SCHEMA),
-            name_identifiers=pl.col("nameIdentifiers").map_elements(
-                parse_datacite_list, return_dtype=NAME_IDENTIFIERS_SCHEMA
-            ),
+            affiliation=pe.parse_datacite_affiliations(pl.col("affiliation")),
+            name_identifiers=pe.parse_datacite_name_identifiers(pl.col("nameIdentifiers")),
         )
     )
 

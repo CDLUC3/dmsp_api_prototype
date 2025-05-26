@@ -63,6 +63,11 @@ def make_page(first_page: pl.Expr, last_page: pl.Expr) -> pl.Expr:
     )
 
 
+def clean_string(expr: pl.Expr) -> pl.Expr:
+    cleaned = expr.str.strip_chars()
+    return pl.when(cleaned == "").then(None).otherwise(cleaned)
+
+
 def replace_with_null(expr: pl.Expr, values: list[str]) -> pl.Expr:
     col = expr.str.strip_chars()
     return pl.when(col.str.to_lowercase().is_in([v.lower() for v in values])).then(None).otherwise(col)

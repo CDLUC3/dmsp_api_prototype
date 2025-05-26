@@ -1,35 +1,41 @@
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
-requires-python = ">=3.12"
+requires = ["maturin>=1.0,<2.0", "polars>=1.3.0"]
+build-backend = "maturin"
 
 [project]
 name = "dmpworks"
-version = "0.1.0"
 description = "DMP Tool Related Works Python Package"
+requires-python = ">=3.12"
 license = { text = "MIT license" }
+dynamic = ["version"]
 dependencies = [
-    "polars",
-    "pendulum",
-    "tqdm",
-    "opensearch-py",
-    "pyarrow",
+    "polars>=1,<2",
+    "pendulum>=3,<4",
+    "tqdm>=4,<5",
+    "opensearch-py>=2.8.0,<3",
+    "pyarrow>=19,<21",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest", # testing
-    "black"  # code formatting
+    "pytest>=8,<9", # testing
+    "black>=25,<26",  # code formatting
+    "maturin>=1.0,<2.0",
+    "ruff>=0.11,<0.12",
+    "mypy>=1,<2"
 ]
 
 [project.scripts]
 dmpworks = "dmpworks.cli:main"
 
-[tool.setuptools]
-package-dir = { "" = "src" }
+[tool.maturin]
+module-name = "dmpworks.polars_expr_plugin._internal"
+python-source = "python"
+include = ["python/**/*"]
 
-[tool.setuptools.package-data]
-"*" = ["*.*"]
+[[tool.mypy.overrides]]
+module = "polars.utils.udfs"
+ignore_missing_imports = true
 
 [tool.black]
 line-length = 120

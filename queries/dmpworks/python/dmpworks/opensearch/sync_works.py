@@ -127,18 +127,63 @@ def parse_date(s: str) -> pendulum.Date:
 
 
 def setup_parser(parser: ArgumentParser) -> None:
-    # fmt: off
-    parser.add_argument("index_name", type=str, help="The name of the OpenSearch index to sync to (e.g., works).")
-    parser.add_argument("in_dir", type=pathlib.Path, help="Path to the DMP Tool works hive partitioned index table export directory (e.g., /path/to/export).")
-    parser.add_argument("--start-date", default=None, type=parse_date, help="Date in YYYY-MM-DD to sync records from in the export. If no date is specified then all records synced (default: None)")
-    parser.add_argument("--host", default="localhost", help="Host address (default: localhost)")
-    parser.add_argument("--port", type=int, default=9200, help="Port number (default: 9200)")
-    parser.add_argument("--batch-size", type=int, default=1000, help="Batch size (default: 1000)")
-    parser.add_argument("--thread-count", type=int, default=4, help="Thread count (default: 4)")
-    parser.add_argument("--chunk-size", type=int, default=500, help="Chunk size (default: 500)")
-    parser.add_argument("--max-chunk-bytes", type=int, default=100 * 1024 * 1024, help="Maximum chunk size in bytes (default: 100MB)")
-    parser.add_argument("--queue-size", type=int, default=4, help="Queue size (default: 4)")
-    # fmt: on
+    parser.add_argument(
+        "index_name",
+        type=str,
+        help="The name of the OpenSearch index to sync to (e.g., works).",
+    )
+    parser.add_argument(
+        "in_dir",
+        type=pathlib.Path,
+        help="Path to the DMP Tool works hive partitioned index table export directory (e.g., /path/to/export).",
+    )
+    parser.add_argument(
+        "--start-date",
+        default=None,
+        type=parse_date,
+        help="Date in YYYY-MM-DD to sync records from in the export. If no date is specified then all records synced (default: None)",
+    )
+    parser.add_argument(
+        "--host",
+        default="localhost",
+        help="Host address (default: localhost)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=9200,
+        help="Port number (default: 9200)",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=1000,
+        help="Batch size (default: 1000)",
+    )
+    parser.add_argument(
+        "--thread-count",
+        type=int,
+        default=4,
+        help="Thread count (default: 4)",
+    )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=500,
+        help="Chunk size (default: 500)",
+    )
+    parser.add_argument(
+        "--max-chunk-bytes",
+        type=int,
+        default=100 * 1024 * 1024,
+        help="Maximum chunk size in bytes (default: 100MB)",
+    )
+    parser.add_argument(
+        "--queue-size",
+        type=int,
+        default=4,
+        help="Queue size (default: 4)",
+    )
 
     # Callback function
     parser.set_defaults(func=handle_command)
