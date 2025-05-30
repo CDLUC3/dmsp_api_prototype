@@ -1,10 +1,9 @@
-
 COPY (
   SELECT
     *,
-    EXTRACT(year FROM updated_date) AS year,
-    EXTRACT(month FROM updated_date) AS month,
-    EXTRACT(day FROM updated_date) AS day,
+--    EXTRACT(year FROM updated_date) AS year,
+--    EXTRACT(month FROM updated_date) AS month,
+--    EXTRACT(day FROM updated_date) AS day,
     'datacite' AS source
   FROM datacite_index
 
@@ -12,9 +11,9 @@ COPY (
 
   SELECT
     *,
-    EXTRACT(year FROM updated_date) AS year,
-    EXTRACT(month FROM updated_date) AS month,
-    EXTRACT(day FROM updated_date) AS day,
+--    EXTRACT(year FROM updated_date) AS year,
+--    EXTRACT(month FROM updated_date) AS month,
+--    EXTRACT(day FROM updated_date) AS day,
     'openalex' AS source
   FROM openalex_index
-) TO 'export' (FORMAT PARQUET, PARTITION_BY (year, month, day));
+) TO 'export' (FORMAT PARQUET, FILE_SIZE_BYTES '100MB');
