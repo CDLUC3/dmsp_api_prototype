@@ -24,6 +24,9 @@ Data sources:
 * ROR: https://zenodo.org/records/15132361
 
 ## Transform Source Datasets
+Run the following commands to convert the source datasets into Parquet files. This step also performs some normalization,
+such as normalization of identifiers. Note: The full output directory must already exist before you run the commands.
+
 Crossref Metadata:
 ```bash
 dmpworks transform crossref-metadata "/path/to/March 2025 Public Data File from Crossref" /path/to/transformed/crossref
