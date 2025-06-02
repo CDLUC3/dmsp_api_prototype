@@ -3,101 +3,84 @@ import json
 import logging
 import os
 import pathlib
-from typing import Dict
 from typing import Optional
 
 import polars as pl
+from dmpworks.transform.pipeline import process_files_parallel
+from dmpworks.transform.transforms import make_page, normalise_identifier, remove_markup
+from dmpworks.transform.utils_cli import add_common_args, copy_dict, handle_errors, validate_common_args
+from dmpworks.transform.utils_file import read_jsonls, validate_directory
 from polars._typing import SchemaDefinition
-
-from cli import handle_errors, add_common_args, validate_common_args
-from pipeline import process_files_parallel
-from transformations import normalise_identifier, remove_markup, make_page
-from utils import read_jsonls, validate_directory, extract_gzip
 
 logger = logging.getLogger(__name__)
 
-SCHEMAS: Dict[str, SchemaDefinition] = {
-    "works": {
-        "id": pl.String,  # https://docs.openalex.org/api-entities/works/work-object#id
-        "doi": pl.String,  # https://docs.openalex.org/api-entities/works/work-object#doi
-        "ids": pl.Struct(  # https://docs.openalex.org/api-entities/works/work-object#ids
+WORKS_SCHEMA: SchemaDefinition = {
+    "id": pl.String,  # https://docs.openalex.org/api-entities/works/work-object#id
+    "doi": pl.String,  # https://docs.openalex.org/api-entities/works/work-object#doi
+    "ids": pl.Struct(  # https://docs.openalex.org/api-entities/works/work-object#ids
+        {
+            "doi": pl.String,
+            "mag": pl.String,
+            "openalex": pl.String,
+            "pmid": pl.String,
+            "pmcid": pl.String,
+        }
+    ),
+    "title": pl.String,  # https://docs.openalex.org/api-entities/works/work-object#title
+    "abstract_inverted_index": pl.String,  # https://docs.openalex.org/api-entities/works/work-object#abstract_inverted_index
+    "type": pl.String,  # https://docs.openalex.org/api-entities/works/work-object#type
+    "publication_date": pl.Date,  # https://docs.openalex.org/api-entities/works/work-object#publication_date
+    "updated_date": pl.Datetime,  # https://docs.openalex.org/api-entities/works/work-object#updated_date
+    "authorships": pl.List(  # https://docs.openalex.org/api-entities/works/work-object#authorships
+        pl.Struct(
             {
-                "doi": pl.String,
-                "mag": pl.String,
-                "openalex": pl.String,
-                "pmid": pl.String,
-                "pmcid": pl.String,
-            }
-        ),
-        "title": pl.String,  # https://docs.openalex.org/api-entities/works/work-object#title
-        "abstract_inverted_index": pl.String,  # https://docs.openalex.org/api-entities/works/work-object#abstract_inverted_index
-        "type": pl.String,  # https://docs.openalex.org/api-entities/works/work-object#type
-        "publication_date": pl.Date,  # https://docs.openalex.org/api-entities/works/work-object#publication_date
-        "updated_date": pl.Datetime,  # https://docs.openalex.org/api-entities/works/work-object#updated_date
-        "authorships": pl.List(  # https://docs.openalex.org/api-entities/works/work-object#authorships
-            pl.Struct(
-                {
-                    "author": pl.Struct(
+                "author": pl.Struct(
+                    {
+                        "id": pl.String,
+                        "display_name": pl.String,
+                        "orcid": pl.String,
+                    }
+                ),
+                "institutions": pl.List(
+                    pl.Struct(
                         {
                             "id": pl.String,
                             "display_name": pl.String,
-                            "orcid": pl.String,
+                            "type": pl.String,
+                            "ror": pl.String,
                         }
-                    ),
-                    "institutions": pl.List(
-                        pl.Struct(
-                            {
-                                "id": pl.String,
-                                "display_name": pl.String,
-                                "type": pl.String,
-                                "ror": pl.String,
-                            }
-                        )
-                    ),
-                }
-            )
-        ),
-        "grants": pl.List(  # https://docs.openalex.org/api-entities/works/work-object#grants
-            pl.Struct(
+                    )
+                ),
+            }
+        )
+    ),
+    "grants": pl.List(  # https://docs.openalex.org/api-entities/works/work-object#grants
+        pl.Struct(
+            {
+                "funder": pl.String,
+                "funder_display_name": pl.String,
+                "award_id": pl.String,
+            }
+        )
+    ),
+    "primary_location": pl.Struct(  # https://docs.openalex.org/api-entities/works/work-object#primary_location
+        {
+            "source": pl.Struct(
                 {
-                    "funder": pl.String,
-                    "funder_display_name": pl.String,
-                    "award_id": pl.String,
+                    "display_name": pl.String,
+                    "publisher": pl.String,
                 }
             )
-        ),
-        "primary_location": pl.Struct(  # https://docs.openalex.org/api-entities/works/work-object#primary_location
-            {
-                "source": pl.Struct(
-                    {
-                        "display_name": pl.String,
-                        "publisher": pl.String,
-                    }
-                )
-            }
-        ),
-        "biblio": pl.Struct(  # https://docs.openalex.org/api-entities/works/work-object#biblio
-            {
-                "volume": pl.String,
-                "issue": pl.String,
-                "first_page": pl.String,
-                "last_page": pl.String,
-            }
-        ),
-    },
-    "funders": {
-        "id": pl.String,  # https://docs.openalex.org/api-entities/funders/funder-object#id
-        "display_name": pl.String,  # https://docs.openalex.org/api-entities/funders/funder-object#display_name
-        "ids": pl.Struct(  # https://docs.openalex.org/api-entities/funders/funder-object#ids
-            {
-                "crossref": pl.String,
-                "doi": pl.String,
-                "openalex": pl.String,
-                "ror": pl.String,
-                "wikidata": pl.String,
-            }
-        ),
-    },
+        }
+    ),
+    "biblio": pl.Struct(  # https://docs.openalex.org/api-entities/works/work-object#biblio
+        {
+            "volume": pl.String,
+            "issue": pl.String,
+            "first_page": pl.String,
+            "last_page": pl.String,
+        }
+    ),
 }
 
 
@@ -219,20 +202,7 @@ def transform_works(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
     ]
 
 
-def transform_funders(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
-    funders = lz.select(
-        id=normalise_identifier(pl.col("id")),
-        display_name=pl.col("display_name"),
-        ids=normalise_ids(pl.col("ids"), ["crossref", "doi", "openalex", "ror", "wikidata"]),
-        # TODO: remove 'entity/' from start of wikidata
-    )
-
-    return [("openalex_funders", funders)]
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description="Transform OpenAlex to Parquet for the DMP Tool.")
-
+def setup_parser(parser: argparse.ArgumentParser) -> None:
     # Positional arguments
     parser.add_argument(
         "in_dir",
@@ -242,12 +212,7 @@ def parse_args():
     parser.add_argument(
         "out_dir",
         type=pathlib.Path,
-        help="Path to the output directory (e.g. /path/to/openalex_transformed/works).",
-    )
-    parser.add_argument(
-        "table_name",
-        choices=["works", "funders"],
-        help="Table name (must be 'works' or 'funders').",
+        help="Path to the output directory (e.g. /path/to/parquets/openalex_works).",
     )
 
     # Common keyword arguments
@@ -263,7 +228,13 @@ def parse_args():
         max_file_processes=os.cpu_count(),
         n_batches=None,
     )
-    args = parser.parse_args()
+
+    # Callback function
+    parser.set_defaults(func=handle_command)
+
+
+def handle_command(args: argparse.Namespace):
+    logging.basicConfig(level=logging.DEBUG)
 
     # Validate
     errors = []
@@ -277,34 +248,25 @@ def parse_args():
         errors.append(f"out_dir '{args.out_dir}' is not a valid directory.")
 
     validate_common_args(args, errors)
-    handle_errors(parser, errors)
-    return args
+    handle_errors(errors)
 
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    args = parse_args()
-
-    # Get schema
-    table_name = args.table_name
-    schema = SCHEMAS.get(table_name, None)
-    if schema is None:
-        raise ValueError(f"Schema not found for table_name={table_name}")
-
-    # Get transform function
-    transform_func = {"works": transform_works, "funders": transform_funders}.get(table_name, None)
-    if transform_func is None:
-        raise ValueError(f"Transform function not found for table_name={table_name}")
-
-    table_dir = args.in_dir / "data" / table_name
-    args_dict = vars(args)
-    del args_dict["in_dir"]
-    del args_dict["table_name"]
+    table_dir = args.in_dir / "data" / "works"
     process_files_parallel(
-        **args_dict,
+        **copy_dict(vars(args), ["in_dir", "command", "transform_command", "func"]),
         in_dir=table_dir,
-        schema=schema,
-        transform_func=transform_func,
+        schema=WORKS_SCHEMA,
+        transform_func=transform_works,
         file_glob="**/*.gz",
         read_func=read_jsonls,
     )
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Transform OpenAlex Works to Parquet for the DMP Tool.")
+    setup_parser(parser)
+    args = parser.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

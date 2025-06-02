@@ -1,15 +1,14 @@
-import argparse
 import logging
 import os
 import pathlib
+from argparse import ArgumentParser, Namespace
 
 import polars as pl
+from dmpworks.transform.pipeline import process_files_parallel
+from dmpworks.transform.transforms import date_parts_to_date, normalise_identifier, remove_markup
+from dmpworks.transform.utils_cli import add_common_args, copy_dict, handle_errors, validate_common_args
+from dmpworks.transform.utils_file import extract_gzip, read_jsonls, validate_directory
 from polars._typing import SchemaDefinition
-
-from cli import handle_errors, add_common_args, validate_common_args
-from pipeline import process_files_parallel
-from transformations import remove_markup, normalise_identifier, date_parts_to_date
-from utils import read_jsonls, validate_directory, extract_gzip
 
 logger = logging.getLogger(__name__)
 
@@ -111,28 +110,25 @@ SCHEMA: SchemaDefinition = {
     "relation": pl.Struct({relation_type: pl.List(RELATION_SCHEMA) for relation_type in RELATION_TYPES}),
 }
 
+
 def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
     lz_cached = lz.cache()
 
-    works = (
-        lz_cached.select(
-            doi=pl.col("DOI"),
-            title=remove_markup(pl.col("title").list.join(" ")),
-            abstract=remove_markup(pl.col("abstract")),
-            type=pl.col("type"),
-            publication_date=date_parts_to_date(
-                pl.col("issued").struct.field("date-parts").list.get(0, null_on_oob=True)
-            ),
-            updated_date=pl.col("deposited")
-            .struct.field("date-time")
-            .str.strptime(pl.Datetime, format="%Y-%m-%dT%H:%M:%SZ"),  # E.g. "2019-04-12T00:53:45Z"
-            container_title=pl.col("container-title").list.join(" "),
-            volume=pl.col("volume"),
-            issue=pl.col("issue"),
-            page=pl.col("page"),
-            publisher=pl.col("publisher"),
-            publisher_location=pl.col("publisher-location"),
-        ),
+    works = lz_cached.select(
+        doi=pl.col("DOI"),
+        title=remove_markup(pl.col("title").list.join(" ")),
+        abstract=remove_markup(pl.col("abstract")),
+        type=pl.col("type"),
+        publication_date=date_parts_to_date(pl.col("issued").struct.field("date-parts").list.get(0, null_on_oob=True)),
+        updated_date=pl.col("deposited")
+        .struct.field("date-time")
+        .str.strptime(pl.Datetime, format="%Y-%m-%dT%H:%M:%SZ"),  # E.g. "2019-04-12T00:53:45Z"
+        container_title=pl.col("container-title").list.join(" "),
+        volume=pl.col("volume"),
+        issue=pl.col("issue"),
+        page=pl.col("page"),
+        publisher=pl.col("publisher"),
+        publisher_location=pl.col("publisher-location"),
     )
 
     exploded_authors = (
@@ -203,9 +199,7 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
     ]
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Transform Crossref Metadata to Parquet for the DMP Tool.")
-
+def setup_parser(parser: ArgumentParser) -> None:
     # Positional arguments
     parser.add_argument(
         "in_dir",
@@ -215,7 +209,7 @@ def parse_args():
     parser.add_argument(
         "out_dir",
         type=pathlib.Path,
-        help="Path to the output directory for transformed Parquet files (e.g. /path/to/crossref_transformed).",
+        help="Path to the output directory for transformed Parquet files (e.g. /path/to/parquets/crossref_metadata).",
     )
 
     # Common keyword arguments
@@ -231,7 +225,13 @@ def parse_args():
         max_file_processes=os.cpu_count(),
         n_batches=None,
     )
-    args = parser.parse_args()
+
+    # Callback function
+    parser.set_defaults(func=handle_command)
+
+
+def handle_command(args: Namespace):
+    logging.basicConfig(level=logging.DEBUG)
 
     # Validate
     errors = []
@@ -242,19 +242,23 @@ def parse_args():
         errors.append(f"out_dir '{args.out_dir}' is not a valid directory.")
 
     validate_common_args(args, errors)
-    handle_errors(parser, errors)
-
-    return args
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    args = parse_args()
+    handle_errors(errors)
     process_files_parallel(
-        **vars(args),
+        **copy_dict(vars(args), ["command", "transform_command", "func"]),
         schema=SCHEMA,
         transform_func=transform,
         file_glob="*.jsonl.gz",
         read_func=read_jsonls,
         extract_func=extract_gzip,
     )
+
+
+def main():
+    parser = ArgumentParser(description="Transform Crossref Metadata to Parquet for the DMP Tool")
+    setup_parser(parser)
+    args = parser.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

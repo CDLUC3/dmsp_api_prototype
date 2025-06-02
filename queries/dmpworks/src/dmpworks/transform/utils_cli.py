@@ -107,10 +107,13 @@ def validate_common_args(args: argparse.Namespace, errors: list[str]):
         errors.append(f"--n-batches must be None or ≥ 1, got {args.n_batches}.")
 
 
-def handle_errors(parser: argparse.ArgumentParser, errors: list[str]):
+def handle_errors(errors: list[str]):
     # If there are errors, print them and exit
     if errors:
         for error in errors:
             print(f"error: {error}", file=sys.stderr)
-        parser.print_usage(sys.stderr)
         sys.exit(2)
+
+
+def copy_dict(original_dict: dict, keys_to_remove: list) -> dict:
+    return {k: v for k, v in original_dict.items() if k not in keys_to_remove}

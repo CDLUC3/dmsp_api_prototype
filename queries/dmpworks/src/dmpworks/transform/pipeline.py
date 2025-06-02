@@ -10,12 +10,11 @@ from pathlib import Path
 from typing import Callable, Optional
 
 import pendulum
-import polars as pl
-from polars._typing import SchemaDefinition
 from tqdm import tqdm
 
-from utils import log_stage, write_parquet, extract_gzip, read_jsonls, batch_files
-
+import polars as pl
+from dmpworks.transform.utils_file import batch_files, extract_gzip, log_stage, read_jsonls, write_parquet
+from polars._typing import SchemaDefinition
 
 TransformFunc = Callable[[pl.LazyFrame], list[tuple[str, pl.LazyFrame]]]
 

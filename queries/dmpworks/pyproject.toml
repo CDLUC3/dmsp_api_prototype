@@ -1,0 +1,45 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+requires-python = ">=3.12"
+
+[project]
+name = "dmpworks"
+version = "0.1.0"
+description = "DMP Tool Related Works Python Package"
+license = { text = "MIT license" }
+dependencies = [
+    "polars",
+    "pendulum",
+    "tqdm",
+    "opensearch-py",
+    "pyarrow",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest", # testing
+    "black"  # code formatting
+]
+
+[project.scripts]
+dmpworks = "dmpworks.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.package-data]
+"*" = ["*.*"]
+
+[tool.black]
+line-length = 120
+target-version = ["py312"]
+skip-string-normalization = true
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | build
+  | dist
+)/
+'''
