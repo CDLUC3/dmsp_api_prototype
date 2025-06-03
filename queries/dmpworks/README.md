@@ -32,7 +32,7 @@ Activate the Python virtual environment:
 source polars/.venv/activate
 ```
 
-Install dependencies:
+Install Polars dependencies:
 ```bash
 (cd polars && rustup toolchain install nightly --component miri)
 (cd polars/py-polars && make requirements-all)
@@ -43,7 +43,12 @@ Build Polars:
 (cd polars/py-polars && RUSTFLAGS="-C target-cpu=native" make build-dist-release)
 ```
 
-To build and install the dmpworks Python package, including its Polars expression plugin:
+Install dmpworks Python package dependencies:
+```bash
+(cd dmsp_api_prototype/queries/dmpworks && pip install -e .[dev])
+```
+
+Build and install the dmpworks Python package, including its Polars expression plugin:
 ```bash
 (cd dmsp_api_prototype/queries/dmpworks && RUSTFLAGS="-C target-cpu=native" maturin develop --release)
 ```
