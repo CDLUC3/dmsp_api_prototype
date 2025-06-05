@@ -7,6 +7,7 @@ from dmpworks.transform.openalex_funders import setup_parser as setup_openalex_f
 from dmpworks.transform.ror import setup_parser as setup_ror
 from dmpworks.opensearch.create_index import setup_parser as setup_create_index
 from dmpworks.opensearch.sync_works import setup_parser as setup_sync_works
+from dmpworks.opensearch.chunk_size import setup_parser as setup_chunk_size
 
 
 def main():
@@ -65,6 +66,12 @@ def main():
         description="Sync the DMP Tool Works Index Table with OpenSearch.",
     )
     setup_sync_works(sync_works_parser)
+
+    chunk_size_parser = os_subparsers.add_parser(
+        "chunk-size",
+        description="Estimate the OpenSearch chunk size in bytes.",
+    )
+    setup_chunk_size(chunk_size_parser)
 
     args = parser.parse_args()
     if hasattr(args, "func"):
