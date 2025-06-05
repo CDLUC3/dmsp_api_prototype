@@ -16,3 +16,11 @@ dist/
 # IDEs and editors
 .idea/
 .vscode/
+
+# Rust
+*.so
+*.pyc
+target
+*.so
+*.dll
+*.pyd

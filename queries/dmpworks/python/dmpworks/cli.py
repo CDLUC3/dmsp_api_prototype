@@ -19,35 +19,52 @@ def main():
     transform_subparsers = transform_parser.add_subparsers(dest="transform_command")
     transform_subparsers.required = True
 
-    # fmt: off
-    crossref_parser = transform_subparsers.add_parser("crossref-metadata", description="Transform Crossref Metadata to Parquet for the DMP Tool")
+    crossref_parser = transform_subparsers.add_parser(
+        "crossref-metadata",
+        description="Transform Crossref Metadata to Parquet for the DMP Tool",
+    )
     setup_crossref_metadata(crossref_parser)
 
-    datacite_parser = transform_subparsers.add_parser("datacite", description="Transform DataCite to Parquet for the DMP Tool.")
+    datacite_parser = transform_subparsers.add_parser(
+        "datacite",
+        description="Transform DataCite to Parquet for the DMP Tool.",
+    )
     setup_datacite(datacite_parser)
 
-    openalex_works_parser = transform_subparsers.add_parser("openalex-works", description="Transform OpenAlex Works to Parquet for the DMP Tool.")
+    openalex_works_parser = transform_subparsers.add_parser(
+        "openalex-works",
+        description="Transform OpenAlex Works to Parquet for the DMP Tool.",
+    )
     setup_openalex_works(openalex_works_parser)
 
-    openalex_funders_parser = transform_subparsers.add_parser("openalex-funders", description="Transform OpenAlex Funders to Parquet for the DMP Tool.")
+    openalex_funders_parser = transform_subparsers.add_parser(
+        "openalex-funders",
+        description="Transform OpenAlex Funders to Parquet for the DMP Tool.",
+    )
     setup_openalex_funders(openalex_funders_parser)
 
-    ror_parser = transform_subparsers.add_parser("ror", description="Transform ROR to Parquet for the DMP Tool.")
+    ror_parser = transform_subparsers.add_parser(
+        "ror",
+        description="Transform ROR to Parquet for the DMP Tool.",
+    )
     setup_ror(ror_parser)
-    # fmt: on
 
     # OpenSearch Commands
     os_parser = subparsers.add_parser("opensearch")
     os_subparsers = os_parser.add_subparsers(dest="opensearch_command")
     os_subparsers.required = True
 
-    # fmt: off
-    create_index_parser = os_subparsers.add_parser("create-index", description="Create an OpenSearch index.")
+    create_index_parser = os_subparsers.add_parser(
+        "create-index",
+        description="Create an OpenSearch index.",
+    )
     setup_create_index(create_index_parser)
 
-    sync_works_parser = os_subparsers.add_parser("sync-works", description="Sync the DMP Tool Works Index Table with OpenSearch.")
+    sync_works_parser = os_subparsers.add_parser(
+        "sync-works",
+        description="Sync the DMP Tool Works Index Table with OpenSearch.",
+    )
     setup_sync_works(sync_works_parser)
-    # fmt: on
 
     args = parser.parse_args()
     if hasattr(args, "func"):

@@ -1,13 +1,12 @@
 import argparse
-import json
 import logging
 import os
 import pathlib
-from typing import Optional
 
+import dmpworks.polars_expr_plugin as pe
 import polars as pl
 from dmpworks.transform.pipeline import process_files_parallel
-from dmpworks.transform.transforms import make_page, normalise_identifier, remove_markup
+from dmpworks.transform.transforms import clean_string, make_page, normalise_identifier
 from dmpworks.transform.utils_cli import add_common_args, copy_dict, handle_errors, validate_common_args
 from dmpworks.transform.utils_file import read_jsonls, validate_directory
 from polars._typing import SchemaDefinition
@@ -90,29 +89,6 @@ def normalise_ids(expr: pl.Expr, field_names: list[str]) -> pl.Expr:
     )
 
 
-def revert_inverted_index(text: str | None) -> Optional[str]:
-    if isinstance(text, str):
-        try:
-            data = json.loads(text)
-        except json.decoder.JSONDecodeError as e:
-            logging.error(f"Error invalid JSON: error={e}")
-            return None
-
-        # Build abstract
-        words = []
-        for word, positions in data.items():
-            for pos in positions:
-                if pos >= len(words):
-                    words.extend([None] * (pos + 1 - len(words)))
-                words[pos] = word
-
-        # Filter out any Nones left by mistake and join
-        abstract = " ".join(word for word in words if word is not None).strip()
-        return abstract if abstract else None
-
-    return None
-
-
 def transform_works(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
     lz_cached = lz.cache()
 
@@ -120,10 +96,8 @@ def transform_works(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         id=normalise_identifier(pl.col("id")),
         doi=normalise_identifier(pl.col("doi")),
         ids=normalise_ids(pl.col("ids"), ["doi", "mag", "openalex", "pmid", "pmcid"]),
-        title=remove_markup(pl.col("title")),
-        abstract=remove_markup(
-            pl.col("abstract_inverted_index").map_elements(revert_inverted_index, return_dtype=pl.String)
-        ),
+        title=clean_string(pl.col("title")),
+        abstract=clean_string(pe.revert_inverted_index(pl.col("abstract_inverted_index"))),
         type=pl.col("type"),
         publication_date=pl.col("publication_date"),  # e.g. 2014-06-04
         updated_date=pl.col("updated_date"),  # e.g. 025-02-27T06:49:42.321119

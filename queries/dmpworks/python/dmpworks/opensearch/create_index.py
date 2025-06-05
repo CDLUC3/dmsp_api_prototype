@@ -25,12 +25,27 @@ def create_index(client: OpenSearch, index_name: str, mapping_filename: str):
 
 
 def setup_parser(parser: ArgumentParser) -> None:
-    # fmt: off
-    parser.add_argument("index_name", type=str, help="The name of the OpenSearch index to create (e.g., works).")
-    parser.add_argument("mapping_filename", type=str, help=f"The name of the OpenSearch mapping in the {MAPPINGS_PACKAGE} resource package (e.g., works-mapping.json).")
-    parser.add_argument("--host", default="localhost", help="Host address (default: localhost)")
-    parser.add_argument("--port", type=int, default=9200, help="Port number (default: 9200)")
-    # fmt: on
+    parser.add_argument(
+        "index_name",
+        type=str,
+        help="The name of the OpenSearch index to create (e.g., works).",
+    )
+    parser.add_argument(
+        "mapping_filename",
+        type=str,
+        help=f"The name of the OpenSearch mapping in the {MAPPINGS_PACKAGE} resource package (e.g., works-mapping.json).",
+    )
+    parser.add_argument(
+        "--host",
+        default="localhost",
+        help="Host address (default: localhost)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=9200,
+        help="Port number (default: 9200)",
+    )
 
     # Callback function
     parser.set_defaults(func=handle_command)
