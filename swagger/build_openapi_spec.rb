@@ -44,7 +44,7 @@ if ARGV.length == 2
     swagger_dir = "swagger-ui-#{ARGV[1]}"
 
     # Install the Swagger UI if necessary
-    unless Dir.exists?(swagger_dir)
+    unless Dir.exist?(swagger_dir)
       p "Installing Swagger UI v#{ARGV[1]} ..."
       sleep(2)
       `wget \"https://github.com/swagger-api/swagger-ui/archive/v#{ARGV[1]}.tar.gz\"`
@@ -84,8 +84,8 @@ if ARGV.length == 2
       openapi_spec['components']['schemas']['Dmp'] = dmp_component
 
       # Add the files to the Swagger UI distribution
-      FileUtils.mkdir("#{swagger_dir}/dist") unless Dir.exists?("#{swagger_dir}/dist")
-      FileUtils.mkdir("#{swagger_dir}/dist/docs") unless Dir.exists?("#{swagger_dir}/dist/docs")
+      FileUtils.mkdir("#{swagger_dir}/dist") unless Dir.exist?("#{swagger_dir}/dist")
+      FileUtils.mkdir("#{swagger_dir}/dist/docs") unless Dir.exist?("#{swagger_dir}/dist/docs")
 
       FileUtils.cp('v0-api-docs.json', "#{swagger_dir}/dist/docs-list.json")
       FileUtils.cp_r('assets/', "#{swagger_dir}/dist/")
