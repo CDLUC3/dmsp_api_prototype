@@ -2,11 +2,16 @@ MODEL (
   name works_index.doi_deletes,
   kind INCREMENTAL_BY_UNIQUE_KEY (
     unique_key (doi, delete_date, source)
+  ),
+  columns (
+    doi TEXT,
+    delete_date TIMESTAMP,
+    source TEXT
   )
 );
 
 WITH constants AS (
-  SELECT CURRENT_DATE AS delete_date
+  SELECT CURRENT_TIMESTAMP AS delete_date
 ),
 
 missing_dois AS (

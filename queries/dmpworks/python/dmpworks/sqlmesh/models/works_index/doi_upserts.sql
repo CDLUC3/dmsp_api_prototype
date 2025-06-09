@@ -8,13 +8,13 @@ MODEL (
 SELECT DISTINCT doi, upsert_date, source
 FROM (
   SELECT doi, updated_date AS upsert_date, 'datacite' AS source
-  FROM datacite_index.datacite_index;
+  FROM datacite_index.datacite_index
 
   UNION ALL
 
   SELECT doi, updated_date AS upsert_date, 'openalex' AS source
-  FROM openalex_index.openalex_index;
-)
+  FROM openalex_index.openalex_index
+);
 
 -- Cleanup old records
 DELETE FROM works_index.doi_upserts

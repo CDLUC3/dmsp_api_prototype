@@ -38,19 +38,20 @@ LEFT JOIN openalex_index.funder_ids ON idx.doi = openalex_index.funder_ids.doi
 LEFT JOIN openalex_index.funder_names ON idx.doi = openalex_index.funder_names.doi;
 
 UNCACHE TABLE ids_temp;
+DROP TABLE openalex_index.titles;
 
-@IF(
-  @runtime_stage = 'creating',
-  DROP TABLE openalex_index.titles;
-  DROP TABLE openalex_index.abstracts;
-  DROP TABLE openalex_index.types;
-  DROP TABLE openalex_index.publication_dates;
-  DROP TABLE openalex_index.updated_dates;
-  DROP TABLE openalex_index.affiliation_names;
-  DROP TABLE openalex_index.affiliation_rors;
-  DROP TABLE openalex_index.author_names;
-  DROP TABLE openalex_index.author_orcids;
-  DROP TABLE openalex_index.award_ids;
-  DROP TABLE openalex_index.funder_ids;
-  DROP TABLE openalex_index.funder_names;
-);
+--@IF(
+--  @runtime_stage = 'creating',
+--  DROP TABLE openalex_index.titles;
+--  DROP TABLE openalex_index.abstracts;
+--  DROP TABLE openalex_index.types;
+--  DROP TABLE openalex_index.publication_dates;
+--  DROP TABLE openalex_index.updated_dates;
+--  DROP TABLE openalex_index.affiliation_names;
+--  DROP TABLE openalex_index.affiliation_rors;
+--  DROP TABLE openalex_index.author_names;
+--  DROP TABLE openalex_index.author_orcids;
+--  DROP TABLE openalex_index.award_ids;
+--  DROP TABLE openalex_index.funder_ids;
+--  DROP TABLE openalex_index.funder_names;
+--);

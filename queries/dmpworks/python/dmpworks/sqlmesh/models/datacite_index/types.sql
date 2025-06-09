@@ -42,7 +42,7 @@ CACHE TABLE type_map AS (
     ('Text', 'text'),
     ('Workflow', 'workflow')
   ) AS t(original_type, normalized_type)
-)
+);
 
 SELECT
   doi,
