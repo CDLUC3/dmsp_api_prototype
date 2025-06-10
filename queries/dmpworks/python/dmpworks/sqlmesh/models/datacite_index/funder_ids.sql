@@ -4,6 +4,7 @@ MODEL (
   kind FULL
 );
 
+JINJA_QUERY_BEGIN;
 SELECT
   doi,
   {{ array_agg_distinct('id') }} AS funder_ids,
@@ -47,3 +48,4 @@ FROM (
   WHERE ids.ror IS NOT NULL
 )
 GROUP BY doi;
+JINJA_END;

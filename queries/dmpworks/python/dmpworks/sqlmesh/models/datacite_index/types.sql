@@ -4,8 +4,8 @@ MODEL (
   kind FULL
 );
 
-CACHE TABLE type_map AS (
-  -- Mapping table to normalise DataCite types
+ -- Mapping table to normalise DataCite types
+WITH type_map AS (
   SELECT * FROM (VALUES
     ('Audiovisual', 'audio-visual'),
     ('Award', 'other'),
@@ -41,13 +41,11 @@ CACHE TABLE type_map AS (
     ('StudyRegistration', 'other'),
     ('Text', 'text'),
     ('Workflow', 'workflow')
-  ) AS t(original_type, normalized_type)
-);
+    ) AS t(original_type, normalized_type)
+)
 
 SELECT
   doi,
   type_map.normalized_type AS type
 FROM datacite.works dw
 INNER JOIN type_map ON dw.type = type_map.original_type;
-
-UNCACHE TABLE ids_temp;

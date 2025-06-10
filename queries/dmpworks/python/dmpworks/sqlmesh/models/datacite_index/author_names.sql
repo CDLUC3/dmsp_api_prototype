@@ -4,6 +4,7 @@ MODEL (
   kind FULL
 );
 
+JINJA_QUERY_BEGIN;
 SELECT
   doi,
   {{ array_agg_distinct('name') }} AS author_names,
@@ -23,3 +24,4 @@ FROM (
   WHERE display_name IS NOT NULL
 )
 GROUP BY doi;
+JINJA_END;

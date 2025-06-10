@@ -4,6 +4,7 @@ MODEL (
   kind FULL
 );
 
+JINJA_QUERY_BEGIN;
 SELECT
   doi,
   {{ array_agg_distinct('ror') }} AS affiliation_rors,
@@ -26,3 +27,4 @@ FROM (
   WHERE ror IS NOT NULL
 )
 GROUP BY doi;
+JINJA_END;

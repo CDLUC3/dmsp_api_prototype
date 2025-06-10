@@ -4,6 +4,7 @@ MODEL (
   kind FULL
 );
 
+JINJA_QUERY_BEGIN;
 SELECT
   doi,
   {{ array_agg_distinct('award_id') }} AS award_ids,
@@ -23,3 +24,4 @@ FROM (
   WHERE award_id IS NOT NULL
 )
 GROUP BY doi;
+JINJA_END;
