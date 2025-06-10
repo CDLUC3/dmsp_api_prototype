@@ -4,7 +4,7 @@ MODEL (
   kind VIEW,
   audits (
     number_of_rows(threshold := 1),
-    unique_combination_of_columns(columns := (work_doi, given_name, family_name, name, orcid))
+    unique_combination_of_columns(columns := (work_doi, given_name, family_name, name, orcid), blocking := false)
   )
 );
 

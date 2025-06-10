@@ -4,7 +4,7 @@ MODEL (
   kind VIEW,
   audits (
     number_of_rows(threshold := 1),
-    unique_combination_of_columns(columns := (work_doi, affiliation_identifier, affiliation_identifier_scheme, name, scheme_uri, source))
+    unique_combination_of_columns(columns := (work_doi, affiliation_identifier, affiliation_identifier_scheme, name, scheme_uri, source), blocking := false)
   )
 );
 

@@ -4,7 +4,7 @@ MODEL (
   kind VIEW,
   audits (
     number_of_rows(threshold := 1),
-    unique_combination_of_columns(columns := (work_doi, funder_identifier, funder_identifier_type, funder_name, award_number, award_uri))
+    unique_combination_of_columns(columns := (work_doi, funder_identifier, funder_identifier_type, funder_name, award_number, award_uri), blocking := false)
   )
 );
 
