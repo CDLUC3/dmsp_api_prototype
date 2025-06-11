@@ -8,8 +8,8 @@ WITH base AS (
   SELECT
     id,
     doi
-  FROM openalex.works
-  WHERE doi IS NOT NULL AND NOT EXISTS (SELECT 1 FROM datacite_works WHERE openalex.works.doi = datacite_works.doi)
+  FROM openalex.works oaw
+  WHERE doi IS NOT NULL AND NOT EXISTS (SELECT 1 FROM datacite.works WHERE oaw.doi = datacite.works.doi)
 ),
 counts AS (
   SELECT
