@@ -4,10 +4,9 @@ MODEL (
   kind FULL
 );
 
-JINJA_QUERY_BEGIN;
 SELECT
   doi,
-  {{ array_agg_distinct('award_id') }} AS award_ids
+  @array_agg_distinct(award_id) AS award_ids
 FROM (
   -- OpenAlex
   SELECT owm.id, owm.doi, award_id
@@ -24,4 +23,3 @@ FROM (
   WHERE award IS NOT NULL
 )
 GROUP BY doi;
-JINJA_END;

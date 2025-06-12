@@ -16,6 +16,7 @@ FROM (
 
   UNION ALL
 
+ -- TODO: check if DOI is in OpenAlex?
   SELECT doi, updated_date
   FROM crossref.works
   WHERE doi IS NOT NULL AND updated_date IS NOT NULL

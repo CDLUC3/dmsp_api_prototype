@@ -4,10 +4,9 @@ MODEL (
   kind FULL
 );
 
-JINJA_QUERY_BEGIN;
 SELECT
   doi,
-  {{ array_agg_distinct('funder_id') }} AS funder_ids
+  @array_agg_distinct(funder_id) AS funder_ids
 FROM (
   -- OpenAlex
   -- Get OpenAlex funder Crossref Funder IDs
@@ -36,4 +35,3 @@ FROM (
   WHERE funder_doi IS NOT NULL
 )
 GROUP BY doi;
-JINJA_END;

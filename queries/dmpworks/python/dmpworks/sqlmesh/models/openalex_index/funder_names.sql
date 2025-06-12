@@ -4,10 +4,9 @@ MODEL (
   kind FULL
 );
 
-JINJA_QUERY_BEGIN;
 SELECT
   doi,
-  {{ array_agg_distinct('funder_name') }} AS funder_names
+  @array_agg_distinct(funder_name) AS funder_names
 FROM (
   -- OpenAlex
   SELECT owm.id, owm.doi, funder_display_name AS funder_name
@@ -24,4 +23,3 @@ FROM (
   WHERE name IS NOT NULL
 )
 GROUP BY doi;
-JINJA_END;

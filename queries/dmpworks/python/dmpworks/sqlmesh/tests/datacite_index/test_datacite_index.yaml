@@ -1,4 +1,4 @@
-test_datacite_index_award_ids:
+test_datacite_index_datacite_index:
   model: datacite_index.datacite_index
   inputs:
     datacite.works:
