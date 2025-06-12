@@ -1,53 +1,53 @@
-test_example_full_model:
+test_openalex_works_metadata:
   model: openalex_index.works_metadata
   inputs:
     # Works with DOIs in datacite.works should be removed from the outputs
     datacite.works:
-      - doi: "10.9999/future.2050.0005"
+      - doi: "10.9999/test.0005"
     openalex.works:
       rows:
-      - id: "W0000000001"
-        doi: "10.9999/future.2050.0001"
-        title: "Quantum Entanglement Networks"
-        abstract: "Instant communication using entangled particles."
-      - id: "W0000000002"
-        doi: "10.9999/future.2050.0002"
-        title: "AI Smart Cities"
-        abstract: "AI-driven model for smart cities."
-      # The following two works have duplicate DOIs, as found in OpenAlex
-      - id: "W0000000003"
-        doi: "10.9999/future.2050.0003"
-        title: "Programmable Matter"
-        abstract: null
-      - id: "W0000000004"
-        doi: "10.9999/future.2050.0003"
-        title: null
-        abstract: "Nanogrids allow materials to change shape on demand."
-      - id: "W0000000005"
-        doi: "10.9999/future.2050.0005"
-        title: "NanoShapeNet"
-        abstract: "A dataset of nanogrid configurations."
+        - id: "W0000000001"
+          doi: "10.9999/test.0001"
+          title: "Title One"
+          abstract: "Abstract One."
+        - id: "W0000000002"
+          doi: "10.9999/test.0002"
+          title: "Title 2"
+          abstract: "Abstract 2"
+        # The following two works have duplicate DOIs, as found in OpenAlex
+        - id: "W0000000003"
+          doi: "10.9999/test.0003"
+          title: "Title Three"
+          abstract: null
+        - id: "W0000000004"
+          doi: "10.9999/test.0003"
+          title: null
+          abstract: "Abstract Three."
+        - id: "W0000000005"
+          doi: "10.9999/test.0005"
+          title: "Title Five"
+          abstract: "Abstract Five"
   outputs:
     query:
       rows:
-      - id: "W0000000001"
-        doi: "10.9999/future.2050.0001"
-        title_length: 29
-        abstract_length: 48
-        is_duplicate: false
-      - id: "W0000000002"
-        doi: "10.9999/future.2050.0002"
-        title_length: 15
-        abstract_length: 33
-        is_duplicate: false
-      - id: "W0000000003"
-        doi: "10.9999/future.2050.0003"
-        title_length: 19
-        abstract_length: null
-        is_duplicate: true
-      - id: "W0000000004"
-        doi: "10.9999/future.2050.0003"
-        title_length: null
-        abstract_length: 52
-        is_duplicate: true
+        - id: "W0000000001"
+          doi: "10.9999/test.0001"
+          title_length: 9
+          abstract_length: 13
+          is_duplicate: false
+        - id: "W0000000002"
+          doi: "10.9999/test.0002"
+          title_length: 7
+          abstract_length: 10
+          is_duplicate: false
+        - id: "W0000000003"
+          doi: "10.9999/test.0003"
+          title_length: 11
+          abstract_length: null
+          is_duplicate: true
+        - id: "W0000000004"
+          doi: "10.9999/test.0003"
+          title_length: null
+          abstract_length: 15
+          is_duplicate: true
   

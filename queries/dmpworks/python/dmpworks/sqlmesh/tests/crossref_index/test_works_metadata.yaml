@@ -1,27 +1,27 @@
-test_example_full_model:
+test_crossref_index_works_metadata:
   model: crossref_index.works_metadata
   inputs:
     crossref.works:
       rows:
-      - doi: "10.9999/future.2050.0001"
-        title: "Quantum Entanglement Networks"
-        abstract: "Instant communication using entangled particles."
-      - doi: "10.9999/future.2050.0002"
-        title: null
-        abstract: "AI-driven model for smart cities."
-      - doi: "10.9999/future.2050.0003"
-        title: "Programmable Matter"
-        abstract: null
+        - doi: "10.9999/test.0001"
+          title: "Title One"
+          abstract: "Abstract One."
+        - doi: "10.9999/test.0002"
+          title: null
+          abstract: "Abstract 2."
+        - doi: "10.9999/test.0003"
+          title: "Title Three"
+          abstract: null
   outputs:
     query:
       rows:
-      - doi: "10.9999/future.2050.0001"
-        title_length: 29
-        abstract_length: 48
-      - doi: "10.9999/future.2050.0002"
-        title_length: null
-        abstract_length: 33
-      - doi: "10.9999/future.2050.0003"
-        title_length: 19
-        abstract_length: null
+        - doi: "10.9999/test.0001"
+          title_length: 9
+          abstract_length: 13
+        - doi: "10.9999/test.0002"
+          title_length: null
+          abstract_length: 11
+        - doi: "10.9999/test.0003"
+          title_length: 11
+          abstract_length: null
   

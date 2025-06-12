@@ -4,15 +4,13 @@ MODEL (
   kind FULL
 );
 
-JINJA_QUERY_BEGIN;
 SELECT
   doi,
-  {{ array_agg_distinct('name') }} AS funder_names,
+  @array_agg_distinct(name) AS funder_names,
 FROM (
   -- DataCite
-  SELECT doi, funder_name AS name
-  FROM datacite.works dw
-  INNER JOIN datacite.works_funders dwf ON dw.doi = dwf.work_doi
+  SELECT work_doi AS doi, funder_name AS name
+  FROM datacite.works_funders
   WHERE funder_name IS NOT NULL
 
   UNION ALL
@@ -24,4 +22,3 @@ FROM (
   WHERE funder_display_name IS NOT NULL
 )
 GROUP BY doi;
-JINJA_END;

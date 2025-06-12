@@ -4,17 +4,15 @@ MODEL (
   kind FULL
 );
 
-JINJA_QUERY_BEGIN;
 SELECT
   doi,
-  {{ array_agg_distinct('orcid') }} AS author_orcids,
+  @array_agg_distinct(orcid) AS author_orcids,
   FROM (
   -- Only use ORCID IDs for author identifiers
 
   -- DataCite
-  SELECT doi, orcid
-  FROM datacite.works dw
-  INNER JOIN datacite.works_authors dwa ON dw.doi = dwa.work_doi
+  SELECT work_doi AS doi, orcid
+  FROM datacite.works_authors
   WHERE orcid IS NOT NULL
 
   UNION ALL
@@ -26,4 +24,3 @@ SELECT
   WHERE orcid IS NOT NULL
 )
 GROUP BY doi;
-JINJA_END;

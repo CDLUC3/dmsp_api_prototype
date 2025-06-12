@@ -1,0 +1,36 @@
+test_datacite_index_award_ids:
+  model: datacite_index.award_ids
+  inputs:
+    datacite.works:
+      rows:
+        - doi: "10.9999/test.0001"
+        - doi: "10.9999/test.0002"
+        - doi: "10.9999/test.0003" # This item should be dropped as it has no award ids
+    datacite.works_funders:
+      rows:
+        - work_doi: "10.9999/test.0001"
+          award_number: "1"
+        - work_doi: "10.9999/test.0002"
+          award_number: "2"
+        - work_doi: "10.9999/test.0002"
+          award_number: null
+    openalex.works_funders:
+      rows:
+        - work_doi: "10.9999/test.0001"
+          award_id: "3"
+        - work_doi: "10.9999/test.0001" # nulls should be filtered out
+          award_id: null
+        - work_doi: "10.9999/test.0001" # duplicates should be filtered out
+          award_id: "1"
+        - work_doi: "10.9999/test.0002"
+          award_id: "4"
+        - work_doi: "10.9999/test.0002" # duplicates should be filtered out
+          award_id: "2"
+  outputs:
+    query:
+      rows:
+        - doi: "10.9999/test.0001"
+          award_ids: [ "1", "3" ]
+        - doi: "10.9999/test.0002"
+          award_ids: [ "2", "4" ]
+
