@@ -1,10 +1,16 @@
+/*
+  openalex_index.updated_dates:
+
+  Chooses the most recent update_date for each DOI from OpenAlex and Crossref Metadata.
+*/
+
+
 MODEL (
   name openalex_index.updated_dates,
   dialect duckdb,
   kind FULL
 );
 
--- Choose most recent update_date from OpenAlex and Crossref Metadata
 SELECT
   doi,
   MAX(updated_date) AS updated_date
@@ -16,9 +22,9 @@ FROM (
 
   UNION ALL
 
- -- TODO: check if DOI is in OpenAlex?
-  SELECT doi, updated_date
-  FROM crossref.works
-  WHERE doi IS NOT NULL AND updated_date IS NOT NULL
+  SELECT owm.doi, cfw.updated_date
+  FROM openalex_index.works_metadata AS owm
+  INNER JOIN crossref.works cfw ON owm.doi = cfw.doi
+  WHERE owm.doi IS NOT NULL AND cfw.updated_date IS NOT NULL
 )
 GROUP BY doi;

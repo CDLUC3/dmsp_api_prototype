@@ -1,3 +1,9 @@
+/*
+  openalex_index.award_ids:
+
+
+*/
+
 MODEL (
   name openalex_index.award_ids,
   dialect duckdb,

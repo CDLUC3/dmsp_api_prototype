@@ -1,4 +1,4 @@
-test_datacite_updated_dates:
+test_datacite_index_updated_dates:
   model: datacite_index.updated_dates
   inputs:
     datacite.works:

@@ -11,6 +11,12 @@ test_openalex_index_types:
           doi: "10.9999/test.0002"
         - id: "W0000000004"
           doi: "10.9999/test.0003"
+        - id: "W0000000005"
+          doi: "10.9999/test.0004"
+        - id: "W0000000006"
+          doi: "10.9999/test.0004"
+        - id: "W0000000007"
+          doi: "10.9999/test.0004"
     openalex.works:
       rows:
         - id: "W0000000001"
@@ -21,6 +27,12 @@ test_openalex_index_types:
           type: "dataset"
         - id: "W0000000004"
           type: null
+        - id: "W0000000005"
+          type: "article"
+        - id: "W0000000006"
+          type: "workflow"
+        - id: "W0000000007"
+          type: "workflow"
   outputs:
     query:
       rows:
@@ -28,4 +40,6 @@ test_openalex_index_types:
           type: "article"
         - doi: "10.9999/test.0002"
           type: "dataset"
+        - doi: "10.9999/test.0004"
+          type: "workflow"
 

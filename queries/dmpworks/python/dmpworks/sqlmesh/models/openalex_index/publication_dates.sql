@@ -1,3 +1,11 @@
+/*
+  openalex_index.publication_dates:
+
+  Handles cases where multiple OpenAlex records share the same DOI, by choosing
+  the most recent publication date for each DOI. DataCite works are excluded
+  via openalex_index.works_metadata.
+*/
+
 MODEL (
   name openalex_index.publication_dates,
   dialect duckdb,

@@ -1,3 +1,9 @@
+/*
+  openalex_index.funder_names:
+
+
+*/
+
 MODEL (
   name openalex_index.funder_names,
   dialect duckdb,

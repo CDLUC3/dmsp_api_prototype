@@ -33,5 +33,7 @@ FROM (
   FROM openalex_index.works_metadata AS owm
   INNER JOIN crossref.works_funders cwf ON owm.doi = cwf.work_doi
   WHERE funder_doi IS NOT NULL
+
+  -- TODO: also convert Crossref based IDs to RORs
 )
 GROUP BY doi;

@@ -1,3 +1,14 @@
+/*
+  openalex_index.title_stats:
+
+  Collates title specific metadata for each unique DOI. DataCite works are excluded in
+  openalex_index.works_metadata. The first SELECT processes OpenAlex works with duplicate DOIs,
+  selecting the work with the longest title. The second SELECT processes non-duplicate works.
+  Since this is the leftmost table in openalex_index.titles, it includes works also found in
+  Crossref Metadata, even if their titles are NULL (no length), ensuring they are available
+  for the subsequent step to check Crossref Metadata for more suitable titles.
+*/
+
 MODEL (
   name openalex_index.title_stats,
   dialect duckdb,

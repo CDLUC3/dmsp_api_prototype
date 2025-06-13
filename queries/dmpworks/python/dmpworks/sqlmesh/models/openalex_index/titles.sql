@@ -1,3 +1,9 @@
+/*
+  openalex_index.titles:
+
+  Chooses the longest title for each DOI from OpenAlex and Crossref Metadata.
+*/
+
 MODEL (
   name openalex_index.titles,
   dialect duckdb,
@@ -8,6 +14,7 @@ SELECT
   stats.doi,
   CASE
     WHEN cwm.title_length > stats.title_length THEN cfw.title
+    WHEN cwm.title_length IS NOT NULL AND stats.title_length IS NULL THEN cfw.title
     ELSE oaw.title
   END AS title
 FROM openalex_index.title_stats AS stats

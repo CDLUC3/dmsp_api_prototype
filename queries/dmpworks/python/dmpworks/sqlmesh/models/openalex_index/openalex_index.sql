@@ -1,14 +1,25 @@
+/*
+  openalex_index.award_ids:
+
+
+*/
+
 MODEL (
   name openalex_index.openalex_index,
   dialect duckdb,
   kind FULL
 );
 
+WITH dois AS (
+  SELECT DISTINCT doi
+  FROM openalex_index.works_metadata
+)
+
 SELECT
   dois.doi,
   openalex_index.titles.title,
   openalex_index.abstracts.abstract,
-  openalex_index.types.type,
+  COALESCE(openalex_index.types.type, 'other') AS type,
   openalex_index.publication_dates.publication_date,
   openalex_index.updated_dates.updated_date,
   COALESCE(openalex_index.affiliation_rors.affiliation_rors, []) AS affiliation_rors,
@@ -18,10 +29,7 @@ SELECT
   COALESCE(openalex_index.award_ids.award_ids, []) AS award_ids,
   COALESCE(openalex_index.funder_ids.funder_ids, []) AS funder_ids,
   COALESCE(openalex_index.funder_names.funder_names, []) AS funder_names
-FROM (
-  SELECT DISTINCT doi
-  FROM openalex_index.works_metadata
-) AS dois
+FROM dois
 LEFT JOIN openalex_index.titles ON dois.doi = openalex_index.titles.doi
 LEFT JOIN openalex_index.abstracts ON dois.doi = openalex_index.abstracts.doi
 LEFT JOIN openalex_index.types ON dois.doi = openalex_index.types.doi

@@ -1,0 +1,52 @@
+test_openalex_index_funder_ids:
+  model: openalex_index.funder_ids
+  inputs:
+    openalex_index.works_metadata:
+      rows:
+        - id: "W0000000001"
+          doi: "10.9999/test.0001"
+        - id: "W0000000002"
+          doi: "10.9999/test.0002"
+        - id: "W0000000003"
+          doi: "10.9999/test.0003"
+        - id: "W0000000004" # Dropped as no data associated with it
+          doi: "10.9999/test.0004"
+    openalex.works_funders:
+      rows:
+        - work_id: "W0000000001"
+          doi: "10.9999/test.0001"
+          funder_id: "F4320306076"
+        - work_id: "W0000000001"
+          doi: "10.9999/test.0001"
+          funder_id: "F4320321001"
+        - work_id: "W0000000002"
+          doi: "10.9999/test.0002"
+          funder_id: "F4320306076"
+    openalex.funders:
+      rows:
+        # National Science Foundation
+        - id: "F4320306076"
+          ids:
+            ror: "021nxhr62"
+            doi: "10.13039/100000001"
+        # National Natural Science Foundation of China
+        - id: "F4320321001"
+          ids:
+            ror: "01h0zpd94"
+            doi: "10.13039/501100001809"
+    crossref.works_funders:
+      - work_doi: "10.9999/test.0003"
+        funder_doi: "10.13039/501100001809"
+  outputs:
+    query:
+      rows:
+        # Case 1. OpenAlex Funder ID -> Crossref Funder IDs
+        # Case 2. OpenAlex Funder -> ROR IDs
+        - doi: "10.9999/test.0001"
+          funder_ids: [ "01h0zpd94", "021nxhr62", "10.13039/100000001", "10.13039/501100001809" ]
+        - doi: "10.9999/test.0002"
+          funder_ids: [ "021nxhr62", "10.13039/100000001" ]
+        # Case 3. Crossref Metadata Funder DOIs
+        - doi: "10.9999/test.0003"
+          funder_ids: [ "10.13039/501100001809"  ]
+        # TODO: Case 4. Crossref Metadata Funder DOIs -> RORs
