@@ -1,0 +1,36 @@
+test_datacite_index_author_names:
+  model: datacite_index.author_names
+  inputs:
+    datacite.works:
+      rows:
+        - doi: "10.9999/test.0001"
+        - doi: "10.9999/test.0002"
+        - doi: "10.9999/test.0003" # This item should be dropped as it has no names
+    datacite.works_authors:
+      rows:
+        - work_doi: "10.9999/test.0001"
+          name: "Albert Einstein"
+        - work_doi: "10.9999/test.0002"
+          name: "Isaac Newton"
+        - work_doi: "10.9999/test.0002"
+          name: null
+    openalex.works_authors:
+      rows:
+        - work_doi: "10.9999/test.0001"
+          display_name: "Marie Curie"
+        - work_doi: "10.9999/test.0001" # nulls should be filtered out
+          display_name: null
+        - work_doi: "10.9999/test.0001" # duplicates should be filtered out
+          display_name: "Albert Einstein"
+        - work_doi: "10.9999/test.0002"
+          display_name: "Richard Feynman"
+        - work_doi: "10.9999/test.0002" # duplicates should be filtered out
+          display_name: "Isaac Newton"
+  outputs:
+    query:
+      rows:
+        - doi: "10.9999/test.0001"
+          author_names: [ "Albert Einstein", "Marie Curie" ]
+        - doi: "10.9999/test.0002"
+          author_names: [ "Isaac Newton", "Richard Feynman" ]
+
