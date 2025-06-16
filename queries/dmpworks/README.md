@@ -125,7 +125,12 @@ Source the .env file:
 source .env
 ```
 
-Run the plan command (select y):
+To run the unit tests:
+```bash
+sqlmesh test -vv
+```
+
+To generate the export parquet files, run the plan command (select y):
 ```bash
 sqlmesh plan -vv
 ```
