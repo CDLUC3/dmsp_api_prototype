@@ -136,8 +136,7 @@ Create the OpenSearch works index:
 dmpworks opensearch create-index works-test works-mapping.json
 ```
 
-Sync the hive partitioned works export with the OpenSearch works index, with an 
-optional start date:
+Sync the works index export with the OpenSearch works index:
 ```bash
-dmpworks opensearch sync-works works-test /path/to/export --start-date 2024-01-01
+dmpworks opensearch sync-works works-test /path/to/export
 ```
