@@ -1,7 +1,7 @@
 /*
-  openalex_index.award_ids:
+  openalex_index.openalex_index:
 
-
+  Creates the OpenAlex index table.
 */
 
 MODEL (
@@ -43,17 +43,3 @@ LEFT JOIN openalex_index.award_ids ON dois.doi = openalex_index.award_ids.doi
 LEFT JOIN openalex_index.funder_ids ON dois.doi = openalex_index.funder_ids.doi
 LEFT JOIN openalex_index.funder_names ON dois.doi = openalex_index.funder_names.doi;
 
---UNCACHE TABLE ids_temp;
---DROP TABLE openalex_index.titles;
---DROP TABLE openalex_index.titles;
---DROP TABLE openalex_index.abstracts;
---DROP TABLE openalex_index.types;
---DROP TABLE openalex_index.publication_dates;
---DROP TABLE openalex_index.updated_dates;
---DROP TABLE openalex_index.affiliation_names;
---DROP TABLE openalex_index.affiliation_rors;
---DROP TABLE openalex_index.author_names;
---DROP TABLE openalex_index.author_orcids;
---DROP TABLE openalex_index.award_ids;
---DROP TABLE openalex_index.funder_ids;
---DROP TABLE openalex_index.funder_names;

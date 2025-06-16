@@ -1,3 +1,10 @@
+/*
+  datacite_index.funder_names:
+
+  Aggregates distinct funder names for DataCite works found in DataCite and
+  OpenAlex, grouped by DOI.
+*/
+
 MODEL (
   name datacite_index.funder_names,
   dialect duckdb,

@@ -1,9 +1,9 @@
 /*
   openalex_index.author_names:
 
-  Aggregates distinct affiliation author names for each OpenAlex work, grouped by DOI.
-  Grouping by DOI also handles cases where multiple OpenAlex records share the same DOI.
-  DataCite works are excluded via openalex_index.works_metadata.
+  Aggregates distinct affiliation author names for each OpenAlex work, grouped
+  by DOI. Grouping by DOI also handles cases where multiple OpenAlex records
+  share the same DOI. DataCite works are excluded via openalex_index.works_metadata.
 */
 
 MODEL (

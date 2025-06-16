@@ -1,3 +1,12 @@
+/*
+  datacite_index.affiliation_rors:
+
+  Aggregates distinct affiliation ROR identifiers for DataCite works found in
+  DataCite and OpenAlex, grouped by DOI. The DataCite affiliation_identifier
+  field contains a variety of different identifiers, which are converted into
+  ROR identifiers.
+*/
+
 MODEL (
   name datacite_index.affiliation_rors,
   dialect duckdb,

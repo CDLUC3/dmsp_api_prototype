@@ -1,3 +1,10 @@
+/*
+  datacite_index.affiliation_names:
+
+  Aggregates distinct affiliation names for DataCite works found in DataCite
+  and OpenAlex, grouped by DOI.
+*/
+
 MODEL (
   name datacite_index.affiliation_names,
   dialect duckdb,

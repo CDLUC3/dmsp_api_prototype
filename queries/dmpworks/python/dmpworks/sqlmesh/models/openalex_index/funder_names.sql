@@ -1,7 +1,9 @@
 /*
   openalex_index.funder_names:
 
-
+  Aggregates distinct funder names from OpenAlex and Crossref Metadata, grouped
+  by DOI. Grouping by DOI also handles cases where multiple OpenAlex records
+  share the same DOI. DataCite works are excluded via openalex_index.works_metadata.
 */
 
 MODEL (

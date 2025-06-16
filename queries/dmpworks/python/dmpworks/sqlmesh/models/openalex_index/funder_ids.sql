@@ -1,3 +1,14 @@
+/*
+  openalex_index.funder_ids:
+
+  Aggregates distinct funder identifiers from OpenAlex and Crossref Metadata,
+  grouped by DOI. OpenAlex funder IDs are converted into both Crossref Funder IDs
+  and ROR IDs. Crossref Funder IDs from Crossref Metadata are kept as they are
+  and also converted into ROR IDs. Grouping by DOI also handles cases where
+  multiple OpenAlex records share the same DOI. DataCite works are excluded via
+  openalex_index.works_metadata.
+*/
+
 MODEL (
   name openalex_index.funder_ids,
   dialect duckdb,
@@ -28,12 +39,19 @@ FROM (
 
   UNION ALL
 
-  -- Crossref Metadata
+  -- Crossref Metadata: Crossref Funder IDs
   SELECT owm.id, owm.doi, funder_doi AS funder_id
   FROM openalex_index.works_metadata AS owm
   INNER JOIN crossref.works_funders cwf ON owm.doi = cwf.work_doi
   WHERE funder_doi IS NOT NULL
 
-  -- TODO: also convert Crossref based IDs to RORs
+  UNION ALL
+
+  -- Crossref Metadata: convert Crossref Funder IDs to RORs
+  SELECT owm.id, owm.doi, ror.index.ror_id AS funder_id
+  FROM openalex_index.works_metadata AS owm
+  INNER JOIN crossref.works_funders cwf ON owm.doi = cwf.work_doi
+  INNER JOIN ror.index ON cwf.funder_doi = ror.index.identifier
+  WHERE funder_doi IS NOT NULL
 )
 GROUP BY doi;

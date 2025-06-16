@@ -1,3 +1,10 @@
+/*
+  datacite_index.datacite_index:
+
+  Creates the DataCite index table.
+*/
+
+
 MODEL (
   name datacite_index.datacite_index,
   dialect duckdb,
@@ -28,13 +35,3 @@ LEFT JOIN datacite_index.author_orcids ON datacite.works.doi = datacite_index.au
 LEFT JOIN datacite_index.award_ids ON datacite.works.doi = datacite_index.award_ids.doi
 LEFT JOIN datacite_index.funder_ids ON datacite.works.doi = datacite_index.funder_ids.doi
 LEFT JOIN datacite_index.funder_names ON datacite.works.doi = datacite_index.funder_names.doi;
-
---DROP TABLE datacite_index.types;
---DROP TABLE datacite_index.updated_dates;
---DROP TABLE datacite_index.affiliation_names;
---DROP TABLE datacite_index.affiliation_rors;
---DROP TABLE datacite_index.author_names;
---DROP TABLE datacite_index.author_orcids;
---DROP TABLE datacite_index.award_ids;
---DROP TABLE datacite_index.funder_ids;
---DROP TABLE datacite_index.funder_names;

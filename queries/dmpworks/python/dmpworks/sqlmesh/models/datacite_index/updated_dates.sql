@@ -1,3 +1,9 @@
+/*
+  datacite_index.updated_dates:
+
+  Chooses the most recent update_date for each DOI from DataCite and OpenAlex.
+*/
+
 MODEL (
   name datacite_index.updated_dates,
   dialect duckdb,

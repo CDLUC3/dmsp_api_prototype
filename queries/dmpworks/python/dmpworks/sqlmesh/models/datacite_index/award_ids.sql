@@ -1,3 +1,10 @@
+/*
+  datacite_index.award_ids:
+
+  Aggregates distinct award identifiers for DataCite works found in DataCite and
+  OpenAlex, grouped by DOI.
+*/
+
 MODEL (
   name datacite_index.award_ids,
   dialect duckdb,

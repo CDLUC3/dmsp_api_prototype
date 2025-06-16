@@ -1,8 +1,8 @@
 /*
   openalex_index.types:
 
-  Chooses the most common type for each DOI from OpenAlex when
-  there are multiple OpenAlex works with the same DOI.
+  Chooses the most common type for each DOI from OpenAlex when there are
+  multiple OpenAlex works with the same DOI.
 */
 
 MODEL (

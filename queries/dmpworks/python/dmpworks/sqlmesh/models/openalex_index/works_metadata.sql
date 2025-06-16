@@ -1,12 +1,13 @@
 /*
   openalex_index.works_metadata:
 
-  Filters out OpenAlex works that are also present in DataCite, and then collates metadata
-  for the remaining works — including OpenAlex ID, DOI, title length, abstract length and a
-  duplicate flag (whether another OpenAlex work shares the same DOI).
+  Filters out OpenAlex works that are also present in DataCite, and then
+  collates metadata for the remaining works — including OpenAlex ID, DOI, title
+  length, abstract length and a duplicate flag (whether another OpenAlex work
+  shares the same DOI).
 
-  This table is used by downstream queries as the leftmost table in joins, so that non-DataCite
-  OpenAlex works are used in further processing.
+  This table is used by downstream queries as the leftmost table in joins, so
+  that non-DataCite OpenAlex works are used in further processing.
 */
 
 MODEL (

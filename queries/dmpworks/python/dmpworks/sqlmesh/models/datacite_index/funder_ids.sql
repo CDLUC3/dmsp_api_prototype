@@ -1,3 +1,15 @@
+/*
+  datacite_index.funder_ids:
+
+  Aggregates distinct funder identifiers for DataCite works, from DataCite and
+  OpenAlex, grouped by DOI. DateCite contains a variety of funder identifiers,
+  the Crossref funder identifiers are kept, then all funder identifiers are also
+  converted into ROR identifiers. OpenAlex funder IDs are converted into both
+  Crossref Funder IDs and ROR IDs. Grouping by DOI also handles cases where
+  multiple OpenAlex records share the same DOI. DataCite works are excluded via
+  openalex_index.works_metadata.
+*/
+
 MODEL (
   name datacite_index.funder_ids,
   dialect duckdb,

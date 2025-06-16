@@ -1,3 +1,10 @@
+/*
+  datacite_index.types:
+
+  Consolidates DataCite types into a set of types more compatible with OpenAlex
+  types.
+*/
+
 MODEL (
   name datacite_index.types,
   dialect duckdb,

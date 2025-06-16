@@ -1,9 +1,10 @@
 /*
   openalex_index.author_orcids:
 
-  Aggregates distinct affiliation author ORCID IDs for each OpenAlex work, grouped by DOI.
-  Grouping by DOI also handles cases where multiple OpenAlex records share the same DOI.
-  DataCite works are excluded via openalex_index.works_metadata.
+  Aggregates distinct affiliation author ORCID identifiers for each OpenAlex work,
+  grouped by DOI. Grouping by DOI also handles cases where multiple OpenAlex
+  records share the same DOI. DataCite works are excluded via
+  openalex_index.works_metadata.
 */
 
 MODEL (

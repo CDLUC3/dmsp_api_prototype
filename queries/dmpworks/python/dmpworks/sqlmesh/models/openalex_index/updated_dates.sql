@@ -1,7 +1,8 @@
 /*
   openalex_index.updated_dates:
 
-  Chooses the most recent update_date for each DOI from OpenAlex and Crossref Metadata.
+  Chooses the most recent update_date for each DOI from OpenAlex and Crossref
+  Metadata.
 */
 
 

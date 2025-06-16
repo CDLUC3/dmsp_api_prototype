@@ -1,3 +1,10 @@
+/*
+  datacite_index.author_names:
+
+  Aggregates distinct author names for DataCite works found in DataCite and
+  OpenAlex, grouped by DOI.
+*/
+
 MODEL (
   name datacite_index.author_names,
   dialect duckdb,

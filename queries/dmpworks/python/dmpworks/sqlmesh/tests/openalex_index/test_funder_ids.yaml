@@ -1,6 +1,14 @@
 test_openalex_index_funder_ids:
   model: openalex_index.funder_ids
   inputs:
+    ror.index:
+      rows:
+        - ror_id: "01h0zpd94"
+          type: "ror"
+          identifier: "01h0zpd94"
+        - ror_id: "01h0zpd94"
+          type: "fundref"
+          identifier: "10.13039/501100001809"
     openalex_index.works_metadata:
       rows:
         - id: "W0000000001"
@@ -47,6 +55,6 @@ test_openalex_index_funder_ids:
         - doi: "10.9999/test.0002"
           funder_ids: [ "021nxhr62", "10.13039/100000001" ]
         # Case 3. Crossref Metadata Funder DOIs
+        # Case 4. Crossref Metadata Funder DOIs -> RORs
         - doi: "10.9999/test.0003"
-          funder_ids: [ "10.13039/501100001809"  ]
-        # TODO: Case 4. Crossref Metadata Funder DOIs -> RORs
+          funder_ids: [ "01h0zpd94", "10.13039/501100001809" ]

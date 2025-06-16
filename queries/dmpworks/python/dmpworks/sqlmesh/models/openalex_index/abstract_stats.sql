@@ -1,12 +1,13 @@
 /*
   openalex_index.abstract_stats:
 
-  Collates abstract specific metadata for each unique DOI. DataCite works are excluded in
-  openalex_index.works_metadata. The first SELECT processes OpenAlex works with duplicate DOIs,
-  selecting the work with the longest abstract. The second SELECT processes non-duplicate works.
-  Since this is the leftmost table in openalex_index.abstracts, it includes works also found in
-  Crossref Metadata, even if their abstracts are NULL (no length), ensuring they are available
-  for the subsequent step to check Crossref Metadata for more suitable abstracts.
+  Collates abstract specific metadata for each unique DOI. DataCite works are
+  excluded in openalex_index.works_metadata. The first SELECT processes OpenAlex
+  works with duplicate DOIs, selecting the work with the longest abstract. The
+  second SELECT processes non-duplicate works. Since this is the leftmost table
+  in openalex_index.abstracts, it includes works also found in Crossref Metadata,
+  even if their abstracts are NULL (no length), ensuring they are available for
+  the subsequent step to check Crossref Metadata for more suitable abstracts.
 */
 
 MODEL (

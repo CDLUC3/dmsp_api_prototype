@@ -1,3 +1,10 @@
+/*
+  datacite_index.author_orcids:
+
+  Aggregates distinct author ORCID identifiers for DataCite works found in
+  DataCite and OpenAlex, grouped by DOI.
+*/
+
 MODEL (
   name datacite_index.author_orcids,
   dialect duckdb,

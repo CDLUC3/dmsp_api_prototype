@@ -1,7 +1,10 @@
 /*
   openalex_index.award_ids:
 
-
+  Aggregates distinct affiliation award identifiers for each OpenAlex and Crossref
+  Metadata work, grouped by DOI. Grouping by DOI also handles cases where
+  multiple OpenAlex records share the same DOI. DataCite works are excluded via
+  openalex_index.works_metadata.
 */
 
 MODEL (
