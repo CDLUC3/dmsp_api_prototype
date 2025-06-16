@@ -5,17 +5,23 @@ gateways:
       # https://sqlmesh.readthedocs.io/en/stable/reference/configuration/#connections
       # https://sqlmesh.readthedocs.io/en/stable/integrations/engines/duckdb/#connection-options
       type: duckdb
-      database: db.db
+      database: /path/to/db.db
       # concurrent_tasks: 1
       # register_comments: True
       # pre_ping: False
       # pretty_sql: False
       # catalogs: 
       # extensions: 
-      # connector_config: 
+      connector_config:
+        threads: 1
+        memory_limit: '80GB'
+        preserve_insertion_order: 'false'
       # secrets: 
       # token: 
 
+variables:
+  data_path: "/path/to/parquets/"
+  export_path: "/path/to/export/"
 
 default_gateway: duckdb
 

@@ -20,7 +20,15 @@ def load_ror(ror_v2_json_file: pathlib.Path):
 
 
 def create_ror_index(ror_df: pl.DataFrame) -> pl.DataFrame:
-    return (
+    # Get all unique ROR IDs
+    ror_ids = (
+        ror_df.select(ror_id=normalise_identifier(pl.col("id")))
+        .unique()
+        .with_columns(type=pl.lit("ror"), identifier=pl.col("ror_id"))
+    )
+
+    # Build mappings to other IDs
+    other_ids = (
         ror_df.select(ror_id=normalise_identifier(pl.col("id")), external_ids=pl.col("external_ids"))
         .explode("external_ids")
         .unnest("external_ids")
@@ -37,6 +45,8 @@ def create_ror_index(ror_df: pl.DataFrame) -> pl.DataFrame:
             .otherwise(pl.col("identifier").str.strip_chars().str.to_lowercase()),
         )
     )
+
+    return pl.concat([ror_ids, other_ids])
 
 
 def setup_parser(parser: argparse.ArgumentParser) -> None:
