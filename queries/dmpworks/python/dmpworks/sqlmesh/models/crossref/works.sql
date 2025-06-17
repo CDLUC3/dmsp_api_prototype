@@ -3,7 +3,7 @@ MODEL (
   dialect duckdb,
   kind VIEW,
   audits (
-    number_of_rows(threshold := 167008747),
+    number_of_rows(threshold := @VAR('audit_crossref_works_threshold')),
     unique_values(columns := (doi), blocking := false),
     not_empty_string(column := doi, blocking := false),
     not_empty_string(column := title, blocking := false),

@@ -22,6 +22,11 @@ gateways:
 variables:
   data_path: "/path/to/parquets/"
   export_path: "/path/to/export/"
+  audit_crossref_works_threshold: 167008747
+  audit_datacite_works_threshold: 72019576
+  audit_openalex_works_threshold: 264675126
+
+
 
 default_gateway: duckdb
 

@@ -3,7 +3,7 @@ MODEL (
   dialect duckdb,
   kind VIEW,
   audits (
-    number_of_rows(threshold := 264675126),
+    number_of_rows(threshold := @VAR('audit_openalex_works_threshold')),
     unique_values(columns := (id), blocking := false),
     not_empty_string(column := id, blocking := false),
     not_empty_string(column := doi, blocking := false),
