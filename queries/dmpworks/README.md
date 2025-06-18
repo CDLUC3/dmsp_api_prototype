@@ -48,7 +48,8 @@ Install dmpworks Python package dependencies:
 (cd dmsp_api_prototype/queries/dmpworks && pip install -e .[dev])
 ```
 
-Build and install the dmpworks Python package, including its Polars expression plugin:
+Build and install the dmpworks Python package, including its Polars expression 
+plugin:
 ```bash
 (cd dmsp_api_prototype/queries/dmpworks && RUSTFLAGS="-C target-cpu=native" maturin develop --release)
 ```
@@ -73,8 +74,9 @@ Data sources:
 * ROR: https://zenodo.org/records/15132361
 
 ## Transform Source Datasets
-Run the following commands to convert the source datasets into Parquet files. This step also performs some normalization,
-such as normalization of identifiers. Note: The full output directory must already exist before you run the commands.
+Run the following commands to convert the source datasets into Parquet files. 
+This step also performs some normalization, such as normalization of identifiers. 
+Note: The full output directory must already exist before you run the commands.
 
 Crossref Metadata:
 ```bash
@@ -102,7 +104,36 @@ dmpworks transform ror /path/to/ror/v1.63-2025-04-03-ror-data/v1.63-2025-04-03-r
 ```
 
 ## Create Works Index Table
-TODO
+[SQL Mesh](https://sqlmesh.readthedocs.io/en/latest/) is used to join the datasets 
+and produce the works index parquet files. This functionality will be directly 
+added to the dmpworks command line in the future.
+
+Enter SQL Mesh folder:
+```bash
+cd dmpworks/sqlmesh
+```
+
+Make a .env file with the following exports, customise each one:
+```
+export SQLMESH__GATEWAYS__DUCKDB__CONNECTION__DATABASE=/path/to/db.db
+export SQLMESH__VARIABLES__DATA_PATH=/path/to/parquets/
+export SQLMESH__VARIABLES__EXPORT_PATH=/path/to/export/
+```
+
+Source the .env file:
+```bash
+source .env
+```
+
+To run the unit tests:
+```bash
+sqlmesh test -vv
+```
+
+To generate the export parquet files, run the plan command (select y):
+```bash
+sqlmesh plan -vv
+```
 
 ## Create OpenSearch Indexes
 Create the OpenSearch works index:
@@ -110,7 +141,7 @@ Create the OpenSearch works index:
 dmpworks opensearch create-index works-test works-mapping.json
 ```
 
-Sync the hive partitioned works export with the OpenSearch works index, with an optional start date:
+Sync the works index export with the OpenSearch works index:
 ```bash
-dmpworks opensearch sync-works works-test /path/to/export --start-date 2024-01-01
+dmpworks opensearch sync-works works-test /path/to/export
 ```
