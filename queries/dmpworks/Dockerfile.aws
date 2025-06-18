@@ -1,0 +1,65 @@
+FROM amazonlinux:2023
+
+# Build arguments
+ARG RUST_TARGET_CPU="x86-64-v3"
+ENV RUST_TARGET_CPU=${RUST_TARGET_CPU}
+ENV PIP_REQUIRE_VIRTUALENV=true
+ENV VENV_PATH=/app/polars/.venv
+ENV VENV_ACT_PATH=${VENV_PATH}/bin/activate
+
+# Install system dependencies
+RUN dnf -y install \
+    aws-cli \
+    tar \
+    zip \
+    pigz \
+    wget \
+    gzip \
+    python3.12 \
+    python3.12-pip \
+    git
+
+RUN dnf group install -y "Development Tools"
+
+# Install Rust
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+WORKDIR /app
+
+# Install s5cmd: https://github.com/peak/s5cmd
+RUN wget https://github.com/peak/s5cmd/releases/download/v2.3.0/s5cmd_2.3.0_Linux-64bit.tar.gz
+RUN tar -xzf s5cmd_2.3.0_Linux-64bit.tar.gz s5cmd
+RUN chmod +x s5cmd
+RUN mv s5cmd /usr/local/bin/
+RUN rm s5cmd_2.3.0_Linux-64bit.tar.gz
+
+# Clone dependencies
+RUN git clone https://github.com/CDLUC3/dmsp_api_prototype.git
+RUN git clone --branch fix-load-json-as-string --single-branch https://github.com/jdddog/polars.git
+RUN git clone --branch local-build --single-branch https://github.com/jdddog/pyo3-polars.git
+
+# Setup Python virtual environment
+# TODO: would be good to get rid of the venv, but polars expects it (or creates it
+# if it doesn't exist) when building
+RUN python3.12 -m venv ${VENV_PATH}
+
+# Install Polars dependencies
+RUN rustup toolchain install nightly --component miri
+WORKDIR /app/polars/py-polars
+RUN source ${VENV_ACT_PATH} && make requirements
+RUN source ${VENV_ACT_PATH} && RUSTFLAGS="-C target-cpu=${RUST_TARGET_CPU}" make build-dist-release
+
+# Install dmpworks Python package dependencies
+WORKDIR /app/dmsp_api_prototype/queries/dmpworks
+RUN source ${VENV_ACT_PATH} && pip install -e .[dev]
+
+# Build and install the dmpworks Python package, including its Polars expression
+RUN source ${VENV_ACT_PATH} && RUSTFLAGS="-C target-cpu=${RUST_TARGET_CPU}" maturin develop --release
+
+WORKDIR /app
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/bin/bash"]
