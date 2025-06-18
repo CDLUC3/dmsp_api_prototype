@@ -23,13 +23,11 @@ def load_dataset(
 
     # Optionally filter by start date
     if start_date is not None:
-        expr = (
-            (ds.field("year") > start_date.year)
-            | ((ds.field("year") == start_date.year) & (ds.field("month") > start_date.month))
-            | (
-                (ds.field("year") == start_date.year)
-                & (ds.field("month") == start_date.month)
-                & (ds.field("day") >= start_date.day)
+        expr = (ds.field("year") > start_date.year) | (
+            (ds.field("year") == start_date.year)
+            & (
+                (ds.field("month") > start_date.month)
+                | ((ds.field("month") == start_date.month) & (ds.field("day") >= start_date.day))
             )
         )
         dataset = dataset.filter(expr)
@@ -138,16 +136,14 @@ def parallel_index_actions(
                 failed_ids.append(info.get("update", {}).get("_id"))
 
             if total % chunk_size == 0:
-                pbar.set_postfix({
-                    "Success": f"{success_count:,}",
-                    "Fail": f"{fail_count:,}"
-                })
+                pbar.set_postfix({"Success": f"{success_count:,}", "Fail": f"{fail_count:,}"})
 
     logging.info(f"Bulk indexing complete. Total: {total:,}, Success: {success_count:,}, Failures: {fail_count:,}")
 
     # Print out failed IDs
     if failed_ids:
         logging.error(f"Failed to index {len(failed_ids)} documents: {', '.join(failed_ids)}")
+
 
 def parse_date(s: str) -> pendulum.Date:
     try:
