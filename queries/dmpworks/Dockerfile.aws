@@ -34,8 +34,7 @@ RUN chmod +x s5cmd
 RUN mv s5cmd /usr/local/bin/
 RUN rm s5cmd_2.3.0_Linux-64bit.tar.gz
 
-# Clone dependencies
-RUN git clone https://github.com/CDLUC3/dmsp_api_prototype.git
+# Clone Polars dependencies
 RUN git clone --branch fix-load-json-as-string --single-branch https://github.com/jdddog/polars.git
 RUN git clone --branch local-build --single-branch https://github.com/jdddog/pyo3-polars.git
 
@@ -50,8 +49,11 @@ WORKDIR /app/polars/py-polars
 RUN source ${VENV_ACT_PATH} && make requirements
 RUN source ${VENV_ACT_PATH} && RUSTFLAGS="-C target-cpu=${RUST_TARGET_CPU}" make build-dist-release
 
-# Install dmpworks Python package dependencies
+# Copy current dir
 WORKDIR /app/dmsp_api_prototype/queries/dmpworks
+COPY . .
+
+# Install dmpworks Python package dependencies
 RUN source ${VENV_ACT_PATH} && pip install -e .[dev]
 
 # Build and install the dmpworks Python package, including its Polars expression
