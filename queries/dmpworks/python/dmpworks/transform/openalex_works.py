@@ -8,7 +8,7 @@ import polars as pl
 from dmpworks.transform.pipeline import process_files_parallel
 from dmpworks.transform.transforms import clean_string, make_page, normalise_identifier
 from dmpworks.transform.utils_cli import add_common_args, copy_dict, handle_errors, validate_common_args
-from dmpworks.transform.utils_file import read_jsonls, validate_directory
+from dmpworks.transform.utils_file import read_jsonls, setup_multiprocessing_logging
 from polars._typing import SchemaDefinition
 
 logger = logging.getLogger(__name__)
@@ -181,7 +181,7 @@ def setup_parser(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "in_dir",
         type=pathlib.Path,
-        help="Path to the OpenAlex snapshot root directory (e.g. /path/to/openalex_snapshot)",
+        help="Path to the OpenAlex funders directory (e.g. /path/to/openalex_snapshot/data/funders)",
     )
     parser.add_argument(
         "out_dir",
@@ -208,14 +208,11 @@ def setup_parser(parser: argparse.ArgumentParser) -> None:
 
 
 def handle_command(args: argparse.Namespace):
-    logging.basicConfig(level=logging.DEBUG)
+    setup_multiprocessing_logging(logging.getLevelName(args.log_level))
 
     # Validate
     errors = []
-    if not args.in_dir.is_dir() and not validate_directory(
-        args.in_dir,
-        ["data", "browse.html", "LICENSE.txt", "README.txt", "RELEASE_NOTES.txt"],
-    ):
+    if not args.in_dir.is_dir():
         errors.append(f"in_dir '{args.in_dir}' is not a valid directory.")
 
     if not args.out_dir.is_dir():
@@ -226,7 +223,7 @@ def handle_command(args: argparse.Namespace):
 
     table_dir = args.in_dir / "data" / "works"
     process_files_parallel(
-        **copy_dict(vars(args), ["in_dir", "command", "transform_command", "func"]),
+        **copy_dict(vars(args), ["command", "transform_command", "func"]),
         in_dir=table_dir,
         schema=WORKS_SCHEMA,
         transform_func=transform_works,

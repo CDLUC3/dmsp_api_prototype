@@ -7,7 +7,7 @@ import polars as pl
 from dmpworks.transform.pipeline import process_files_parallel
 from dmpworks.transform.transforms import date_parts_to_date, normalise_identifier, remove_markup
 from dmpworks.transform.utils_cli import add_common_args, copy_dict, handle_errors, validate_common_args
-from dmpworks.transform.utils_file import extract_gzip, read_jsonls, validate_directory
+from dmpworks.transform.utils_file import extract_gzip, read_jsonls, setup_multiprocessing_logging, validate_directory
 from polars._typing import SchemaDefinition
 
 logger = logging.getLogger(__name__)
@@ -231,7 +231,7 @@ def setup_parser(parser: ArgumentParser) -> None:
 
 
 def handle_command(args: Namespace):
-    logging.basicConfig(level=logging.DEBUG)
+    setup_multiprocessing_logging(logging.getLevelName(args.log_level))
 
     # Validate
     errors = []

@@ -5,6 +5,7 @@ import pathlib
 import polars
 import polars as pl
 from dmpworks.transform.transforms import normalise_identifier, normalise_isni
+from dmpworks.transform.utils_file import setup_multiprocessing_logging
 from polars._typing import SchemaDefinition
 
 SCHEMA: SchemaDefinition = {
@@ -67,7 +68,7 @@ def setup_parser(parser: argparse.ArgumentParser) -> None:
 
 
 def handle_command(args: argparse.Namespace):
-    logging.basicConfig(level=logging.DEBUG)
+    setup_multiprocessing_logging(logging.getLevelName(args.log_level))
 
     df_ror = load_ror(args.ror_v2_json_file)
     df_ror_index = create_ror_index(df_ror)
