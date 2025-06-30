@@ -27,7 +27,7 @@ FROM (
   -- Crossref Metadata
   SELECT owm.id, owm.doi, name AS funder_name
   FROM openalex_index.works_metadata AS owm
-  INNER JOIN crossref.works_funders cwf ON owm.doi = cwf.work_doi
+  INNER JOIN crossref_metadata.works_funders cwf ON owm.doi = cwf.work_doi
   WHERE name IS NOT NULL
 )
 GROUP BY doi;

@@ -62,6 +62,13 @@ def setup_parser(parser: argparse.ArgumentParser) -> None:
         type=pathlib.Path,
         help="Path to the output directory (e.g. /path/to/ror_transformed).",
     )
+    log_levels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"]
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        help=f"Logging verbosity. Choices: {', '.join(log_levels)} (default: %(default)s)",
+    )
 
     # Callback function
     parser.set_defaults(func=handle_command)

@@ -221,10 +221,8 @@ def handle_command(args: argparse.Namespace):
     validate_common_args(args, errors)
     handle_errors(errors)
 
-    table_dir = args.in_dir / "data" / "works"
     process_files_parallel(
         **copy_dict(vars(args), ["command", "transform_command", "func"]),
-        in_dir=table_dir,
         schema=WORKS_SCHEMA,
         transform_func=transform_works,
         file_glob="**/*.gz",

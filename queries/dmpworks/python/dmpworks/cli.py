@@ -4,6 +4,7 @@ from dmpworks.transform.crossref_metadata import setup_parser as setup_crossref_
 from dmpworks.transform.datacite import setup_parser as setup_datacite
 from dmpworks.transform.openalex_works import setup_parser as setup_openalex_works
 from dmpworks.transform.openalex_funders import setup_parser as setup_openalex_funders
+from dmpworks.transform.demo_dataset import setup_parser as setup_demo_dataset
 from dmpworks.transform.ror import setup_parser as setup_ror
 from dmpworks.opensearch.create_index import setup_parser as setup_create_index
 from dmpworks.opensearch.sync_works import setup_parser as setup_sync_works
@@ -49,6 +50,12 @@ def main():
         description="Transform ROR to Parquet for the DMP Tool.",
     )
     setup_ror(ror_parser)
+
+    demo_dataset_parser = transform_subparsers.add_parser(
+        "demo-dataset",
+        description="Create demo datasets from original sources.",
+    )
+    setup_demo_dataset(demo_dataset_parser)
 
     # OpenSearch Commands
     os_parser = subparsers.add_parser("opensearch")

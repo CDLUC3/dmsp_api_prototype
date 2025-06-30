@@ -20,7 +20,7 @@ test_openalex_index_updated_dates:
         - id: "W0000000003"
           doi: "10.9999/test.0003"
           updated_date: null
-    crossref.works:
+    crossref_metadata.works:
       rows:
         - doi: "10.9999/test.0001"
           updated_date: "2025-01-01 00:00:00"

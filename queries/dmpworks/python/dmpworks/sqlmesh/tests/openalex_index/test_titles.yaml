@@ -31,7 +31,7 @@ test_openalex_index_titles:
           title_length: 7
         - doi: "10.9999/test.0003"
           title_length: 7
-    crossref.works:
+    crossref_metadata.works:
       rows:
         - doi: "10.9999/test.0001"
           title: "Title One"

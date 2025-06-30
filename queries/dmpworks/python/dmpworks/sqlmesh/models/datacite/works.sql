@@ -3,7 +3,7 @@ MODEL (
   dialect duckdb,
   kind VIEW,
   audits (
-    number_of_rows(threshold := @VAR('audit_datacite_works_threshold')),
+    number_of_rows(threshold := CAST(@VAR('audit_datacite_works_threshold') AS INT64)),
     unique_values(columns := (doi), blocking := false),
     not_empty_string(column := doi, blocking := false),
     not_empty_string(column := title, blocking := false),

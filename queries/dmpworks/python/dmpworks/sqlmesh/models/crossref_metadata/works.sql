@@ -1,9 +1,9 @@
 MODEL (
-  name crossref.works,
+  name crossref_metadata.works,
   dialect duckdb,
   kind VIEW,
   audits (
-    number_of_rows(threshold := @VAR('audit_crossref_works_threshold')),
+    number_of_rows(threshold := CAST(@VAR('audit_crossref_metadata_works_threshold') AS INT64)),
     unique_values(columns := (doi), blocking := false),
     not_empty_string(column := doi, blocking := false),
     not_empty_string(column := title, blocking := false),
@@ -19,4 +19,4 @@ MODEL (
 );
 
 SELECT *
-FROM read_parquet(@VAR('data_path') || 'crossref/parquets/crossref_works_[0-9]*.parquet');
+FROM read_parquet(@VAR('data_path') || 'crossref_metadata/parquets/crossref_works_[0-9]*.parquet');
