@@ -25,7 +25,7 @@ FROM (
 
   SELECT owm.doi, cfw.updated_date
   FROM openalex_index.works_metadata AS owm
-  INNER JOIN crossref.works cfw ON owm.doi = cfw.doi
+  INNER JOIN crossref_metadata.works cfw ON owm.doi = cfw.doi
   WHERE owm.doi IS NOT NULL AND cfw.updated_date IS NOT NULL
 )
 GROUP BY doi;

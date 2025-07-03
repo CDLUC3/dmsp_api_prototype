@@ -9,7 +9,7 @@ test_openalex_index_funder_names:
           doi: "10.9999/test.0002"
         - id: "W0000000003"
           doi: "10.9999/test.0003" # This item should be dropped as it has no award ids
-    crossref.works_funders:
+    crossref_metadata.works_funders:
       rows:
         - work_doi: "10.9999/test.0001"
           name: "National Science Foundation"

@@ -20,4 +20,4 @@ SELECT
 FROM openalex_index.abstract_stats AS stats
 LEFT JOIN openalex.works oaw ON stats.id = oaw.id
 LEFT JOIN crossref_index.works_metadata cwm ON stats.doi = cwm.doi
-LEFT JOIN crossref.works cfw ON stats.doi = cfw.doi;
+LEFT JOIN crossref_metadata.works cfw ON stats.doi = cfw.doi;

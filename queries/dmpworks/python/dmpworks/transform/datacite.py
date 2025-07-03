@@ -14,7 +14,7 @@ from dmpworks.transform.transforms import (
     replace_with_null,
 )
 from dmpworks.transform.utils_cli import add_common_args, copy_dict, handle_errors, validate_common_args
-from dmpworks.transform.utils_file import extract_gzip, read_jsonls, validate_directory
+from dmpworks.transform.utils_file import extract_gzip, read_jsonls, setup_multiprocessing_logging
 from polars import Date
 from polars._typing import SchemaDefinition
 
@@ -292,7 +292,7 @@ def setup_parser(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "in_dir",
         type=pathlib.Path,
-        help="Path to the input DataCite directory (e.g., /path/to/DataCite_Public_Data_File_2024).",
+        help="Path to the input DataCite dois directory (e.g., /path/to/DataCite_Public_Data_File_2024/dois).",
     )
     parser.add_argument(
         "out_dir",
@@ -319,11 +319,11 @@ def setup_parser(parser: argparse.ArgumentParser) -> None:
 
 
 def handle_command(args: argparse.Namespace):
-    logging.basicConfig(level=logging.DEBUG)
+    setup_multiprocessing_logging(logging.getLevelName(args.log_level))
 
     # Validate
     errors = []
-    if not args.in_dir.is_dir() and not validate_directory(args.in_dir, ["dois", "MANIFEST", "README"]):
+    if not args.in_dir.is_dir():
         errors.append(f"in_dir '{args.in_dir}' is not a valid directory.")
 
     if not args.out_dir.is_dir():

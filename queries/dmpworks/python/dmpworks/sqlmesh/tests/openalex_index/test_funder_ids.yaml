@@ -42,7 +42,7 @@ test_openalex_index_funder_ids:
           ids:
             ror: "01h0zpd94"
             doi: "10.13039/501100001809"
-    crossref.works_funders:
+    crossref_metadata.works_funders:
       - work_doi: "10.9999/test.0003"
         funder_doi: "10.13039/501100001809"
   outputs:

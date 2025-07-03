@@ -76,6 +76,13 @@ def add_common_args(
         action="store_true",
         help="Enable low memory mode for Polars when streaming records from files.",
     )
+    log_levels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"]
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        help=f"Logging verbosity. Choices: {', '.join(log_levels)} (default: %(default)s)",
+    )
 
 
 def validate_common_args(args: argparse.Namespace, errors: list[str]):

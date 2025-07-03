@@ -42,7 +42,7 @@ FROM (
   -- Crossref Metadata: Crossref Funder IDs
   SELECT owm.id, owm.doi, funder_doi AS funder_id
   FROM openalex_index.works_metadata AS owm
-  INNER JOIN crossref.works_funders cwf ON owm.doi = cwf.work_doi
+  INNER JOIN crossref_metadata.works_funders cwf ON owm.doi = cwf.work_doi
   WHERE funder_doi IS NOT NULL
 
   UNION ALL
@@ -50,7 +50,7 @@ FROM (
   -- Crossref Metadata: convert Crossref Funder IDs to RORs
   SELECT owm.id, owm.doi, ror.index.ror_id AS funder_id
   FROM openalex_index.works_metadata AS owm
-  INNER JOIN crossref.works_funders cwf ON owm.doi = cwf.work_doi
+  INNER JOIN crossref_metadata.works_funders cwf ON owm.doi = cwf.work_doi
   INNER JOIN ror.index ON cwf.funder_doi = ror.index.identifier
   WHERE funder_doi IS NOT NULL
 )
