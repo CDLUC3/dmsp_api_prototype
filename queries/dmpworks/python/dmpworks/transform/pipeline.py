@@ -10,11 +10,11 @@ from concurrent.futures import as_completed, ProcessPoolExecutor
 from pathlib import Path
 from typing import Callable, Optional
 
-import pendulum
 from tqdm import tqdm
 
 import polars as pl
 from dmpworks.transform.utils_file import batch_files, extract_gzip, read_jsonls, write_parquet
+from dmpworks.utils import timed
 from polars._typing import SchemaDefinition
 
 TransformFunc = Callable[[pl.LazyFrame], list[tuple[str, pl.LazyFrame]]]
@@ -309,6 +309,7 @@ class Pipeline:
             log.debug("Workers joined")
 
 
+@timed
 def process_files_parallel(
     *,
     in_dir: pathlib.Path,
@@ -330,8 +331,6 @@ def process_files_parallel(
     low_memory: bool = False,
     log_level: int = logging.INFO,
 ):
-    start = pendulum.now()
-
     log.info(f"in_dir: {in_dir}")
     log.info(f"out_dir: {out_dir}")
     log.info(f"schema: {schema}")
@@ -374,7 +373,3 @@ def process_files_parallel(
         log_level=log_level,
     )
     pipeline.start(batches)
-
-    end = pendulum.now()
-    diff = end - start
-    log.info(f"Execution time: {diff.in_words()}")

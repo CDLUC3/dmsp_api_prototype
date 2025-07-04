@@ -14,6 +14,7 @@ from opensearchpy.helpers import parallel_bulk
 from tqdm import tqdm
 
 from dmpworks.transform.utils_cli import handle_errors
+from dmpworks.utils import timed
 
 
 def load_dataset(
@@ -153,6 +154,7 @@ def parse_date(s: str) -> pendulum.Date:
         raise argparse.ArgumentTypeError(f"Not a valid date: '{s}'. Expected format: YYYY-MM-DD")
 
 
+@timed
 def sync_works(client: OpenSearch, args: Namespace):
     actions = stream_work_actions(
         source=args.in_dir, index_name=args.index_name, start_date=args.start_date, batch_size=args.batch_size
@@ -285,7 +287,6 @@ def setup_parser(parser: ArgumentParser) -> None:
 def handle_command(args: Namespace):
     logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
     logging.getLogger("opensearch").setLevel(logging.WARNING)
-    start = pendulum.now()
 
     # Validate
     errors = []
@@ -295,10 +296,6 @@ def handle_command(args: Namespace):
 
     client = make_opensearch_client(args)
     sync_works(client, args)
-
-    end = pendulum.now()
-    diff = end - start
-    logging.info(f"Execution time: {diff.in_words()}")
 
 
 def main():

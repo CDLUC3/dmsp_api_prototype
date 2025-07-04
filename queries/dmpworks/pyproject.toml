@@ -14,7 +14,8 @@ dependencies = [
     "tqdm>=4,<5",
     "opensearch-py>=2.8.0,<3",
     "pyarrow>=19,<21",
-    "sqlmesh>=0.188.1,<1"
+    "sqlmesh>=0.188.1,<1",
+    "cyclopts>=3,<4"
 ]
 
 [project.optional-dependencies]
@@ -28,6 +29,7 @@ dev = [
 
 [project.scripts]
 dmpworks = "dmpworks.cli:main"
+openalex_funders = "dmpworks.batch.openalex_funders:app"
 
 [tool.maturin]
 module-name = "dmpworks.polars_expr_plugin._internal"
@@ -50,3 +52,7 @@ exclude = '''
   | dist
 )/
 '''
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "INFO"

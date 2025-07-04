@@ -9,10 +9,10 @@ from multiprocessing import current_process
 from typing import Literal, Optional
 
 import orjson
-import pendulum
 from tqdm import tqdm
 
 from dmpworks.transform.utils_file import setup_multiprocessing_logging
+from dmpworks.utils import timed
 
 Dataset = Literal["crossref-metadata", "datacite", "openalex_works"]
 
@@ -110,6 +110,7 @@ def filter_dataset(
     return total_filtered
 
 
+@timed
 def create_demo_dataset(
     dataset: Dataset,
     ror_id: str,
@@ -119,7 +120,6 @@ def create_demo_dataset(
     log_level: int,
 ):
     logging.basicConfig(level=log_level)
-    start = pendulum.now()
 
     is_empty = next(out_dir.iterdir(), None) is None
     if not is_empty:
@@ -152,10 +152,6 @@ def create_demo_dataset(
     except KeyboardInterrupt:
         logging.info(f"Shutting down...")
         executor.shutdown(wait=True, cancel_futures=True)
-
-    end = pendulum.now()
-    diff = end - start
-    logging.info(f"Execution time: {diff.in_words()}")
 
 
 def setup_parser(parser: argparse.ArgumentParser) -> None:
