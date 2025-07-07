@@ -34,7 +34,7 @@ def load_dataset(
 
 
 def count_records(source, start_date: Optional[pendulum.Date] = None) -> int:
-    logging.info(f"Counting records: {source}")
+    logging.debug(f"Counting records: {source}")
     dataset = load_dataset(source, start_date=start_date)
     return dataset.count_rows()
 
@@ -115,7 +115,7 @@ def parallel_index_actions(
     fail_count = 0
     failed_ids = []
 
-    with tqdm(total=total_records, desc="Sync Works with OpenSearch", unit="record") as pbar:
+    with tqdm(total=total_records, desc="Sync Works with OpenSearch", unit="doc") as pbar:
         for success, info in parallel_bulk(
             client,
             actions,

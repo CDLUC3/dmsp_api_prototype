@@ -1,10 +1,11 @@
 import logging
 import os
 import pathlib
-from typing import Annotated, Literal, Optional
+from typing import Annotated, Optional
 
 from cyclopts import App, Parameter, validators
 
+from dmpworks.cli_utils import Directory, LogLevel
 from dmpworks.transform.crossref_metadata import transform_crossref_metadata
 from dmpworks.transform.datacite import transform_datacite
 from dmpworks.transform.openalex_funders import transform_openalex_funders
@@ -14,16 +15,7 @@ from dmpworks.transform.utils_file import setup_multiprocessing_logging
 
 app = App(name="transform", help="Transformation utilities.")
 
-Directory = Annotated[
-    pathlib.Path,
-    Parameter(
-        validator=validators.Path(
-            dir_okay=True,
-            file_okay=False,
-            exists=True,
-        )
-    ),
-]
+
 BatchSize = Annotated[
     int,
     Parameter(
@@ -94,10 +86,6 @@ LowMemory = Annotated[
     Parameter(
         help="Enable low memory mode for Polars when streaming records from files.",
     ),
-]
-LogLevel = Annotated[
-    Literal["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"],
-    Parameter(help="Python log level."),
 ]
 
 

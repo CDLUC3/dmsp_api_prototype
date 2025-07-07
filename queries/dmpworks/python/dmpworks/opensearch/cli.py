@@ -1,13 +1,12 @@
 import logging
-import pathlib
-from typing import Literal, Optional, Sequence
+from typing import Annotated, Literal, Optional, Sequence
 
 import boto3
 import pendulum
-from cyclopts import App, Parameter, Token, validators
+from cyclopts import App, Parameter, Token
 from opensearchpy import AWSV4SignerAuth, OpenSearch, RequestsHttpConnection
-from sqlalchemy.sql.annotation import Annotated
 
+from dmpworks.cli_utils import Directory, LogLevel
 from dmpworks.opensearch.chunk_size import measure_chunk_size
 from dmpworks.opensearch.create_index import create_index
 from dmpworks.opensearch.sync_works import sync_works
@@ -28,23 +27,9 @@ def parse_date(type_, tokens: Sequence[Token]) -> pendulum.Date:
         raise ValueError(f"Not a valid date: '{value}'. Expected format: YYYY-MM-DD")
 
 
-Directory = Annotated[
-    pathlib.Path,
-    Parameter(
-        validator=validators.Path(
-            dir_okay=True,
-            file_okay=False,
-            exists=True,
-        )
-    ),
-]
 Mode = Literal["local", "aws"]
 ChunkSize = Annotated[int, Parameter(validator=validate_chunk_size)]
 Date = Annotated[Optional[pendulum.Date], Parameter(converter=parse_date)]
-LogLevel = Annotated[
-    Literal["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"],
-    Parameter(help="Python log level"),
-]
 
 
 def make_opensearch_client(
@@ -164,7 +149,7 @@ def sync_works_cmd(
 
     level = logging.getLevelName(log_level)
     logging.basicConfig(level=level)
-    logging.getLogger("opensearch").setLevel(level)
+    logging.getLogger("opensearch").setLevel(logging.WARNING)
 
     client = make_opensearch_client(mode, host, port, region=region, service=service)
     sync_works(
