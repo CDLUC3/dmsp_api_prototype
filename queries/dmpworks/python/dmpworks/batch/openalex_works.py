@@ -3,19 +3,19 @@ import logging
 from cyclopts import App
 
 from dmpworks.batch.tasks import download_source_task, transform_parquets_task
-from dmpworks.transform.openalex_funders import transform_openalex_funders
+from dmpworks.transform.openalex_works import transform_openalex_works
 from dmpworks.transform.utils_file import setup_multiprocessing_logging
 from dmpworks.utils import run_process
 
 log = logging.getLogger(__name__)
 
-DATASET = "openalex_funders"
-app = App(name="openalex-funders", help="OpenAlex Funders AWS Batch pipeline.")
+DATASET = "openalex_works"
+app = App(name="openalex-works", help="OpenAlex Works AWS Batch pipeline.")
 
 
 @app.command(name="download")
 def download_cmd(bucket_name: str, task_id: str):
-    """Download OpenAlex Funders from the OpenAlex S3 bucket and upload it to
+    """Download OpenAlex Works from the OpenAlex S3 bucket and upload it to
     the DMP Tool S3 bucket.
 
     Args:
@@ -31,7 +31,7 @@ def download_cmd(bucket_name: str, task_id: str):
                 "s5cmd",
                 "--no-sign-request",
                 "cp",
-                "s3://openalex/data/funders/*",
+                "s3://openalex/data/works/*",
                 f"{ctx.local_dir}/",
             ],
         )
@@ -39,7 +39,7 @@ def download_cmd(bucket_name: str, task_id: str):
 
 @app.command(name="transform")
 def transform_cmd(bucket_name: str, task_id: str):
-    """Download OpenAlex Funders from the DMP Tool S3 bucket, transform it to
+    """Download OpenAlex Works from the DMP Tool S3 bucket, transform it to
     Parquet format, and upload the results to same bucket.
 
     Args:
@@ -50,7 +50,7 @@ def transform_cmd(bucket_name: str, task_id: str):
     setup_multiprocessing_logging(logging.INFO)
 
     with transform_parquets_task(bucket_name, DATASET, task_id) as ctx:
-        transform_openalex_funders(
+        transform_openalex_works(
             in_dir=ctx.in_dir,
             out_dir=ctx.out_dir,
         )

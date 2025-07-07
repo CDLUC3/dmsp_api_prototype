@@ -199,35 +199,41 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
     ]
 
 
-def setup_parser(parser: ArgumentParser) -> None:
-    # Positional arguments
-    parser.add_argument(
-        "in_dir",
-        type=pathlib.Path,
-        help="Path to the input Crossref Metadata directory (e.g., /path/to/March 2025 Public Data File from Crossref).",
+def transform_crossref_metadata(
+    in_dir: pathlib.Path,
+    out_dir: pathlib.Path,
+    batch_size: int = os.cpu_count(),
+    extract_workers: int = 1,
+    transform_workers: int = 2,
+    cleanup_workers: int = 1,
+    extract_queue_size: int = 0,
+    transform_queue_size: int = 3,
+    cleanup_queue_size: int = 0,
+    max_file_processes: int = os.cpu_count(),
+    n_batches: int = None,
+    low_memory: bool = False,
+):
+    process_files_parallel(
+        # Non customizable parameters, specific to Crossref Metadata
+        schema=SCHEMA,
+        transform_func=transform,
+        file_glob="*.jsonl.gz",
+        read_func=read_jsonls,
+        extract_func=extract_gzip,
+        # Customisable parameters
+        in_dir=in_dir,
+        out_dir=out_dir,
+        batch_size=batch_size,
+        extract_workers=extract_workers,
+        transform_workers=transform_workers,
+        cleanup_workers=cleanup_workers,
+        extract_queue_size=extract_queue_size,
+        transform_queue_size=transform_queue_size,
+        cleanup_queue_size=cleanup_queue_size,
+        max_file_processes=max_file_processes,
+        n_batches=n_batches,
+        low_memory=low_memory,
     )
-    parser.add_argument(
-        "out_dir",
-        type=pathlib.Path,
-        help="Path to the output directory for transformed Parquet files (e.g. /path/to/parquets/crossref_metadata).",
-    )
-
-    # Common keyword arguments
-    add_common_args(
-        parser=parser,
-        batch_size=os.cpu_count(),
-        extract_workers=1,
-        transform_workers=2,
-        cleanup_workers=1,
-        extract_queue_size=0,
-        transform_queue_size=3,
-        cleanup_queue_size=0,
-        max_file_processes=os.cpu_count(),
-        n_batches=None,
-    )
-
-    # Callback function
-    parser.set_defaults(func=handle_command)
 
 
 def handle_command(args: Namespace):
@@ -243,22 +249,3 @@ def handle_command(args: Namespace):
 
     validate_common_args(args, errors)
     handle_errors(errors)
-    process_files_parallel(
-        **copy_dict(vars(args), ["command", "transform_command", "func"]),
-        schema=SCHEMA,
-        transform_func=transform,
-        file_glob="*.jsonl.gz",
-        read_func=read_jsonls,
-        extract_func=extract_gzip,
-    )
-
-
-def main():
-    parser = ArgumentParser(description="Transform Crossref Metadata to Parquet for the DMP Tool")
-    setup_parser(parser)
-    args = parser.parse_args()
-    args.func(args)
-
-
-if __name__ == "__main__":
-    main()
