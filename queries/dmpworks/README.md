@@ -163,8 +163,6 @@ together. Each item contains a DOI, title, abstract, publication date, updated
 date, affiliation names, affiliation ROR IDs, author names, author ORCID IDs,
 funder names, award IDs and funder IDs.
 
-![](./img.png)
-
 The works index is created with [SQL Mesh](https://sqlmesh.readthedocs.io/en/latest/)
 and [DuckDB](https://duckdb.org). SQLMesh is a tool for writing SQL data 
 transformations and DuckDB is an embedded SQL database.
@@ -196,12 +194,12 @@ Run SQL Mesh:
 dmpworks sqlmesh plan
 ```
 
-Run the following to view the DuckDB database:
+Run the DuckDB UI:
 ```bash
 duckdb ${SQLMESH__GATEWAYS__DUCKDB__CONNECTION__DATABASE} -ui
 ```
 
-Go to OpenSearch Dashboards to view the works index: http://localhost:4213.
+To view the DuckDB database: http://localhost:4213.
 
 ## Create OpenSearch Indexes
 [OpenSearch](https://opensearch.org) is used to match related works to
@@ -209,12 +207,12 @@ Data Management Plans.
 
 Create the OpenSearch works index:
 ```bash
-dmpworks opensearch create-index works-test works-mapping.json
+dmpworks opensearch create-index works-demo works-mapping.json
 ```
 
 Sync the works index export with the OpenSearch works index:
 ```bash
-dmpworks opensearch sync-works works-test /path/to/export
+dmpworks opensearch sync-works works-demo ${DEMO_DIR}/export
 ```
 
 Go to OpenSearch Dashboards to view the works index: http://localhost:5601.
