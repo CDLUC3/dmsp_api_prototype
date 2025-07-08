@@ -27,3 +27,5 @@ target
 
 # SQL Mesh
 logs
+
+.env.*
