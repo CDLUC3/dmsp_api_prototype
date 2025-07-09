@@ -28,11 +28,11 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 WORKDIR /app
 
 # Install s5cmd: https://github.com/peak/s5cmd
-RUN wget https://github.com/peak/s5cmd/releases/download/v2.3.0/s5cmd_2.3.0_Linux-64bit.tar.gz
-RUN tar -xzf s5cmd_2.3.0_Linux-64bit.tar.gz s5cmd
-RUN chmod +x s5cmd
-RUN mv s5cmd /usr/local/bin/
-RUN rm s5cmd_2.3.0_Linux-64bit.tar.gz
+RUN wget https://github.com/peak/s5cmd/releases/download/v2.3.0/s5cmd_2.3.0_Linux-64bit.tar.gz && \
+  tar -xzf s5cmd_2.3.0_Linux-64bit.tar.gz s5cmd && \
+  chmod +x s5cmd && \
+  mv s5cmd /usr/local/bin/ && \
+  rm s5cmd_2.3.0_Linux-64bit.tar.gz
 
 # Clone Polars dependencies
 RUN git clone --branch fix-load-json-as-string --single-branch https://github.com/jdddog/polars.git
