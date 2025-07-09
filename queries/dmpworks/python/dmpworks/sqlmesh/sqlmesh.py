@@ -27,7 +27,7 @@ def run_plan() -> Plan:
     return plan
 
 
-def run_tests() -> ModelTextTestResult:
+def run_test() -> ModelTextTestResult:
     configure_console(ignore_warnings=False)
     ctx = Context(
         paths=[sqlmesh_dir()],

@@ -41,3 +41,14 @@ def run_process(args):
 
     if proc.returncode != 0:
         raise subprocess.CalledProcessError(proc.returncode, args)
+
+
+class InstanceOf:
+    def __init__(self, cls):
+        self.cls = cls
+
+    def __eq__(self, other):
+        return isinstance(other, self.cls)
+
+    def __repr__(self):
+        return f"<any {self.cls.__name__} instance>"

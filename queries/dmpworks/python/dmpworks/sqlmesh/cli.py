@@ -1,22 +1,26 @@
 from cyclopts import App
 
 
-app = App(name="sqlmesh", help="SQLMesh utilities")
+app = App(name="sqlmesh", help="SQLMesh utilities.")
 
 
 @app.command(name="test")
 def test_cmd():
     """Run SQLMesh plan."""
 
-    from dmpworks.sqlmesh.sqlmesh import run_tests
+    # Imported here as SQLMesh prints unnecessary logs in unrelated parts of
+    # system if imported globally
+    from dmpworks.sqlmesh.sqlmesh import run_test
 
-    run_tests()
+    run_test()
 
 
 @app.command(name="plan")
 def plan_cmd():
     """Run SQLMesh tests."""
 
+    # Imported here as SQLMesh prints unnecessary logs in unrelated parts of
+    # system if imported globally
     from dmpworks.sqlmesh.sqlmesh import run_plan
 
     run_plan()

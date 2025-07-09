@@ -114,8 +114,8 @@ def crossref_metadata_cmd(
 
     setup_multiprocessing_logging(logging.getLevelName(log_level))
     transform_crossref_metadata(
-        in_dir=in_dir,
-        out_dir=out_dir,
+        in_dir,
+        out_dir,
         batch_size=batch_size,
         extract_workers=extract_workers,
         transform_workers=transform_workers,
@@ -154,8 +154,8 @@ def datacite_cmd(
 
     setup_multiprocessing_logging(logging.getLevelName(log_level))
     transform_datacite(
-        in_dir=in_dir,
-        out_dir=out_dir,
+        in_dir,
+        out_dir,
         batch_size=batch_size,
         extract_workers=extract_workers,
         transform_workers=transform_workers,
@@ -194,8 +194,8 @@ def openalex_funders_cmd(
 
     setup_multiprocessing_logging(logging.getLevelName(log_level))
     transform_openalex_funders(
-        in_dir=in_dir,
-        out_dir=out_dir,
+        in_dir,
+        out_dir,
         batch_size=batch_size,
         extract_workers=extract_workers,
         transform_workers=transform_workers,
@@ -234,8 +234,8 @@ def openalex_works_cmd(
 
     setup_multiprocessing_logging(logging.getLevelName(log_level))
     transform_openalex_works(
-        in_dir=in_dir,
-        out_dir=out_dir,
+        in_dir,
+        out_dir,
         batch_size=batch_size,
         extract_workers=extract_workers,
         transform_workers=transform_workers,
@@ -267,6 +267,6 @@ def ror_works_cmd(
 
     setup_multiprocessing_logging(logging.getLevelName(log_level))
     transform_ror(
-        ror_v2_json_file=ror_v2_json_file,
-        out_dir=out_dir,
+        ror_v2_json_file,
+        out_dir,
     )

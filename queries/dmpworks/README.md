@@ -212,7 +212,7 @@ dmpworks opensearch create-index works-demo works-mapping.json
 
 Sync the works index export with the OpenSearch works index:
 ```bash
-dmpworks opensearch sync-works works-demo ${DEMO_DIR}/export
+dmpworks opensearch sync-works works-demo ${DATA}/export
 ```
 
 Go to OpenSearch Dashboards to view the works index: http://localhost:5601.

@@ -32,7 +32,7 @@ def extract_orcid(expr: pl.Expr) -> pl.Expr:
     # https://support.orcid.org/hc/en-us/articles/360006897674-Structure-of-the-ORCID-Identifier
     return (
         pl.when(expr.is_not_null())
-        .then(expr.str.to_lowercase().str.extract(r"\d{4}-\d{4}-\d{4}-[\dx]"))
+        .then(expr.str.to_lowercase().str.extract(r"\d{4}-\d{4}-\d{4}-\d{3}[\dx]", group_index=0))
         .otherwise(None)
     )
 

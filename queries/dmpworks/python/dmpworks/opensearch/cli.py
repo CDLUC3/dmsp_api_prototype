@@ -11,7 +11,7 @@ from dmpworks.opensearch.chunk_size import measure_chunk_size
 from dmpworks.opensearch.create_index import create_index
 from dmpworks.opensearch.sync_works import sync_works
 
-app = App(name="opensearch", help="OpenSearch utilities")
+app = App(name="opensearch", help="OpenSearch utilities.")
 
 
 def validate_chunk_size(type_, value):
