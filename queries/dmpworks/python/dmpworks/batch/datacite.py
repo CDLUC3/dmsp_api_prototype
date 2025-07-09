@@ -1,9 +1,12 @@
 import logging
+from typing import Optional
 
 from cyclopts import App
 
 from dmpworks.batch.tasks import download_source_task, transform_parquets_task
+from dmpworks.transform.cli import DataCiteConfig
 from dmpworks.transform.datacite import transform_datacite
+from dmpworks.transform.utils_cli import copy_dict
 from dmpworks.transform.utils_file import setup_multiprocessing_logging
 from dmpworks.utils import run_process
 
@@ -38,19 +41,27 @@ def download_cmd(bucket_name: str, task_id: str):
 
 
 @app.command(name="transform")
-def transform_cmd(bucket_name: str, task_id: str):
+def transform_cmd(
+    bucket_name: str,
+    task_id: str,
+    *,
+    config: Optional[DataCiteConfig] = None,
+):
     """Download DataCite from the DMP Tool S3 bucket, transform it to
     Parquet format, and upload the results to same bucket.
 
     Args:
         bucket_name: S3 bucket name.
         task_id: a unique task ID.
+        config: optional configuration parameters.
     """
 
+    config = DataCiteConfig() if config is None else config
     setup_multiprocessing_logging(logging.INFO)
 
     with transform_parquets_task(bucket_name, DATASET, task_id) as ctx:
         transform_datacite(
             in_dir=ctx.in_dir,
             out_dir=ctx.out_dir,
+            **copy_dict(vars(config), ["log_level"]),
         )
