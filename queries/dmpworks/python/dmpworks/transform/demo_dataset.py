@@ -1,4 +1,3 @@
-import argparse
 import gzip
 import logging
 import os
@@ -11,10 +10,9 @@ from typing import Literal, Optional
 import orjson
 from tqdm import tqdm
 
-from dmpworks.transform.utils_file import setup_multiprocessing_logging
 from dmpworks.utils import timed
 
-Dataset = Literal["crossref-metadata", "datacite", "openalex_works"]
+Dataset = Literal["crossref-metadata", "datacite", "openalex-works"]
 
 
 def normalise_affiliations(affiliations) -> Optional[list[dict]]:
@@ -112,15 +110,8 @@ def filter_dataset(
 
 @timed
 def create_demo_dataset(
-    dataset: Dataset,
-    ror_id: str,
-    institution_name: Optional[str],
-    in_dir: pathlib.Path,
-    out_dir: pathlib.Path,
-    log_level: int,
+    dataset: Dataset, ror_id: str, institution_name: Optional[str], in_dir: pathlib.Path, out_dir: pathlib.Path
 ):
-    logging.basicConfig(level=log_level)
-
     is_empty = next(out_dir.iterdir(), None) is None
     if not is_empty:
         raise Exception(f"Output directory is not empty: {out_dir}")
@@ -152,73 +143,3 @@ def create_demo_dataset(
     except KeyboardInterrupt:
         logging.info(f"Shutting down...")
         executor.shutdown(wait=True, cancel_futures=True)
-
-
-def setup_parser(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument(
-        "dataset",
-        choices=["crossref-metadata", "datacite", "openalex-works"],
-        help="The dataset to filter.",
-    )
-    parser.add_argument(
-        "ror_id",
-        type=str,
-        help="A ROR ID without a prefix used to filter records.",
-    )
-    parser.add_argument(
-        "in_dir",
-        type=pathlib.Path,
-        help="Path to the dataset directory (e.g. /path/to/openalex_works)",
-    )
-    parser.add_argument(
-        "out_dir",
-        type=pathlib.Path,
-        help="Path to the output directory (e.g. /path/to/demo_dataset/openalex).",
-    )
-    parser.add_argument(
-        "--institution-name",
-        type=str,
-        help="The name of the institution to filter",
-    )
-    log_levels = ["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"]
-    parser.add_argument(
-        "--log-level",
-        type=str,
-        default="INFO",
-        help=f"Logging verbosity. Choices: {', '.join(log_levels)} (default: %(default)s)",
-    )
-
-    # Callback function
-    parser.set_defaults(func=handle_command)
-
-
-def handle_command(args: argparse.Namespace):
-    setup_multiprocessing_logging(logging.getLevelName(args.log_level))
-
-    # Validate
-    errors = []
-    if not args.in_dir.is_dir():
-        errors.append(f"in_dir '{args.in_dir}' is not a valid directory.")
-
-    if not args.out_dir.is_dir():
-        errors.append(f"out_dir '{args.out_dir}' is not a valid directory.")
-
-    create_demo_dataset(
-        args.dataset,
-        args.ror_id,
-        args.institution_name,
-        args.in_dir,
-        args.out_dir,
-        args.log_level,
-    )
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Produce a demo versions of each dataset.")
-    setup_parser(parser)
-    args = parser.parse_args()
-    args.func(args)
-
-
-if __name__ == "__main__":
-    main()

@@ -69,7 +69,7 @@ def test_parse_datacite_affiliations():
                         "schemeUri": "https://ror.org",
                     }
                 ],
-                None,
+                [],
             ],
         },
         schema={"affiliation": pl.String, "parsed_affiliation": AFFILIATION_SCHEMA},
@@ -113,7 +113,7 @@ def test_parse_datacite_name_identifiers():
                         "schemeUri": "https://orcid.org",
                     }
                 ],
-                None,
+                [],
             ],
         },
         schema={"nameIdentifiers": pl.String, "parsedNameIdentifiers": NAME_IDENTIFIERS_SCHEMA},

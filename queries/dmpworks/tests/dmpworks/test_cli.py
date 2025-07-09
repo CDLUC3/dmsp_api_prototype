@@ -235,3 +235,35 @@ def test_transform_ror(mock_transform_ror, tmp_path: pathlib.Path):
         ror_v2_json_file,
         out_dir,
     )
+
+
+@pytest.fixture
+def mock_create_demo_dataset(mocker):
+    return mocker.patch("dmpworks.transform.cli.create_demo_dataset")
+
+
+def test_demo_dataset(mock_create_demo_dataset, tmp_path: pathlib.Path):
+    in_dir = tmp_path / "input"
+    out_dir = tmp_path / "output"
+    in_dir.mkdir()
+    out_dir.mkdir()
+
+    cli(
+        [
+            "transform",
+            "demo-dataset",
+            "openalex-works",
+            "01an7q238",
+            str(in_dir),
+            str(out_dir),
+            "--institution-name",
+            "University of California, Berkeley",
+        ]
+    )
+    mock_create_demo_dataset.assert_called_once_with(
+        "openalex-works",
+        "01an7q238",
+        "University of California, Berkeley",
+        in_dir,
+        out_dir,
+    )

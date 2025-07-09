@@ -52,3 +52,7 @@ class InstanceOf:
 
     def __repr__(self):
         return f"<any {self.cls.__name__} instance>"
+
+
+def copy_dict(original_dict: dict, keys_to_remove: list) -> dict:
+    return {k: v for k, v in original_dict.items() if k not in keys_to_remove}

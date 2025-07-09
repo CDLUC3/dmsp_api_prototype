@@ -6,9 +6,8 @@ from cyclopts import App
 from dmpworks.batch.tasks import download_source_task, transform_parquets_task
 from dmpworks.transform.cli import DataCiteConfig
 from dmpworks.transform.datacite import transform_datacite
-from dmpworks.transform.utils_cli import copy_dict
 from dmpworks.transform.utils_file import setup_multiprocessing_logging
-from dmpworks.utils import run_process
+from dmpworks.utils import copy_dict, run_process
 
 log = logging.getLogger(__name__)
 

@@ -2,18 +2,19 @@ import logging
 import os
 import pathlib
 from dataclasses import dataclass
-from typing import Annotated, Optional
+from typing import Annotated, Literal, Optional
 
 from cyclopts import App, Parameter, validators
 
 from dmpworks.cli_utils import Directory, LogLevel
 from dmpworks.transform.crossref_metadata import transform_crossref_metadata
 from dmpworks.transform.datacite import transform_datacite
+from dmpworks.transform.demo_dataset import create_demo_dataset
 from dmpworks.transform.openalex_funders import transform_openalex_funders
 from dmpworks.transform.openalex_works import transform_openalex_works
 from dmpworks.transform.ror import transform_ror
-from dmpworks.transform.utils_cli import copy_dict
 from dmpworks.transform.utils_file import setup_multiprocessing_logging
+from dmpworks.utils import copy_dict
 
 app = App(name="transform", help="Transformation utilities.")
 
@@ -273,3 +274,27 @@ def ror_works_cmd(
         ror_v2_json_file,
         out_dir,
     )
+
+
+@app.command(name="demo-dataset")
+def demo_dataset_cmd(
+    dataset: Literal["crossref-metadata", "datacite", "openalex-works"],
+    ror_id: str,
+    in_dir: Directory,
+    out_dir: Directory,
+    institution_name: Optional[str] = None,
+    log_level: LogLevel = "INFO",
+):
+    """Create a demo dataset.
+
+    Args:
+        dataset: The dataset to filter.
+        ror_id: A ROR ID without a prefix used to filter records.
+        in_dir: Path to the dataset directory (e.g. /path/to/openalex_works).
+        out_dir: Path to the output directory (e.g. /path/to/demo_dataset/openalex).
+        institution_name: The name of the institution to filter.
+        log_level: Python log level.
+    """
+
+    logging.basicConfig(level=log_level)
+    create_demo_dataset(dataset, ror_id, institution_name, in_dir, out_dir)

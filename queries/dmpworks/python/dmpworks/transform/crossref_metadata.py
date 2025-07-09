@@ -1,13 +1,11 @@
 import logging
 import os
 import pathlib
-from argparse import ArgumentParser, Namespace
 
 import polars as pl
 from dmpworks.transform.pipeline import process_files_parallel
 from dmpworks.transform.transforms import date_parts_to_date, normalise_identifier, remove_markup
-from dmpworks.transform.utils_cli import add_common_args, copy_dict, handle_errors, validate_common_args
-from dmpworks.transform.utils_file import extract_gzip, read_jsonls, setup_multiprocessing_logging, validate_directory
+from dmpworks.transform.utils_file import extract_gzip, read_jsonls
 from polars._typing import SchemaDefinition
 
 logger = logging.getLogger(__name__)
@@ -234,18 +232,3 @@ def transform_crossref_metadata(
         n_batches=n_batches,
         low_memory=low_memory,
     )
-
-
-def handle_command(args: Namespace):
-    setup_multiprocessing_logging(logging.getLevelName(args.log_level))
-
-    # Validate
-    errors = []
-    if not args.in_dir.is_dir() and not validate_directory(args.in_dir, ["0.jsonl.gz", "1.jsonl.gz", "2.jsonl.gz"]):
-        errors.append(f"in_dir '{args.in_dir}' is not a valid directory.")
-
-    if not args.out_dir.is_dir():
-        errors.append(f"out_dir '{args.out_dir}' is not a valid directory.")
-
-    validate_common_args(args, errors)
-    handle_errors(errors)
