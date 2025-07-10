@@ -20,7 +20,6 @@ def download_source_task(bucket_name: str, dataset: str, task_id: str):
     local_dir = local_path(dataset, task_id, "download")
 
     clean_s3_prefix(target_uri)
-    upload_to_s3(local_dir, target_uri)
 
     log.info(f"Downloading {dataset}")
     ctx = DownloadTaskContext(
