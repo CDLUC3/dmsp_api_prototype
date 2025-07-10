@@ -15,7 +15,8 @@ dependencies = [
     "opensearch-py>=2.8.0,<3",
     "pyarrow>=19,<21",
     "sqlmesh>=0.188.1,<1",
-    "cyclopts>=3,<4"
+    "cyclopts>=3,<4",
+    "pooch>=1,<2"
 ]
 
 [project.optional-dependencies]
