@@ -31,7 +31,7 @@ test_openalex_index_abstracts:
           abstract_length: 10
         - doi: "10.9999/test.0003"
           abstract_length: 10
-    crossref.works:
+    crossref_metadata.works:
       rows:
         - doi: "10.9999/test.0001"
           abstract: "Abstract One"

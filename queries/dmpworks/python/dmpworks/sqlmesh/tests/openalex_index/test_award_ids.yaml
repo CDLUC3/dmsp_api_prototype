@@ -9,7 +9,7 @@ test_openalex_index_award_ids:
           doi: "10.9999/test.0002"
         - id: "W0000000003"
           doi: "10.9999/test.0003"
-    crossref.works_funders:
+    crossref_metadata.works_funders:
       rows:
         - work_doi: "10.9999/test.0001"
           award: "1"

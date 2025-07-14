@@ -1,7 +1,5 @@
-import argparse
 import logging
 import pathlib
-from argparse import ArgumentParser, Namespace
 from typing import Iterator, Optional
 
 import pendulum
@@ -12,7 +10,7 @@ from opensearchpy import OpenSearch
 from opensearchpy.helpers import parallel_bulk
 from tqdm import tqdm
 
-from dmpworks.transform.utils_cli import handle_errors
+from dmpworks.utils import timed
 
 
 def load_dataset(
@@ -36,7 +34,7 @@ def load_dataset(
 
 
 def count_records(source, start_date: Optional[pendulum.Date] = None) -> int:
-    logging.info(f"Counting records: {source}")
+    logging.debug(f"Counting records: {source}")
     dataset = load_dataset(source, start_date=start_date)
     return dataset.count_rows()
 
@@ -117,7 +115,7 @@ def parallel_index_actions(
     fail_count = 0
     failed_ids = []
 
-    with tqdm(total=total_records, desc="Sync Works with OpenSearch", unit="record") as pbar:
+    with tqdm(total=total_records, desc="Sync Works with OpenSearch", unit="doc") as pbar:
         for success, info in parallel_bulk(
             client,
             actions,
@@ -145,126 +143,26 @@ def parallel_index_actions(
         logging.error(f"Failed to index {len(failed_ids)} documents: {', '.join(failed_ids)}")
 
 
-def parse_date(s: str) -> pendulum.Date:
-    try:
-        return pendulum.from_format(s, "YYYY-MM-DD").date()
-    except Exception:
-        raise argparse.ArgumentTypeError(f"Not a valid date: '{s}'. Expected format: YYYY-MM-DD")
-
-
-def setup_parser(parser: ArgumentParser) -> None:
-    parser.add_argument(
-        "index_name",
-        type=str,
-        help="The name of the OpenSearch index to sync to (e.g., works).",
-    )
-    parser.add_argument(
-        "in_dir",
-        type=pathlib.Path,
-        help="Path to the DMP Tool works hive partitioned index table export directory (e.g., /path/to/export).",
-    )
-    parser.add_argument(
-        "--start-date",
-        default=None,
-        type=parse_date,
-        help="Date in YYYY-MM-DD to sync records from in the export. If no date is specified then all records synced (default: None)",
-    )
-    parser.add_argument(
-        "--host",
-        default="localhost",
-        help="Host address (default: localhost)",
-    )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=9200,
-        help="Port number (default: 9200)",
-    )
-    parser.add_argument(
-        "--batch-size",
-        type=int,
-        default=1000,
-        help="Batch size (default: 1000)",
-    )
-    parser.add_argument(
-        "--thread-count",
-        type=int,
-        default=4,
-        help="Thread count (default: 4)",
-    )
-    parser.add_argument(
-        "--chunk-size",
-        type=int,
-        default=500,
-        help="Chunk size (default: 500)",
-    )
-    parser.add_argument(
-        "--max-chunk-bytes",
-        type=int,
-        default=100 * 1024 * 1024,
-        help="Maximum chunk size in bytes (default: 100MB)",
-    )
-    parser.add_argument(
-        "--queue-size",
-        type=int,
-        default=4,
-        help="Queue size (default: 4)",
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Enable debug logging",
-    )
-
-    # Callback function
-    parser.set_defaults(func=handle_command)
-
-
-def handle_command(args: Namespace):
-    logging.basicConfig(level=logging.DEBUG if args.debug else logging.INFO)
-    logging.getLogger("opensearch").setLevel(logging.WARNING)
-
-    start = pendulum.now()
-
-    # Validate
-    errors = []
-    if not args.in_dir.is_dir():
-        errors.append(f"in_dir '{args.in_dir}' is not a valid directory.")
-    handle_errors(errors)
-
-    client = OpenSearch(
-        hosts=[{"host": args.host, "port": args.port}],
-        http_compress=True,
-        use_ssl=False,
-        verify_certs=False,
-        ssl_assert_hostname=False,
-        ssl_show_warn=False,
-    )
-    actions = stream_work_actions(
-        source=args.in_dir, index_name=args.index_name, start_date=args.start_date, batch_size=args.batch_size
-    )
-    total_records = count_records(args.in_dir, start_date=args.start_date)
+@timed
+def sync_works(
+    client: OpenSearch,
+    in_dir: pathlib.Path,
+    index_name: str,
+    start_date: pendulum.Date,
+    batch_size: int = 1000,
+    thread_count: int = 4,
+    chunk_size: int = 500,
+    max_chunk_bytes: int = 100 * 1024 * 1024,
+    queue_size: int = 4,
+):
+    actions = stream_work_actions(source=in_dir, index_name=index_name, start_date=start_date, batch_size=batch_size)
+    total_records = count_records(in_dir, start_date=start_date)
     parallel_index_actions(
         client,
         actions,
         total_records,
-        thread_count=args.thread_count,
-        chunk_size=args.chunk_size,
-        max_chunk_bytes=args.max_chunk_bytes,
-        queue_size=args.queue_size,
+        thread_count=thread_count,
+        chunk_size=chunk_size,
+        max_chunk_bytes=max_chunk_bytes,
+        queue_size=queue_size,
     )
-
-    end = pendulum.now()
-    diff = end - start
-    logging.info(f"Execution time: {diff.in_words()}")
-
-
-def main():
-    parser = ArgumentParser(description="Sync the DMP Tool Works Index Table with OpenSearch.")
-    setup_parser(parser)
-    args = parser.parse_args()
-    args.func(args)
-
-
-if __name__ == "__main__":
-    main()

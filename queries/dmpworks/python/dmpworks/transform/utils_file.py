@@ -1,6 +1,7 @@
 import gzip
 import logging
 import shutil
+from multiprocessing.util import log_to_stderr
 from pathlib import Path
 from typing import Callable, Generator
 
@@ -40,5 +41,10 @@ def write_parquet(lz: pl.LazyFrame, out_file: Path) -> None:
     lz.sink_parquet(out_file, compression="snappy")
 
 
-def log_stage(stage: str, status: str, batch: int):
-    logging.debug(f"[{stage:<10}] {status:<5} batch={batch}")
+def setup_multiprocessing_logging(log_level: int):
+    logging.basicConfig(
+        level=log_level, format="[%(asctime)s] [%(levelname)s] [%(processName)s] [%(threadName)s] %(message)s"
+    )
+    if log_level == logging.DEBUG:
+        # Make multi-processing print logs
+        log_to_stderr(logging.DEBUG)

@@ -18,3 +18,16 @@
 - Initial move of files from dmsp_aws_prototype repo into this repo
 - Added README documentation
 - Added diagram
+
+## Related Works
+### Added
+- Dockerfile to be able to run dmpworks in AWS Batch.
+- Commands for running DataCite, OpenAlex Funders and OpenAlex Works pipelines in AWS Batch.
+- Migrated from argparse to cyclopts for building the CLI.
+- Unit tests to check that the CLI is functioning correctly.
+- Commands to run SQLMesh test and plan programmatically.
+- Updated README with additional documentation.
+- Command line interface to create a subset of each dataset.
+
+### Bug Fixes
+- Corrections to Polars transforms and SQL.

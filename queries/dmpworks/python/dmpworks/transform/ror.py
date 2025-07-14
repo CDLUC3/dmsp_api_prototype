@@ -1,5 +1,3 @@
-import argparse
-import logging
 import pathlib
 
 import polars
@@ -49,39 +47,9 @@ def create_ror_index(ror_df: pl.DataFrame) -> pl.DataFrame:
     return pl.concat([ror_ids, other_ids])
 
 
-def setup_parser(parser: argparse.ArgumentParser) -> None:
-    # Positional arguments
-    parser.add_argument(
-        "ror_v2_json_file",
-        type=pathlib.Path,
-        help="Path to the ROR V2 (e.g. /path/to/v1.63-2025-04-03-ror-data_schema_v2.json)",
-    )
-    parser.add_argument(
-        "out_dir",
-        type=pathlib.Path,
-        help="Path to the output directory (e.g. /path/to/ror_transformed).",
-    )
-
-    # Callback function
-    parser.set_defaults(func=handle_command)
-
-
-def handle_command(args: argparse.Namespace):
-    logging.basicConfig(level=logging.DEBUG)
-
-    df_ror = load_ror(args.ror_v2_json_file)
+def transform_ror(ror_v2_json_file: pathlib.Path, out_dir: pathlib.Path):
+    df_ror = load_ror(ror_v2_json_file)
     df_ror_index = create_ror_index(df_ror)
 
-    out = args.out_dir / "ror.parquet"
+    out = out_dir / "ror.parquet"
     df_ror_index.write_parquet(out, compression="snappy")
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Transform ROR to Parquet for the DMP Tool.")
-    setup_parser(parser)
-    args = parser.parse_args()
-    args.func(args)
-
-
-if __name__ == "__main__":
-    main()
