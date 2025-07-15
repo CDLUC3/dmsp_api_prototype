@@ -8,4 +8,5 @@ MODEL (
 );
 
 SELECT *
-FROM read_parquet(@VAR('data_path') || 'datacite/parquets/datacite_works_relations_[0-9]*.parquet');
+FROM read_parquet(@VAR('datacite_path') || '/datacite_works_relations_[0-9]*.parquet');
+

@@ -76,7 +76,7 @@ def test_opensearch_sync_works(mock_sync_works, tmp_path: pathlib.Path):
 @pytest.fixture
 def mock_run_plan(mocker):
     # Patch in original location as this is imported in the command function
-    return mocker.patch("dmpworks.sqlmesh.sqlmesh.run_plan")
+    return mocker.patch("dmpworks.sql.commands.run_plan")
 
 
 def test_sqlmesh_plan(mock_run_plan):
@@ -88,7 +88,7 @@ def test_sqlmesh_plan(mock_run_plan):
 @pytest.fixture
 def mock_run_test(mocker):
     # Patch in original location as this is imported in the command function
-    return mocker.patch("dmpworks.sqlmesh.sqlmesh.run_test")
+    return mocker.patch("dmpworks.sql.commands.run_test")
 
 
 def test_sqlmesh_test(mock_run_test):

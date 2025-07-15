@@ -3,10 +3,9 @@ import logging
 import pathlib
 from typing import Iterator
 
-import pendulum
 from tqdm import tqdm
 
-from dmpworks.opensearch.sync_works import count_records, stream_work_actions
+from dmpworks.opensearch.sync_works import count_records
 
 
 def analyze_bulk_chunks(actions: Iterator[dict], chunk_size: int, total_records: int):
@@ -47,7 +46,7 @@ def measure_chunk_bytes(chunk):
     return len(payload.encode("utf-8"))
 
 
-def measure_chunk_size(in_dir: pathlib.Path, start_date: pendulum.Date, chunk_size: int):
-    actions = stream_work_actions(source=in_dir, index_name="test-index", start_date=start_date, batch_size=chunk_size)
-    total_records = count_records(in_dir, start_date=start_date)
+def measure_chunk_size(in_dir: pathlib.Path, chunk_size: int):
+    actions = stream_work_actions(source=in_dir, index_name="test-index", batch_size=chunk_size)
+    total_records = count_records(in_dir)
     analyze_bulk_chunks(actions, chunk_size, total_records)

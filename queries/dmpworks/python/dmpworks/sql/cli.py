@@ -10,7 +10,7 @@ def test_cmd():
 
     # Imported here as SQLMesh prints unnecessary logs in unrelated parts of
     # system if imported globally
-    from dmpworks.sqlmesh.sqlmesh import run_test
+    from dmpworks.sql.commands import run_test
 
     run_test()
 
@@ -21,6 +21,10 @@ def plan_cmd():
 
     # Imported here as SQLMesh prints unnecessary logs in unrelated parts of
     # system if imported globally
-    from dmpworks.sqlmesh.sqlmesh import run_plan
+    from dmpworks.sql.commands import run_plan
 
     run_plan()
+
+
+if __name__ == "__main__":
+    app()

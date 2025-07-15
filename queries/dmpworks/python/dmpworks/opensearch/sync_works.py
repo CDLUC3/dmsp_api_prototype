@@ -1,88 +1,58 @@
 import logging
+import multiprocessing as mp
 import pathlib
-from typing import Iterator, Optional
+import time
+from concurrent.futures import ProcessPoolExecutor
+from typing import Iterator, List, Optional
 
-import pendulum
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
+import pyarrow.parquet as pq
 from opensearchpy import OpenSearch
-from opensearchpy.helpers import parallel_bulk
+from opensearchpy.helpers import streaming_bulk
 from tqdm import tqdm
 
+from dmpworks.opensearch.utils import (
+    CHUNK_SIZE,
+    INITIAL_BACKOFF,
+    make_opensearch_client,
+    MAX_BACKOFF,
+    MAX_CHUNK_BYTES,
+    MAX_RETRIES,
+    OpenSearchClientConfig,
+    OpenSearchSyncConfig,
+)
 from dmpworks.utils import timed
 
-
-def load_dataset(
-    source,
-    start_date: Optional[pendulum.Date] = None,
-) -> ds.Dataset:
-    dataset = ds.dataset(source, format="parquet", partitioning="hive")
-
-    # Optionally filter by start date
-    if start_date is not None:
-        expr = (ds.field("year") > start_date.year) | (
-            (ds.field("year") == start_date.year)
-            & (
-                (ds.field("month") > start_date.month)
-                | ((ds.field("month") == start_date.month) & (ds.field("day") >= start_date.day))
-            )
-        )
-        dataset = dataset.filter(expr)
-
-    return dataset
+log = logging.getLogger(__name__)
 
 
-def count_records(source, start_date: Optional[pendulum.Date] = None) -> int:
-    logging.debug(f"Counting records: {source}")
-    dataset = load_dataset(source, start_date=start_date)
+# Global OpenSearch client, one created for each process
+open_search: Optional[OpenSearch] = None
+success_counter: Optional[mp.Value] = None
+failure_counter: Optional[mp.Value] = None
+counter_lock: Optional[mp.Value] = None
+
+
+def count_records(source) -> int:
+    log.debug(f"Counting records: {source}")
+    dataset = ds.dataset(source, format="parquet")
     return dataset.count_rows()
 
 
 def stream_parquet_batches(
-    source,
-    start_date: Optional[pendulum.Date] = None,
+    source: pathlib.Path,
     columns: Optional[list[str]] = None,
     batch_size: Optional[int] = None,
 ) -> Iterator[pa.RecordBatch]:
-    dataset = load_dataset(source, start_date=start_date)
-
-    # Yield batches
-    # Type hints are wrong, e.g. parameter isn't int_batch_size, it is batch_size
-    for batch in dataset.to_batches(columns=columns, batch_size=batch_size):
+    # Yield batches from a parquet file
+    parquet_file = pq.ParquetFile(source)
+    for batch in parquet_file.iter_batches(batch_size=batch_size, columns=columns):
         yield batch
 
 
-def stream_work_actions(
-    *, source, index_name: str, start_date: Optional[pendulum.date] = None, batch_size: Optional[int] = None
-) -> Iterator[dict]:
-    for batch in stream_parquet_batches(
-        source,
-        start_date=start_date,
-        batch_size=batch_size,
-        columns=[
-            "doi",
-            "title",
-            "abstract",
-            "type",
-            "publication_date",
-            "updated_date",
-            "affiliation_rors",
-            "affiliation_names",
-            "author_names",
-            "author_orcids",
-            "award_ids",
-            "funder_ids",
-            "funder_names",
-            "source",
-        ],
-    ):
-        actions = batch_to_work_actions(index_name=index_name, batch=batch)
-        for action in actions:
-            yield action
-
-
-def batch_to_work_actions(*, index_name: str, batch: pa.RecordBatch) -> Iterator[dict]:
+def batch_to_work_actions(index_name: str, batch: pa.RecordBatch) -> Iterator[dict]:
     # Convert date and datetimes
     batch = batch.set_column(
         batch.schema.get_field_index("publication_date"),
@@ -96,73 +66,159 @@ def batch_to_work_actions(*, index_name: str, batch: pa.RecordBatch) -> Iterator
     )
 
     # Create actions
-    docs = batch.to_pylist()
-    for doc in docs:
-        yield {"_op_type": "update", "_index": index_name, "_id": doc["doi"], "doc": doc, "doc_as_upsert": True}
+    for i in range(batch.num_rows):
+        doc = {name: batch[name][i].as_py() for name in batch.schema.names}
+        yield {
+            "_op_type": "update",
+            "_index": index_name,
+            "_id": doc["doi"],
+            "doc": doc,
+            "doc_as_upsert": True,
+        }
 
 
-def parallel_index_actions(
-    client: OpenSearch,
-    actions: Iterator[dict],
-    total_records: int,
-    thread_count: int = 4,
-    chunk_size: int = 500,
-    max_chunk_bytes: int = 100 * 1024 * 1024,
-    queue_size: int = 4,
+def init_process(
+    config: OpenSearchClientConfig,
+    success_value: mp.Value,
+    failure_value: mp.Value,
+    lock: mp.Lock,
+    level: int,
 ):
-    total = 0
-    success_count = 0
-    fail_count = 0
-    failed_ids = []
+    global open_search, success_counter, failure_counter, counter_lock
+    logging.basicConfig(level=level, format="[%(asctime)s] [%(levelname)s] [%(processName)s] %(message)s")
+    # logging.getLogger("opensearch").setLevel(logging.WARNING)
+    open_search = make_opensearch_client(config)
+    success_counter = success_value
+    failure_counter = failure_value
+    counter_lock = lock
 
-    with tqdm(total=total_records, desc="Sync Works with OpenSearch", unit="doc") as pbar:
-        for success, info in parallel_bulk(
-            client,
-            actions,
-            thread_count=thread_count,
-            chunk_size=chunk_size,
-            max_chunk_bytes=max_chunk_bytes,
-            queue_size=queue_size,
-        ):
-            total += 1
-            pbar.update(1)
 
-            if success:
-                success_count += 1
-            else:
-                fail_count += 1
-                failed_ids.append(info.get("update", {}).get("_id"))
+def index_file(
+    *,
+    file_path: pathlib.Path,
+    index_name: str,
+    columns: Optional[List[str]],
+    chunk_size: int = CHUNK_SIZE,
+    max_chunk_bytes: int = MAX_CHUNK_BYTES,
+    max_retries: int = MAX_RETRIES,
+    initial_backoff: int = INITIAL_BACKOFF,
+    max_backoff: int = MAX_BACKOFF,
+):
+    batches = stream_parquet_batches(source=file_path, columns=columns, batch_size=chunk_size)
+    actions = (action for batch in batches for action in batch_to_work_actions(index_name, batch))
 
-            if total % chunk_size == 0:
-                pbar.set_postfix({"Success": f"{success_count:,}", "Fail": f"{fail_count:,}"})
-
-    logging.info(f"Bulk indexing complete. Total: {total:,}, Success: {success_count:,}, Failures: {fail_count:,}")
-
-    # Print out failed IDs
-    if failed_ids:
-        logging.error(f"Failed to index {len(failed_ids)} documents: {', '.join(failed_ids)}")
+    for ok, info in streaming_bulk(
+        open_search,
+        actions,
+        chunk_size=chunk_size,
+        max_chunk_bytes=max_chunk_bytes,
+        max_retries=max_retries,
+        initial_backoff=initial_backoff,
+        max_backoff=max_backoff,
+        raise_on_error=False,
+        raise_on_exception=False,
+    ):
+        if not ok:
+            with counter_lock:
+                failure_counter.value += 1
+        else:
+            with counter_lock:
+                success_counter.value += 1
 
 
 @timed
 def sync_works(
-    client: OpenSearch,
-    in_dir: pathlib.Path,
     index_name: str,
-    start_date: pendulum.Date,
-    batch_size: int = 1000,
-    thread_count: int = 4,
-    chunk_size: int = 500,
-    max_chunk_bytes: int = 100 * 1024 * 1024,
-    queue_size: int = 4,
+    in_dir: pathlib.Path,
+    client_config: OpenSearchClientConfig,
+    sync_config: OpenSearchSyncConfig,
+    log_level: int = logging.INFO,
 ):
-    actions = stream_work_actions(source=in_dir, index_name=index_name, start_date=start_date, batch_size=batch_size)
-    total_records = count_records(in_dir, start_date=start_date)
-    parallel_index_actions(
-        client,
-        actions,
-        total_records,
-        thread_count=thread_count,
-        chunk_size=chunk_size,
-        max_chunk_bytes=max_chunk_bytes,
-        queue_size=queue_size,
-    )
+    parquet_files = list(in_dir.rglob("*.parquet"))
+    log.info("Counting records...")
+    total_records = count_records(in_dir)
+    log.info(f"Total records {total_records}")
+    columns = [
+        "doi",
+        "title",
+        "abstract",
+        "type",
+        "publication_date",
+        "updated_date",
+        "affiliation_rors",
+        "affiliation_names",
+        "author_names",
+        "author_orcids",
+        "award_ids",
+        "funder_ids",
+        "funder_names",
+        "source",
+    ]
+
+    total = 0
+    ctx = mp.get_context("spawn")
+    success = ctx.Value("i", 0)
+    failure = ctx.Value("i", 0)
+    lock = ctx.Lock()
+
+    with tqdm(total=total_records, desc="Sync Works with OpenSearch", unit="doc") as pbar:
+        with ProcessPoolExecutor(
+            mp_context=ctx,
+            max_workers=sync_config.max_processes,
+            initializer=init_process,
+            initargs=(
+                client_config,
+                success,
+                failure,
+                lock,
+                log_level,
+            ),
+        ) as executor:
+            log.info("Queuing futures...")
+            futures = [
+                executor.submit(
+                    index_file,
+                    file_path=file_path,
+                    index_name=index_name,
+                    columns=columns,
+                    chunk_size=sync_config.chunk_size,
+                    max_chunk_bytes=sync_config.max_chunk_bytes,
+                    max_retries=sync_config.max_retries,
+                    initial_backoff=sync_config.initial_backoff,
+                    max_backoff=sync_config.max_backoff,
+                )
+                for file_path in parquet_files
+            ]
+            log.info("Finished queuing futures.")
+
+            while futures:
+                # Get counts
+                with lock:
+                    success_count = success.value
+                    failure_count = failure.value
+
+                # Update process bar
+                new_total = success_count + failure_count
+                delta = new_total - total
+                total = new_total
+                pbar.update(delta)
+                pbar.set_postfix({"Success": f"{success_count:,}", "Fail": f"{failure_count:,}"})
+
+                # Get any futures have finished and are done and save failed_ids
+                finished = []
+                for fut in futures:
+                    if fut.done():
+                        try:
+                            fut.result()
+                        except Exception as e:
+                            log.exception(f"Error processing future: {e}")
+                            continue
+
+                        finished.append(fut)
+                for fut in finished:
+                    futures.remove(fut)
+
+                # Sleep
+                time.sleep(1)
+
+        log.info(f"Bulk indexing complete. Total: {total:,}, Success: {success_count:,}, Failures: {failure_count:,}")

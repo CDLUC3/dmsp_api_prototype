@@ -64,3 +64,7 @@ def transform_cmd(
             out_dir=ctx.transform_dir,
             **copy_dict(vars(config), ["log_level"]),
         )
+
+
+if __name__ == "__main__":
+    app()
