@@ -85,31 +85,41 @@ def associate_elastic_ip(
     instance_id: str,
     allocation_id: str,
     region_name: str,
+    max_wait_time_seconds: int = 300,
 ):
     ec2_client = boto3.client("ec2", region_name=region_name)
     try:
         current_ip = get_instance_outgoing_ip()
+        log.info(f"Current IP is {current_ip}")
         response = ec2_client.associate_address(
             AllocationId=allocation_id,
             InstanceId=instance_id,
             AllowReassociation=True,
         )
         log.info(f"Successfully associated Elastic IP {allocation_id} with instance {instance_id}.")
-        log.info(f"Association ID: {response['AssociationId']}")
-        log.info(f"Waiting for IP {current_ip} to change...")
-        for _ in range(25):
-            new_ip = get_instance_outgoing_ip()
-            if new_ip != current_ip:
-                current_ip = new_ip
-                log.info(f"Elastic IP {current_ip} is being used for outgoing traffic.")
-                break
-            print(f"Current IP is {current_ip}")
-            time.sleep(5)
-
+        log.info(f"Association ID: {response.get('AssociationId')}")
     except Exception as e:
         msg = f"Error associating Elastic IP: {e}"
         log.error(msg)
         raise Exception(msg)
+
+    log.info(f"Waiting for IP {current_ip} to change...")
+    start_time = time.time()
+    while True:
+        elapsed = time.time() - start_time
+        if elapsed > max_wait_time_seconds:
+            msg = f"IP did not change within {max_wait_time_seconds} seconds."
+            log.error(msg)
+            raise TimeoutError(msg)
+
+        new_ip = get_instance_outgoing_ip()
+        if new_ip != current_ip:
+            current_ip = new_ip
+            log.info(f"Elastic IP {current_ip} is being used for outgoing traffic.")
+            break
+
+        log.info(f"Current IP is still {current_ip}. Waiting...")
+        time.sleep(5)
 
 
 def get_ec2_instance_info(token_ttl_seconds: int = 300):
