@@ -8,4 +8,4 @@ MODEL (
 );
 
 SELECT *
-FROM read_parquet(@VAR('data_path') || 'openalex_works/parquets/openalex_works_affiliations_[0-9]*.parquet');
+FROM read_parquet(@VAR('data_path') || '/openalex_works/' || @VAR('openalex_works_release_date') || '/transform/parquets/openalex_works_affiliations_[0-9]*.parquet');
