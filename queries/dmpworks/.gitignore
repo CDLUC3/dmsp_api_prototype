@@ -24,3 +24,8 @@ target
 *.so
 *.dll
 *.pyd
+
+# SQL Mesh
+logs
+
+.env.*

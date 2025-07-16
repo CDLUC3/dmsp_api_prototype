@@ -1,22 +1,25 @@
 import logging
+import multiprocessing as mp
 import os
 import pathlib
 import queue
 import shutil
 import threading
 from abc import ABC, abstractmethod
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import as_completed, ProcessPoolExecutor
 from pathlib import Path
 from typing import Callable, Optional
 
-import pendulum
 from tqdm import tqdm
 
 import polars as pl
-from dmpworks.transform.utils_file import batch_files, extract_gzip, log_stage, read_jsonls, write_parquet
+from dmpworks.transform.utils_file import batch_files, extract_gzip, read_jsonls, write_parquet
+from dmpworks.utils import timed
 from polars._typing import SchemaDefinition
 
 TransformFunc = Callable[[pl.LazyFrame], list[tuple[str, pl.LazyFrame]]]
+
+log = logging.getLogger(__name__)
 
 
 class FileExtractor:
@@ -63,47 +66,49 @@ class BaseWorker(threading.Thread, ABC):
         *,
         input_queue: queue.Queue,
         output_queue: queue.Queue,
-        shutdown_event: threading.Event,
         name: Optional[str] = None,
+        log_level: int = logging.INFO,
     ):
-        super().__init__(daemon=True, name=name)
+        super().__init__(name=name)  # daemon=False,
         self.input_queue = input_queue
         self.output_queue = output_queue
-        self.shutdown_event = shutdown_event
+        self.log_level = log_level
 
     def run(self):
-        try:
-            while not self.shutdown_event.is_set():
-                try:
-                    task = self.input_queue.get(timeout=1)
-                except queue.Empty:
-                    continue
+        log.info("running worker")
 
-                if task is None:
-                    break
+        while True:
+            log.debug(f"Waiting for task")
+            task = self.input_queue.get()
+            if task is None:
+                log.debug(f"Received exit signal")
+                self.input_queue.task_done()
+                break
 
-                idx, batch = task
+            idx, batch = task
+            log.debug(f"Picked up task batch={idx}")
+            try:
+                self.process_task(idx, batch)
+            except Exception:
+                log.exception(f"Error processing batch={idx}")
+            finally:
+                self.input_queue.task_done()
+                log.debug(f"Task done batch={idx}")
 
-                try:
-                    self.process_task(idx, batch)
-                except Exception as e:
-                    logging.exception(f"Error processing batch={idx}, files={batch} in {self.name}", e)
-                    self.shutdown_event.set()
-                # finally:
-                #     if not self.input_queue.all_tasks_done:
-                #         self.input_queue.task_done()
-        finally:
-            self.on_shutdown()
+        log.info("worker shutdown")
 
     @abstractmethod
     def process_task(self, idx: int, batch: list[Path]):
         """Process the given task. Must be implemented by subclasses."""
         pass
 
-    @abstractmethod
-    def on_shutdown(self):
-        """Override in subclasses to perform cleanup when the thread exits."""
-        pass
+
+def log_stage(logger: logging.Logger, stage: str, status: str, batch: int):
+    logger.debug(f"[{stage:<10}] {status:<5} batch={batch}")
+
+
+def init_process_logs(level: int):
+    logging.basicConfig(level=level, format="[%(asctime)s] [%(levelname)s] [%(processName)s] %(message)s")
 
 
 class ExtractWorker(BaseWorker):
@@ -112,20 +117,33 @@ class ExtractWorker(BaseWorker):
         *,
         input_queue: queue.Queue,
         output_queue: queue.Queue,
-        shutdown_event: threading.Event,
         file_extractor: Optional[FileExtractor] = None,
         max_processes: int = os.cpu_count(),
         name: str = None,
+        log_level: int = logging.INFO,
     ):
-        super().__init__(input_queue=input_queue, output_queue=output_queue, shutdown_event=shutdown_event, name=name)
+        super().__init__(input_queue=input_queue, output_queue=output_queue, name=name, log_level=log_level)
         self.file_extractor = file_extractor
         self.max_processes = max_processes
-        self.daemon = True
-        self.executor = ProcessPoolExecutor(max_workers=self.max_processes)
+        self.executor: Optional[ProcessPoolExecutor] = None
+
+    def run(self):
+        log.debug("Extract outer run start")
+        executor = ProcessPoolExecutor(
+            mp_context=mp.get_context("spawn"),
+            max_workers=self.max_processes,
+            initializer=init_process_logs,
+            initargs=(self.log_level,),
+        )
+        self.executor = executor
+        super().run()
+        executor.shutdown(wait=True, cancel_futures=True)
+        log.debug("Extract outer run end")
 
     def process_task(self, idx: int, batch: list[Path]):
         # Extract files with ProcessPoolExecutor
-        log_stage("EXTRACT", "start", idx)
+        log_stage(log, "EXTRACT", "start", idx)
+
         futures = []
         if self.file_extractor is not None:
             for file in batch:
@@ -133,17 +151,13 @@ class ExtractWorker(BaseWorker):
 
         # Wait for batch to finish
         extracted_files = []
-        for future in futures:
-            extracted_files.append(future.result())
+        for future in as_completed(futures):
+            file_path = future.result()
+            extracted_files.append(file_path)
 
         # Queue output
         self.output_queue.put((idx, extracted_files))
-        self.input_queue.task_done()
-        log_stage("EXTRACT", "end", idx)
-
-    def on_shutdown(self):
-        if self.executor is not None:
-            self.executor.shutdown()
+        log_stage(log, "EXTRACT", "end", idx)
 
 
 class TransformWorker(BaseWorker):
@@ -152,25 +166,20 @@ class TransformWorker(BaseWorker):
         *,
         input_queue: queue.Queue,
         output_queue: queue.Queue,
-        shutdown_event: threading.Event,
         batch_transformer: BatchTransformer,
         name: str = None,
+        log_level: int = logging.INFO,
     ):
-        super().__init__(input_queue=input_queue, output_queue=output_queue, shutdown_event=shutdown_event, name=name)
+        super().__init__(input_queue=input_queue, output_queue=output_queue, name=name, log_level=log_level)
         self.batch_transformer = batch_transformer
-        self.daemon = True
 
     def process_task(self, idx: int, batch: list[Path]):
-        log_stage("TRANSFORM", "start", idx)
+        log_stage(log, "TRANSFORM", "start", idx)
         self.batch_transformer(idx, batch)
 
         # Queue output
         self.output_queue.put((idx, batch))
-        self.input_queue.task_done()
-        log_stage("TRANSFORM", "end", idx)
-
-    def on_shutdown(self):
-        pass
+        log_stage(log, "TRANSFORM", "end", idx)
 
 
 class CleanupWorker(BaseWorker):
@@ -179,21 +188,16 @@ class CleanupWorker(BaseWorker):
         *,
         input_queue: queue.Queue,
         output_queue: queue.Queue,
-        shutdown_event: threading.Event,
         name: str = None,
+        log_level: int = logging.INFO,
     ):
-        super().__init__(input_queue=input_queue, output_queue=output_queue, shutdown_event=shutdown_event, name=name)
-        self.daemon = True
+        super().__init__(input_queue=input_queue, output_queue=output_queue, name=name, log_level=log_level)
 
     def process_task(self, idx: int, batch: list[Path]):
-        log_stage("CLEANUP", "start", idx)
+        log_stage(log, "CLEANUP", "start", idx)
         [file.unlink(missing_ok=True) for file in batch]
         self.output_queue.put(idx)
-        self.input_queue.task_done()
-        log_stage("CLEANUP", "end", idx)
-
-    def on_shutdown(self):
-        pass
+        log_stage(log, "CLEANUP", "end", idx)
 
 
 class Pipeline:
@@ -209,9 +213,8 @@ class Pipeline:
         transform_queue_size: int = 0,
         cleanup_queue_size: int = 0,
         max_file_processes: int = os.cpu_count(),
+        log_level: logging.INFO,
     ):
-        logging.basicConfig(level=logging.DEBUG, format="[%(asctime)s] [%(levelname)s] [%(threadName)s] %(message)s")
-        self.shutdown_event = threading.Event()
         self.extract_queue = queue.Queue(maxsize=extract_queue_size)
         self.transform_queue = queue.Queue(maxsize=transform_queue_size)
         self.cleanup_queue = queue.Queue(maxsize=cleanup_queue_size)
@@ -220,10 +223,10 @@ class Pipeline:
             ExtractWorker(
                 input_queue=self.extract_queue,
                 output_queue=self.transform_queue,
-                shutdown_event=self.shutdown_event,
                 file_extractor=file_extractor,
                 max_processes=max_file_processes,
-                name=f"Extract-{i}",
+                name=f"Extract-Thread-{i}",
+                log_level=log_level,
             )
             for i in range(extract_workers)
         ]
@@ -231,9 +234,9 @@ class Pipeline:
             TransformWorker(
                 input_queue=self.transform_queue,
                 output_queue=self.cleanup_queue,
-                shutdown_event=self.shutdown_event,
                 batch_transformer=batch_transformer,
-                name=f"Transform-{i}",
+                name=f"Transform-Thread-{i}",
+                log_level=log_level,
             )
             for i in range(transform_workers)
         ]
@@ -241,8 +244,8 @@ class Pipeline:
             CleanupWorker(
                 input_queue=self.cleanup_queue,
                 output_queue=self.completed_queue,
-                shutdown_event=self.shutdown_event,
-                name=f"Cleanup-{i}",
+                name=f"Cleanup-Thread-{i}",
+                log_level=log_level,
             )
             for i in range(cleanup_workers)
         ]
@@ -259,15 +262,15 @@ class Pipeline:
             with tqdm(total=num_batches, desc="Transformation Pipeline", unit="batch") as pbar:
                 # Fill extract queue
                 for idx, batch in enumerate(batches):
-                    logging.debug(f"Queuing batch: {idx}")
+                    log.debug(f"Queuing batch: {idx}")
                     self.extract_queue.put((idx, batch))
 
                 # Wait for tasks to complete
                 num_completed = 0
-                while num_completed < len(batches) and not self.shutdown_event.is_set():
+                while num_completed < len(batches):
                     try:
                         idx = self.completed_queue.get(timeout=1)
-                        logging.info(f"Task completed: {idx}")
+                        log.info(f"Task completed: {idx}")
                         if idx is None:
                             break
 
@@ -275,23 +278,38 @@ class Pipeline:
                         pbar.update(1)
                         self.completed_queue.task_done()
                     except queue.Empty:
-                        logging.debug(f"Completed queue empty")
+                        log.debug(f"Completed queue empty")
                         continue
 
         except KeyboardInterrupt:
-            logging.info("Interrupted by user")
-            self.shutdown_event.set()
-
+            log.info("Interrupted by user")
         finally:
             # Signal shutdown
-            for q in [self.extract_queue, self.transform_queue, self.cleanup_queue]:
-                q.put(None)
+            # Each worker will eventually get a None
+            for q, ws in [
+                (self.extract_queue, self.extract_workers),
+                (self.transform_queue, self.transform_workers),
+                (self.cleanup_queue, self.cleanup_workers),
+            ]:
+                for _ in ws:
+                    while True:
+                        try:
+                            q.put(None, timeout=1)
+                            break
+                        except queue.Full:
+                            log.warning("Queue full, retrying shutdown...")
 
-            # # Join threads
-            # for worker in workers:
-            #     worker.join()
+                    q.put(None)
+
+            # Join threads
+            log.debug("Joining threads")
+            for worker in workers:
+                log.debug(f"Joining worker: {worker}")
+                worker.join()
+            log.debug("Workers joined")
 
 
+@timed
 def process_files_parallel(
     *,
     in_dir: pathlib.Path,
@@ -311,23 +329,23 @@ def process_files_parallel(
     max_file_processes: int = os.cpu_count(),
     n_batches: Optional[int] = None,
     low_memory: bool = False,
+    log_level: int = logging.INFO,
 ):
-    start = pendulum.now()
-
-    logging.info(f"in_dir: {in_dir}")
-    logging.info(f"out_dir: {out_dir}")
-    logging.info(f"schema: {schema}")
-    logging.info(f"transform_func: {transform_func.__name__}")
-    logging.info(f"batch_size: {batch_size}")
-    logging.info(f"extract_workers: {extract_workers}")
-    logging.info(f"transform_workers: {transform_workers}")
-    logging.info(f"cleanup_workers: {cleanup_workers}")
-    logging.info(f"extract_queue_size: {extract_queue_size}")
-    logging.info(f"transform_queue_size: {transform_queue_size}")
-    logging.info(f"cleanup_queue_size: {cleanup_queue_size}")
-    logging.info(f"max_file_processes: {max_file_processes}")
-    logging.info(f"n_batches: {n_batches}")
-    logging.info(f"low_memory: {low_memory}")
+    log.info(f"in_dir: {in_dir}")
+    log.info(f"out_dir: {out_dir}")
+    log.info(f"schema: {schema}")
+    log.info(f"transform_func: {transform_func.__name__}")
+    log.info(f"batch_size: {batch_size}")
+    log.info(f"extract_workers: {extract_workers}")
+    log.info(f"transform_workers: {transform_workers}")
+    log.info(f"cleanup_workers: {cleanup_workers}")
+    log.info(f"extract_queue_size: {extract_queue_size}")
+    log.info(f"transform_queue_size: {transform_queue_size}")
+    log.info(f"cleanup_queue_size: {cleanup_queue_size}")
+    log.info(f"max_file_processes: {max_file_processes}")
+    log.info(f"n_batches: {n_batches}")
+    log.info(f"low_memory: {low_memory}")
+    log.info(f"log_level: {logging.getLevelName(log_level)}")
 
     # Cleanup existing output directory
     shutil.rmtree(out_dir, ignore_errors=True)
@@ -352,9 +370,6 @@ def process_files_parallel(
         transform_queue_size=transform_queue_size,
         cleanup_queue_size=cleanup_queue_size,
         max_file_processes=max_file_processes,
+        log_level=log_level,
     )
     pipeline.start(batches)
-
-    end = pendulum.now()
-    diff = end - start
-    logging.info(f"Execution time: {diff.in_words()}")

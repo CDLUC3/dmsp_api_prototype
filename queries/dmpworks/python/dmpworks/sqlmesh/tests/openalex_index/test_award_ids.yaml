@@ -1,0 +1,44 @@
+test_openalex_index_award_ids:
+  model: openalex_index.award_ids
+  inputs:
+    openalex_index.works_metadata:
+      rows:
+        - id: "W0000000001"
+          doi: "10.9999/test.0001"
+        - id: "W0000000002"
+          doi: "10.9999/test.0002"
+        - id: "W0000000003"
+          doi: "10.9999/test.0003"
+    crossref_metadata.works_funders:
+      rows:
+        - work_doi: "10.9999/test.0001"
+          award: "1"
+        - work_doi: "10.9999/test.0002"
+          award: "2"
+        - work_doi: "10.9999/test.0002"
+          award: null
+    openalex.works_funders:
+      rows:
+        - work_id: "W0000000001"
+          work_doi: "10.9999/test.0001"
+          award_id: "3"
+        - work_id: "W0000000001"
+          work_doi: "10.9999/test.0001" # nulls should be filtered out
+          award_id: null
+        - work_id: "W0000000001"
+          work_doi: "10.9999/test.0001" # duplicates should be filtered out
+          award_id: "1"
+        - work_id: "W0000000002"
+          work_doi: "10.9999/test.0002"
+          award_id: "4"
+        - work_id: "W0000000002"
+          work_doi: "10.9999/test.0002" # duplicates should be filtered out
+          award_id: "2"
+  outputs:
+    query:
+      rows:
+        - doi: "10.9999/test.0001"
+          award_ids: [ "1", "3" ]
+        - doi: "10.9999/test.0002"
+          award_ids: [ "2", "4" ]
+
