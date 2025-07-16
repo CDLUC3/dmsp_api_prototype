@@ -8,4 +8,4 @@ MODEL (
 );
 
 SELECT *
-FROM read_parquet(@VAR('data_path') || '/crossref_metadata/' || @VAR('crossref_metadata_release_date') || '/transform/parquets/crossref_works_affiliations_[0-9]*.parquet');
+FROM read_parquet(@VAR('crossref_metadata_path') || '/crossref_works_affiliations_[0-9]*.parquet');

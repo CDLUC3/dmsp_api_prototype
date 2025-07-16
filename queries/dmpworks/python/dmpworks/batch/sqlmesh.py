@@ -67,17 +67,16 @@ def plan(
         download_from_s3(f"{target_uri}*", transform_dir)
 
     # Configure SQL Mesh environment
-    data_dir = pathlib.Path("/data")
-    sqlmesh_data_dir = data_dir / "sqlmesh" / task_id
+    sqlmesh_data_dir = pathlib.Path("/data") / "sqlmesh" / task_id
     duckdb_dir = sqlmesh_data_dir / "duckdb" / "db.db"
     export_dir = sqlmesh_data_dir / "export"
     duckdb_dir.parent.mkdir(parents=True, exist_ok=True)
     export_dir.mkdir(parents=True, exist_ok=True)
     os.environ["SQLMESH__GATEWAYS__DUCKDB__CONNECTION__DATABASE"] = str(duckdb_dir)
-    os.environ["SQLMESH__VARIABLES__DATA_PATH"] = str(data_dir)
-    os.environ["SQLMESH__VARIABLES__EXPORT_PATH"] = str(export_dir)
     for dataset, release_date in datasets:
-        os.environ[f"SQLMESH__VARIABLES__{dataset.upper()}_RELEASE_DATE"] = release_date
+        parquet_path = local_path(dataset, release_date, "transform") / "parquets"
+        os.environ[f"SQLMESH__VARIABLES__{dataset.upper()}_PATH"] = str(parquet_path)
+    os.environ["SQLMESH__VARIABLES__EXPORT_PATH"] = str(export_dir)
 
     # Run SQL Mesh
     run_plan()
