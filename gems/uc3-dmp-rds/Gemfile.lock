@@ -1,11 +1,7 @@
 PATH
   remote: .
   specs:
-<<<<<<< HEAD
     uc3-dmp-rds (0.0.29)
-=======
-    uc3-dmp-rds (0.0.28)
->>>>>>> e711d535b61f4597a8f06b313eb61d43a93c3214
       active_record_simple_execute (~> 0.9.1)
       json (~> 2.6)
       mysql2 (~> 0.5.5)
