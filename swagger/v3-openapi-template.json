@@ -1,12 +1,12 @@
 {
-  "openapi": "3.0.0",
+  "openapi": "3.1.0",
 
   "info": {
-    "version": "0.1.0",
-    "title": "DMPTool v3 API specification",
-    "description": "Please use the interface below to test the features of the DMPTool API.<br><br>Note that the lock icon next to an endpoint indicates that you must provide an access token.<br>To acquire an access token, click on the green 'Authorize' button and enter your API credentials along with the scope(s) you have access to.<br><br>If you do not have credentials for the API, you can test any of the endpoints that do not display a lock icon.<br>If you would like API credentials, please contact us via the link below.<br><br><strong>If you receive a 'TypeError: Load failed' message from one of the endpoints, then this is due to an issue with your token. Please log out and then re authenticate</strong>",
+    "version": "3.0.0",
+    "title": "DMP Tool v3 API specification",
+    "description": "Please use the interface below to test the features of the DMP Tool API.<br><br>Note that the lock icon next to an endpoint indicates that you must provide an access token.<br>To acquire an access token, click on the green 'Authorize' button and enter your API credentials along with the scope(s) you have access to.<br><br>If you do not have credentials for the API, you can test any of the endpoints that do not display a lock icon.<br>If you would like API credentials, please contact us via the link below.<br><br><strong>If you receive a 'TypeError: Load failed' message from one of the endpoints, then this is due to an issue with your token. Please log out and then re authenticate</strong>",
     "contact": {
-      "name": "DMPTool Support",
+      "name": "DMP Tool Support",
       "email": "dmptool@ucop.edu",
       "url": "https://dmptool.org/contact-us"
     },
@@ -118,12 +118,12 @@
         "description": "OAuth2 Client Credentials",
         "flows": {
           "clientCredentials": {
-            "tokenUrl": "https://auth.dmphub.uc3dev.cdlib.net/oauth2/token",
+            "tokenUrl": "https://auth.dmphub.uc3stg.cdlib.net/oauth2/token",
             "scopes": {
-              "https://auth.dmphub.uc3dev.cdlib.net/dev.delete": "Delete an item",
-              "https://auth.dmphub.uc3dev.cdlib.net/dev.read": "Fetch an item",
-              "https://auth.dmphub.uc3dev.cdlib.net/dev.upload": "Upload an object",
-              "https://auth.dmphub.uc3dev.cdlib.net/dev.write": "Create or update an item"
+              "https://auth.dmphub.uc3stg.cdlib.net/stg.delete": "Delete an item",
+              "https://auth.dmphub.uc3stg.cdlib.net/stg.read": "Fetch an item",
+              "https://auth.dmphub.uc3stg.cdlib.net/stg.upload": "Upload an object",
+              "https://auth.dmphub.uc3stg.cdlib.net/stg.write": "Create or update an item"
             }
           }
         }
@@ -236,7 +236,7 @@
           "identifier": {
             "type": "string",
             "title": "The download uri for the PDF document",
-            "example": "https://api.dmphub.uc3dev.cdlib.net/narratives/1234567890.pdf"
+            "example": "https://api.dmphub.uc3stg.cdlib.net/narratives/1234567890.pdf"
           }
         },
         "required": ["descriptor", "work_type", "type", "identifier"]
@@ -244,7 +244,7 @@
 
       "User": {
         "type": "object",
-        "title": "A DMPTool user",
+        "title": "A DMP Tool user",
         "properties": {
           "affiliation": {
             "type": "object",
@@ -350,7 +350,7 @@
           "funder_api": {
             "type": "string",
             "description": "The AJAX target for the funder's API. Can be used to back a search field on an HTML form",
-            "example": "https://api.dmphub.uc3dev.cdlib.net/awards/nih"
+            "example": "https://api.dmphub.uc3stg.cdlib.net/awards/nih"
           },
           "funder_api_query_fields": {
             "type": "object",
@@ -774,241 +774,11 @@
   },
 
   "paths": {
-    "/awards/crossref/{funderId}": {
-      "servers": [
-        {
-          "description": "DMPHub development instance",
-          "url": "https://api.dmphub.uc3dev.cdlib.net"
-        }
-      ],
-      "get": {
-        "tags": [
-          "UI support operations"
-        ],
-        "operationId": "GetAwardsCrossref",
-        "description": "Performs a search for Crossref award data",
-        "parameters": [
-          {
-            "name": "funderId",
-            "in": "path",
-            "description": "The Crossref Funder Id",
-            "example": "10.13039/100000015",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          { "$ref": "#/components/parameters/keywordParam" },
-          { "$ref": "#/components/parameters/projectNbrParam" },
-          { "$ref": "#/components/parameters/opportunityNbrParam" },
-          { "$ref": "#/components/parameters/piNamesParam" },
-          { "$ref": "#/components/parameters/yearsParam" },
-          { "$ref": "#/components/parameters/pageParam" },
-          { "$ref": "#/components/parameters/perPageParam" }
-        ],
-        "security": [
-          {
-            "SystemAuthorizer": [
-              "https://auth.dmphub.uc3dev.cdlib.net/dev.read"
-            ]
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The Project and award metadata",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AwardResponse"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StandardErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/awards/nih": {
-      "servers": [
-        {
-          "description": "DMPHub development instance",
-          "url": "https://api.dmphub.uc3dev.cdlib.net"
-        }
-      ],
-      "get": {
-        "tags": [
-          "UI support operations"
-        ],
-        "operationId": "GetAwardsNIH",
-        "description": "Performs a search for NIH award data",
-        "parameters": [
-          { "$ref": "#/components/parameters/keywordParam" },
-          { "$ref": "#/components/parameters/projectNbrParam" },
-          { "$ref": "#/components/parameters/opportunityNbrParam" },
-          { "$ref": "#/components/parameters/piNamesParam" },
-          { "$ref": "#/components/parameters/yearsParam" },
-          { "$ref": "#/components/parameters/pageParam" },
-          { "$ref": "#/components/parameters/perPageParam" }
-        ],
-        "security": [
-          {
-            "SystemAuthorizer": [
-              "https://auth.dmphub.uc3dev.cdlib.net/dev.read"
-            ]
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The Project and award metadata",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AwardResponse"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StandardErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/awards/nsf": {
-      "servers": [
-        {
-          "description": "DMPHub development instance",
-          "url": "https://api.dmphub.uc3dev.cdlib.net"
-        }
-      ],
-      "get": {
-        "tags": [
-          "UI support operations"
-        ],
-        "operationId": "GetAwardsNSF",
-        "description": "Performs a search for NSF award data",
-        "parameters": [
-          { "$ref": "#/components/parameters/keywordParam" },
-          { "$ref": "#/components/parameters/projectNbrParam" },
-          { "$ref": "#/components/parameters/opportunityNbrParam" },
-          { "$ref": "#/components/parameters/piNamesParam" },
-          { "$ref": "#/components/parameters/yearsParam" },
-          { "$ref": "#/components/parameters/pageParam" },
-          { "$ref": "#/components/parameters/perPageParam" }
-        ],
-        "security": [
-          {
-            "SystemAuthorizer": [
-              "https://auth.dmphub.uc3dev.cdlib.net/dev.read"
-            ]
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "The Project and award metadata",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AwardResponse"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StandardErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-
-    "/narratives": {
-      "servers": [
-        {
-          "description": "DMPHub development instance",
-          "url": "https://api.dmphub.uc3dev.cdlib.net"
-        }
-      ],
-      "post": {
-        "tags": [
-          "UI support operations"
-        ],
-        "operationId": "PostNarratives",
-        "description": "Uploads the specified PDF document",
-        "security": [
-          {
-            "SystemAuthorizer": [
-              "https://auth.dmphub.uc3dev.cdlib.net/dev.write"
-            ]
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "multipart/form-data": {
-              "schema": {
-                "type": "object",
-                "properties": {
-                  "file": {
-                    "type": "string",
-                    "format": "binary"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "The metadata of the uploaded PDF document including its download URL",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PdfResponse"
-                }
-              }
-            }
-          },
-          "default": {
-            "description": "Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StandardErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-
     "/dmps": {
       "servers": [
         {
           "description": "DMPHub development instance",
-          "url": "https://api.dmphub.uc3dev.cdlib.net"
+          "url": "https://api.dmphub.uc3stg.cdlib.net"
         }
       ],
       "get": {
@@ -1021,7 +791,7 @@
           {
             "name": "owner",
             "in": "query",
-            "description": "The ORCID id or email of one of the DMP's contributors.",
+            "description": "The ORCID id or email of one of the DMP's contributors. (e.g. 0000-0000-0000-0000)",
             "required": false,
             "schema": {
               "type": "string",
@@ -1041,7 +811,7 @@
           },
           {
             "name": "org",
-            "description": "If your institution has specific ROR ids for different schools, you may specify an individual ROR id otherwise leave this blank to retrieve all DMPs for all of your associated ROR ids.",
+            "description": "If your institution has specific ROR ids for different schools, you may specify an individual ROR id otherwise leave this blank to retrieve all DMPs for all of your associated ROR ids. (e.g. 01cwqze88)",
             "in": "query",
             "required": false,
             "schema": {
@@ -1057,7 +827,7 @@
           },
           {
             "name": "funder",
-            "description": "A funder's ROR id or Crossref Funder id. Note that this is dependent on the way a DMP has encoded the funder's identifier. If the DMP uses the ROR id and you search for the Crossref Funder id, it will not return that DMP",
+            "description": "A funder's ROR id or Crossref Funder id. Note that this is dependent on the way a DMP has encoded the funder's identifier. If the DMP uses the ROR id and you search for the Crossref Funder id, it will not return that DMP (e.g. 01cwqze88 or 10.13039/100000002)",
             "in": "query",
             "required": false,
             "schema": {
@@ -1078,12 +848,11 @@
           },
           {
             "name": "search",
-            "description": "An exact match search against DMP titles and abstracts",
+            "description": "An exact match search against DMP titles and abstracts (use + to separate multiple terms, e.g. 'Test+Plan').",
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string",
-              "example": "Test Plan"
+              "type": "string"
             }
           },
           {
@@ -1132,7 +901,7 @@
         "security": [
           {
             "SystemAuthorizer": [
-              "https://auth.dmphub.uc3dev.cdlib.net/dev.read"
+              "https://auth.dmphub.uc3stg.cdlib.net/stg.read"
             ]
           }
         ],
@@ -1179,7 +948,7 @@
         "security": [
           {
             "SystemAuthorizer": [
-              "https://auth.dmphub.uc3dev.cdlib.net/dev.write"
+              "https://auth.dmphub.uc3stg.cdlib.net/stg.write"
             ]
           }
         ],
@@ -1212,7 +981,7 @@
       "servers": [
         {
           "description": "DMPHub development instance",
-          "url": "https://api.dmphub.uc3dev.cdlib.net"
+          "url": "https://api.dmphub.uc3stg.cdlib.net"
         }
       ],
       "post": {
@@ -1261,7 +1030,7 @@
       "servers": [
         {
           "description": "DMPHub development instance",
-          "url": "https://api.dmphub.uc3dev.cdlib.net"
+          "url": "https://api.dmphub.uc3stg.cdlib.net"
         }
       ],
 
@@ -1286,7 +1055,7 @@
         "security": [
           {
             "SystemAuthorizer": [
-              "https://auth.dmphub.uc3dev.cdlib.net/dev.write"
+              "https://auth.dmphub.uc3stg.cdlib.net/stg.write"
             ]
           }
         ],
@@ -1398,7 +1167,7 @@
         "security": [
           {
             "SystemAuthorizer": [
-              "https://auth.dmphub.uc3dev.cdlib.net/dev.write"
+              "https://auth.dmphub.uc3stg.cdlib.net/stg.write"
             ]
           }
         ],
@@ -1415,6 +1184,236 @@
           },
           "default": {
             "description": "Non-2xx level HTTP status codes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/narratives": {
+      "servers": [
+        {
+          "description": "DMPHub development instance",
+          "url": "https://api.dmphub.uc3stg.cdlib.net"
+        }
+      ],
+      "post": {
+        "tags": [
+          "DMP operations"
+        ],
+        "operationId": "PostNarratives",
+        "description": "Uploads the specified PDF document",
+        "security": [
+          {
+            "SystemAuthorizer": [
+              "https://auth.dmphub.uc3stg.cdlib.net/stg.write"
+            ]
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The metadata of the uploaded PDF document including its download URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PdfResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/awards/crossref/{funderId}": {
+      "servers": [
+        {
+          "description": "DMPHub development instance",
+          "url": "https://api.dmphub.uc3stg.cdlib.net"
+        }
+      ],
+      "get": {
+        "tags": [
+          "UI support operations"
+        ],
+        "operationId": "GetAwardsCrossref",
+        "description": "Performs a search for Crossref award data",
+        "parameters": [
+          {
+            "name": "funderId",
+            "in": "path",
+            "description": "The Crossref Funder Id",
+            "example": "10.13039/100000015",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          { "$ref": "#/components/parameters/keywordParam" },
+          { "$ref": "#/components/parameters/projectNbrParam" },
+          { "$ref": "#/components/parameters/opportunityNbrParam" },
+          { "$ref": "#/components/parameters/piNamesParam" },
+          { "$ref": "#/components/parameters/yearsParam" },
+          { "$ref": "#/components/parameters/pageParam" },
+          { "$ref": "#/components/parameters/perPageParam" }
+        ],
+        "security": [
+          {
+            "SystemAuthorizer": [
+              "https://auth.dmphub.uc3stg.cdlib.net/stg.read"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Project and award metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AwardResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/awards/nih": {
+      "servers": [
+        {
+          "description": "DMPHub development instance",
+          "url": "https://api.dmphub.uc3stg.cdlib.net"
+        }
+      ],
+      "get": {
+        "tags": [
+          "UI support operations"
+        ],
+        "operationId": "GetAwardsNIH",
+        "description": "Performs a search for NIH award data",
+        "parameters": [
+          { "$ref": "#/components/parameters/keywordParam" },
+          { "$ref": "#/components/parameters/projectNbrParam" },
+          { "$ref": "#/components/parameters/opportunityNbrParam" },
+          { "$ref": "#/components/parameters/piNamesParam" },
+          { "$ref": "#/components/parameters/yearsParam" },
+          { "$ref": "#/components/parameters/pageParam" },
+          { "$ref": "#/components/parameters/perPageParam" }
+        ],
+        "security": [
+          {
+            "SystemAuthorizer": [
+              "https://auth.dmphub.uc3stg.cdlib.net/stg.read"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Project and award metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AwardResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StandardErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/awards/nsf": {
+      "servers": [
+        {
+          "description": "DMPHub development instance",
+          "url": "https://api.dmphub.uc3stg.cdlib.net"
+        }
+      ],
+      "get": {
+        "tags": [
+          "UI support operations"
+        ],
+        "operationId": "GetAwardsNSF",
+        "description": "Performs a search for NSF award data",
+        "parameters": [
+          { "$ref": "#/components/parameters/keywordParam" },
+          { "$ref": "#/components/parameters/projectNbrParam" },
+          { "$ref": "#/components/parameters/opportunityNbrParam" },
+          { "$ref": "#/components/parameters/piNamesParam" },
+          { "$ref": "#/components/parameters/yearsParam" },
+          { "$ref": "#/components/parameters/pageParam" },
+          { "$ref": "#/components/parameters/perPageParam" }
+        ],
+        "security": [
+          {
+            "SystemAuthorizer": [
+              "https://auth.dmphub.uc3stg.cdlib.net/stg.read"
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The Project and award metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AwardResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "Error",
             "content": {
               "application/json": {
                 "schema": {

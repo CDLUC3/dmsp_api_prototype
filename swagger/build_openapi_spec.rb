@@ -67,9 +67,9 @@ if ARGV.length == 2
       3
     end
     begin
-      openapi_spec = JSON.parse(File.read('v0-openapi-template.json'))
+      openapi_spec = JSON.parse(File.read('v3-openapi-template.json'))
     rescue JSON::ParserError
-      p "    failure when trying to parse the OpenApi spec v0-openapi-template.json."
+      p "    failure when trying to parse the OpenApi spec v3-openapi-template.json."
       4
     end
 
@@ -87,11 +87,11 @@ if ARGV.length == 2
       FileUtils.mkdir("#{swagger_dir}/dist") unless Dir.exist?("#{swagger_dir}/dist")
       FileUtils.mkdir("#{swagger_dir}/dist/docs") unless Dir.exist?("#{swagger_dir}/dist/docs")
 
-      FileUtils.cp('v0-api-docs.json', "#{swagger_dir}/dist/docs-list.json")
+      FileUtils.cp('v3-api-docs.json', "#{swagger_dir}/dist/docs-list.json")
       FileUtils.cp_r('assets/', "#{swagger_dir}/dist/")
       FileUtils.cp('default_index.html', "#{swagger_dir}/dist/index.html")
 
-      output = File.open("#{swagger_dir}/dist/docs/v0-openapi-spec.json", 'w+')
+      output = File.open("#{swagger_dir}/dist/docs/v3-openapi-spec.json", 'w+')
       json_out = openapi_spec.to_json
       json_out = json_out.gsub('uc3dev', "uc3#{ARGV[0]}")
       output.write(json_out)

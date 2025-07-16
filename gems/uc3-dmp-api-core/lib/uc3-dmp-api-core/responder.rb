@@ -86,7 +86,11 @@ module Uc3DmpApiCore
       def headers
         return {} if ENV['CORS_ORIGIN'].nil?
 
-        { 'access-control-allow-origin': ENV.fetch('CORS_ORIGIN', nil) }
+        { 
+          'access-control-allow-origin': ENV.fetch('CORS_ORIGIN', nil),
+          'access-control-allow-headers': '*',
+          'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', 
+        }
       end
     end
   end

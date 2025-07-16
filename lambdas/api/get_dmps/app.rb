@@ -85,8 +85,10 @@ module Functions
       unless term.blank?
         logger&.debug(message: "Searching results for #{term}")
         dmps = dmps.select do |dmp|
+          logger&.debug(message: "Checking DMP: #{dmp['abstract']}")
           dmp['title'].to_s.downcase.include?(term) || dmp['abstract'].to_s.downcase.include?(term)
         end
+        logger&.debug(message: "Search results:", details: { term: term, dmps: dmps })
       end
 
       # Handle sort
@@ -254,7 +256,13 @@ module Functions
         body[:last] = _build_link(url:, target_page: last, per_page: body[:per_page]) if current_page < last
         body.compact
 
-        { statusCode: status.to_i, body: body.to_json, headers: {} }
+        headers = {
+          'access-control-allow-origin': ENV.fetch('CORS_ORIGIN', nil),
+          'access-control-allow-headers': '*',
+          'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        }
+
+        { statusCode: status.to_i, body: body.to_json, headers: headers }
       end
     end
   end
