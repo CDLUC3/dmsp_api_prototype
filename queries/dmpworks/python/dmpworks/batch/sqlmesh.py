@@ -73,8 +73,6 @@ def plan(
     export_dir = sqlmesh_data_dir / "export"
     duckdb_dir.parent.mkdir(parents=True, exist_ok=True)
     export_dir.mkdir(parents=True, exist_ok=True)
-    os.environ["SQLMESH__GATEWAYS__DUCKDB__CONNECTION__CONNECTOR_CONFIG__THREADS"] = str(os.cpu_count())
-    os.environ["SQLMESH__GATEWAYS__DUCKDB__CONNECTION__CONNECTOR_CONFIG__MEMORY_LIMIT"] = "240GB"
     os.environ["SQLMESH__GATEWAYS__DUCKDB__CONNECTION__DATABASE"] = str(duckdb_dir)
     os.environ["SQLMESH__VARIABLES__DATA_PATH"] = str(data_dir)
     os.environ["SQLMESH__VARIABLES__EXPORT_PATH"] = str(export_dir)
