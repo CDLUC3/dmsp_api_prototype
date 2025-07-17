@@ -6,7 +6,7 @@ from typing import Iterator
 import pendulum
 from tqdm import tqdm
 
-from dmpworks.opensearch.sync_works import count_records, stream_work_actions
+from dmpworks.opensearch.sync_works import count_records
 
 
 def analyze_bulk_chunks(actions: Iterator[dict], chunk_size: int, total_records: int):

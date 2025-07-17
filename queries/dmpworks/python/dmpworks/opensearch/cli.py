@@ -1,70 +1,21 @@
 import logging
-from dataclasses import dataclass
-from typing import Annotated, Literal, Optional, Sequence
+from typing import Optional
 
-import pendulum
-from cyclopts import App, Parameter, Token
+from cyclopts import App
 
 from dmpworks.cli_utils import Directory, LogLevel
 from dmpworks.opensearch.chunk_size import measure_chunk_size
 from dmpworks.opensearch.create_index import create_index
-from dmpworks.opensearch.sync_works import (
-    BATCH_SIZE,
-    CHUNK_SIZE,
+from dmpworks.opensearch.sync_works import sync_works
+from dmpworks.opensearch.utils import (
+    ChunkSize,
+    Date,
     make_opensearch_client,
-    MAX_CHUNK_BYTES,
-    MAX_PROCESSES,
-    QUEUE_SIZE,
-    sync_works,
-    THREAD_COUNT,
+    OpenSearchClientConfig,
+    OpenSearchSyncConfig,
 )
 
 app = App(name="opensearch", help="OpenSearch utilities.")
-
-
-def validate_chunk_size(type_, value):
-    if value <= 0:
-        raise ValueError("Chunk size must be greater than zero.")
-
-
-def parse_date(type_, tokens: Sequence[Token]) -> pendulum.Date:
-    value = tokens[0].value
-    try:
-        return pendulum.from_format(value, "YYYY-MM-DD").date()
-    except Exception:
-        raise ValueError(f"Not a valid date: '{value}'. Expected format: YYYY-MM-DD")
-
-
-Mode = Literal["local", "aws"]
-ChunkSize = Annotated[int, Parameter(validator=validate_chunk_size)]
-Date = Annotated[Optional[pendulum.Date], Parameter(converter=parse_date)]
-
-
-@dataclass
-class OpenSearchClientConfig:
-    mode: Mode = "local"
-    host: str = "localhost"
-    port: int = 9200
-    region: str = None
-    service: str = None
-
-
-class OpenSearchSyncConfig:
-    max_processes: int = MAX_PROCESSES
-    batch_size: int = BATCH_SIZE
-    thread_count: int = THREAD_COUNT
-    chunk_size: int = CHUNK_SIZE
-    max_chunk_bytes: int = MAX_CHUNK_BYTES
-    queue_size: int = QUEUE_SIZE
-    log_level: int = logging.INFO
-
-
-# max_processes: Maximum number of processes. Each process reads a parquet file and loads it into OpenSearch.
-#         batch_size: Batch size.
-#         thread_count: Thread count.
-#         chunk_size: Chunk size.
-#         max_chunk_bytes: Maximum chunk size in bytes.
-#         queue_size: Queue size.
 
 
 @app.command(name="chunk-size")
@@ -92,7 +43,7 @@ def chunk_size_cmd(
 def create_index_cmd(
     index_name: str,
     mapping_filename: str,
-    client_config: OpenSearchClientConfig,
+    client_config: Optional[OpenSearchClientConfig] = None,
     log_level: LogLevel = "INFO",
 ):
     """Create an OpenSearch index.
@@ -104,6 +55,9 @@ def create_index_cmd(
         log_level: Python log level.
     """
 
+    if client_config is None:
+        client_config = OpenSearchClientConfig()
+
     level = logging.getLevelName(log_level)
     logging.basicConfig(level=level)
     client = make_opensearch_client(client_config)
@@ -114,8 +68,8 @@ def create_index_cmd(
 def sync_works_cmd(
     index_name: str,
     in_dir: Directory,
-    client_config: OpenSearchClientConfig,
-    sync_config: OpenSearchSyncConfig,
+    client_config: Optional[OpenSearchClientConfig] = None,
+    sync_config: Optional[OpenSearchSyncConfig] = None,
     log_level: LogLevel = "INFO",
 ):
     """Sync the DMP Tool Works Index Table with OpenSearch.
@@ -128,11 +82,17 @@ def sync_works_cmd(
         log_level: Python log level.
     """
 
+    if client_config is None:
+        client_config = OpenSearchClientConfig()
+
+    if sync_config is None:
+        sync_config = OpenSearchSyncConfig()
+
     level = logging.getLevelName(log_level)
     logging.basicConfig(level=level)
     logging.getLogger("opensearch").setLevel(logging.WARNING)
 
-    sync_works(in_dir, index_name, client_config, sync_config)
+    sync_works(index_name, in_dir, client_config, sync_config)
 
 
 if __name__ == "__main__":

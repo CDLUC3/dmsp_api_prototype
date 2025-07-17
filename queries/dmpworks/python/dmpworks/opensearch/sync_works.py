@@ -1,27 +1,28 @@
 import logging
+import multiprocessing as mp
 import pathlib
 from concurrent.futures import as_completed, ProcessPoolExecutor
 from typing import Iterator, List, Optional
 
-import boto3
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import pyarrow.parquet as pq
-from opensearchpy import AWSV4SignerAuth, OpenSearch, RequestsHttpConnection
+from opensearchpy import OpenSearch
 from opensearchpy.helpers import parallel_bulk
 from tqdm import tqdm
 
-from dmpworks.opensearch.cli import OpenSearchClientConfig, OpenSearchSyncConfig
+from dmpworks.opensearch.utils import (
+    BATCH_SIZE,
+    CHUNK_SIZE,
+    make_opensearch_client,
+    MAX_CHUNK_BYTES,
+    OpenSearchClientConfig,
+    OpenSearchSyncConfig,
+    QUEUE_SIZE,
+    THREAD_COUNT,
+)
 from dmpworks.utils import timed
-
-MAX_PROCESSES = 4
-BATCH_SIZE = 5000
-THREAD_COUNT = 2
-CHUNK_SIZE = 500
-MAX_CHUNK_BYTES = 100 * 1024 * 1024
-QUEUE_SIZE = 2
-
 
 # Global OpenSearch client, one created for each process
 open_search: Optional[OpenSearch] = None
@@ -38,10 +39,9 @@ def stream_parquet_batches(
     columns: Optional[list[str]] = None,
     batch_size: Optional[int] = None,
 ) -> Iterator[pa.RecordBatch]:
-    # Yield batches
-    # Type hints are wrong, e.g. parameter isn't int_batch_size, it is batch_size
-    table = pq.read_table(source, columns=columns)
-    for batch in table.to_batches(batch_size=batch_size):
+    # Yield batches from a parquet file
+    parquet_file = pq.ParquetFile(source)
+    for batch in parquet_file.iter_batches(batch_size=batch_size, columns=columns):
         yield batch
 
 
@@ -62,32 +62,6 @@ def batch_to_work_actions(index_name: str, batch: pa.RecordBatch) -> Iterator[di
     docs = batch.to_pylist()
     for doc in docs:
         yield {"_op_type": "update", "_index": index_name, "_id": doc["doi"], "doc": doc, "doc_as_upsert": True}
-
-
-def make_opensearch_client(config: OpenSearchClientConfig) -> OpenSearch:
-    if config.mode == "aws":
-        credentials = boto3.Session().get_credentials()
-        auth = AWSV4SignerAuth(credentials, config.region, config.service)
-        client = OpenSearch(
-            hosts=[{'host': config.host, 'port': config.port}],
-            http_auth=auth,
-            use_ssl=True,
-            verify_certs=True,
-            connection_class=RequestsHttpConnection,
-            pool_maxsize=20,
-        )
-    else:
-        client = OpenSearch(
-            hosts=[{"host": config.host, "port": config.port}],
-            http_compress=True,
-            use_ssl=False,
-            verify_certs=False,
-            ssl_assert_hostname=False,
-            ssl_show_warn=False,
-            pool_maxsize=20,
-        )
-
-    return client
 
 
 def init_process(config: OpenSearchClientConfig, level: int):
@@ -132,8 +106,8 @@ def index_file(
 
 @timed
 def sync_works(
-    in_dir: pathlib.Path,
     index_name: str,
+    in_dir: pathlib.Path,
     client_config: OpenSearchClientConfig,
     sync_config: OpenSearchSyncConfig,
     log_level: int = logging.INFO,
@@ -162,6 +136,7 @@ def sync_works(
 
     with tqdm(total=total_records, desc="Sync Works with OpenSearch", unit="doc") as pbar:
         with ProcessPoolExecutor(
+            mp_context=mp.get_context("spawn"),
             max_workers=sync_config.max_processes,
             initializer=init_process,
             initargs=(
@@ -190,7 +165,7 @@ def sync_works(
                 success_count += success
                 failure_count += failures
                 all_failed_ids.extend(failed_ids)
-                pbar.update(success + failures)
+                pbar.update(total_count)
                 pbar.set_postfix({"Success": f"{success_count:,}", "Fail": f"{failure_count:,}"})
 
         logging.info(

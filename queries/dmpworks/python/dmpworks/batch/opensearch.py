@@ -37,9 +37,9 @@ def sync_works_cmd(
     setup_multiprocessing_logging(level)
 
     # Download Parquet files from S3
-    export_dir = local_path("sqlmesh", export_date, "export") / "parquet"
-    source_uri = s3_uri(bucket_name, "sqlmesh", export_date, "export") + "parquet/"
+    export_dir = local_path("sqlmesh", export_date, "export")
+    source_uri = s3_uri(bucket_name, "sqlmesh", export_date, "export")
     download_from_s3(f"{source_uri}*", export_dir)
 
     # Run process
-    sync_works(export_dir, index_name, client_config, sync_config, level)
+    sync_works(index_name, export_dir, client_config, sync_config, level)
