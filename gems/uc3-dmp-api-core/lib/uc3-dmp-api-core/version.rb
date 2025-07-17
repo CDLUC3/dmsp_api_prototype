@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
 module Uc3DmpApiCore
-  VERSION = '0.0.25'
+  VERSION = '0.0.31'
 end

@@ -8,6 +8,8 @@ Please note that you must have an AWS account to deploy the system and that doin
 
 All of these Lambdas rely on AWS resources that are managed within the [DMSP Prototype - Infrastructure repository](https://github.com/CDLUC3/dmsp_aws_prototype). See the following diagram for details.
 
+You will need to install the `awscli`, `aws-sam-cli`, `wget` and `esbuild` installed on your machine. For OSX users, this can be managed via homebrew.
+
 <img src="docs/Lambda-Use-Diagram.png?raw=true">
 
 ## Directory layout
@@ -127,17 +129,9 @@ You should then run `ruby sam_build_deploy.rb [env] true true [log_level]`.
 **Updating dependencies (gem and JS)**
 You will need to update the versions of gems and JS packages managed by other parties (e.g. aws) on a fairly frequent basis. To do this you should:
 
-- Navigate to the `landing_page/` directory and run `npm upgrade` and then deploy the changes by running `ruby build_deploy.rb [env]`
-- Navigate to the `gems/` directory and update the gem dependencies for each one. To do this:
-  - delete the current `*.gem` file
-  - run `bundle update` to update all dependencies
-  - open the `lib/[gem_name]/version.rb` and increment the number
-  - rebuild the gem by running `gem build [gem_name].gemspec`
-  - publish the gem by running `gem push [new_gemfile_name]`
-- Navigate to `lambdas/layers/` directory and then update each layer:
-  - Navigate to `lambdas/layers/baseline` and run `ruby sam_build_deploy.rb [env] true true [log_level]`. This will deploy the Layer and then each individual Lambda that uses it
-  - Navigate to `lambdas/layers/dmptool` and within each of the subdirectories run `./build_deploy.sh [env]`
-  - Navigate to the `lambdas/layers/api` and run `ruby sam_build_deploy.rb [env] true true [log_level]`.
+- Run `./update-dependencies [env] [publishGems?]` where env is the `dev`, `stg` or `prd` environment and `publishGems?` is a boolean indicating whether or not the Ruby gem versions should be incremented and published.
+
+Typically you will want to run this against `dev` 1st and publish the new gem files. Then when updating `stg` and `prd` you would not want to republish new gem files.
 
 **Modifying the DMP Landing page**
 The DMP ID landing page is a static React JS webspage that makes an API call to the API Gateway to fetch the JSON for the DMP ID. The JSON is then used to render the page.

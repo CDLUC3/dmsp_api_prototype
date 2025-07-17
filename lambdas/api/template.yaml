@@ -283,7 +283,7 @@ Resources:
       # Lambdas do not! For example, "'GET,PUT'" defined here should be "GET, PUT" when passed
       # into the Lambdas as an ENV!
       Cors:
-        AllowHeaders: !Sub "'*'"
+        AllowHeaders: "'*'"
         AllowMethods: "'GET, PUT, POST, DELETE, OPTIONS'"
         AllowOrigin: !If
         - IsDev
@@ -549,7 +549,7 @@ Resources:
       CodeUri: 'get_dmps'
       Handler: 'app.Functions::GetDmps.process'
       Runtime: 'ruby3.2'
-      Timeout: 5
+      Timeout: 30
       Architectures:
         - 'x86_64'
       Layers:

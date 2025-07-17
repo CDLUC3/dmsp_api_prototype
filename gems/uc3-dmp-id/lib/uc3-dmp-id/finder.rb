@@ -179,7 +179,8 @@ module Uc3DmpId
       # Fetch the DMP IDs for the specified funder
       def _by_funder(funder:, client: nil, logger: nil)
         regex = /^[a-zA-Z0-9]+$/
-        id = "#{ROR_DOMAIN}/#{funder.strip}" unless (funder.to_s =~ regex).nil?
+        # id = "#{ROR_DOMAIN}/#{funder.strip}" unless (funder.to_s =~ regex).nil?
+        id = funder.to_s.strip unless (funder.to_s =~ regex).nil?
         id = "#{DOI_DOMAIN}#{funder.strip}" if id.nil? && !(funder.to_s =~ Helper::DOI_REGEX).nil?
         return [] if id.nil?
 
