@@ -1,7 +1,16 @@
 import pathlib
 from typing import Annotated, Literal
 
+import pendulum
 from cyclopts import Parameter, validators
+
+
+def validate_date_str(type_, value):
+    try:
+        pendulum.from_format(value, "YYYY-MM-DD")
+    except pendulum.parsing.exceptions.ParserError:
+        raise ValueError(f"Invalid date: '{value}'. Must be in YYYY-MM-DD format.")
+
 
 Directory = Annotated[
     pathlib.Path,
@@ -17,3 +26,4 @@ LogLevel = Annotated[
     Literal["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG", "NOTSET"],
     Parameter(help="Python log level"),
 ]
+DateString = Annotated[str, Parameter(validator=validate_date_str)]

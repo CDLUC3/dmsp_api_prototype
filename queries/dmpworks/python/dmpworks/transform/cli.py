@@ -296,5 +296,6 @@ def demo_dataset_cmd(
         log_level: Python log level.
     """
 
-    logging.basicConfig(level=log_level)
-    create_demo_dataset(dataset, ror_id, institution_name, in_dir, out_dir)
+    level = logging.getLevelName(log_level)
+    logging.basicConfig(level=level)
+    create_demo_dataset(dataset, ror_id, institution_name, in_dir, out_dir, level)

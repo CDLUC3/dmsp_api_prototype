@@ -2,13 +2,11 @@ import logging
 import os
 import pathlib
 from dataclasses import dataclass
-from typing import Annotated
 
-import pendulum
-import pendulum.parsing
-from cyclopts import App, Parameter
+from cyclopts import App
 
 from dmpworks.batch.utils import download_from_s3, local_path, s3_uri, upload_to_s3
+from dmpworks.cli_utils import DateString, LogLevel
 from dmpworks.sqlmesh.sqlmesh import run_plan
 from dmpworks.transform.utils_file import setup_multiprocessing_logging
 
@@ -16,16 +14,6 @@ log = logging.getLogger(__name__)
 
 DATASET = "sqlmesh"
 app = App(name="sqlmesh", help="SQLMesh AWS Batch pipeline.")
-
-
-def validate_date_str(type_, value):
-    try:
-        pendulum.from_format(value, "YYYY-MM-DD")
-    except pendulum.parsing.exceptions.ParserError:
-        raise ValueError(f"Invalid date: '{value}'. Must be in YYYY-MM-DD format.")
-
-
-DateString = Annotated[str, Parameter(validator=validate_date_str)]
 
 
 @dataclass
@@ -42,6 +30,7 @@ def plan(
     bucket_name: str,
     task_id: str,
     release_dates: ReleaseDates,
+    log_level: LogLevel = "INFO",
 ):
     """
 
@@ -51,7 +40,7 @@ def plan(
         release_dates: the release dates of each dataset.
     """
 
-    setup_multiprocessing_logging(logging.INFO)
+    setup_multiprocessing_logging(logging.getLevelName(log_level))
 
     # Download Parquet files for each dataset from S3.
     datasets = [
