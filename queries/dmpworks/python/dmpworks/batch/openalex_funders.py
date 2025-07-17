@@ -21,7 +21,7 @@ def download_cmd(bucket_name: str, task_id: str):
     the DMP Tool S3 bucket.
 
     Args:
-        bucket_name: S3 bucket name.
+        bucket_name: DMP Tool S3 bucket name.
         task_id: a unique task ID.
     """
 
@@ -34,7 +34,7 @@ def download_cmd(bucket_name: str, task_id: str):
                 "--no-sign-request",
                 "cp",
                 "s3://openalex/data/funders/*",
-                f"{ctx.local_dir}/",
+                f"{ctx.download_dir}/",
             ],
         )
 
@@ -50,7 +50,7 @@ def transform_cmd(
     Parquet format, and upload the results to same bucket.
 
     Args:
-        bucket_name: S3 bucket name.
+        bucket_name: DMP Tool S3 bucket name.
         task_id: a unique task ID.
         config: optional configuration parameters.
     """
@@ -60,7 +60,7 @@ def transform_cmd(
 
     with transform_parquets_task(bucket_name, DATASET, task_id) as ctx:
         transform_openalex_funders(
-            in_dir=ctx.in_dir,
-            out_dir=ctx.out_dir,
+            in_dir=ctx.download_dir,
+            out_dir=ctx.transform_dir,
             **copy_dict(vars(config), ["log_level"]),
         )
