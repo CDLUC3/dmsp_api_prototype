@@ -177,6 +177,7 @@ def sync_works(
                 log_level,
             ),
         ) as executor:
+            log.info("Queuing futures...")
             futures = [
                 executor.submit(
                     index_file,
@@ -191,8 +192,10 @@ def sync_works(
                 )
                 for file_path in parquet_files
             ]
+            log.info("Finished queuing futures.")
 
             while futures:
+                log.info("Get counts")
                 # Get counts
                 with lock:
                     success_count = success.value
@@ -206,6 +209,7 @@ def sync_works(
                 pbar.set_postfix({"Success": f"{success_count:,}", "Fail": f"{failure_count:,}"})
 
                 # Get any futures have finished and are done and save failed_ids
+                log.info("Check futures")
                 finished = []
                 for fut in futures:
                     if fut.done():
@@ -221,7 +225,8 @@ def sync_works(
                     futures.remove(fut)
 
                 # Sleep
-                time.sleep(1)
+                log.info("Sleep")
+                time.sleep(10)
 
         log.info(f"Bulk indexing complete. Total: {total:,}, Success: {success_count:,}, Failures: {failure_count:,}")
 

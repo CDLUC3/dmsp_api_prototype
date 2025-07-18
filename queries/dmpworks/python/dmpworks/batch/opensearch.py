@@ -39,7 +39,8 @@ def sync_works_cmd(
     # Download Parquet files from S3
     export_dir = local_path("sqlmesh", export_date, "export")
     source_uri = s3_uri(bucket_name, "sqlmesh", export_date, "export")
-    download_from_s3(f"{source_uri}*", export_dir)
+    download_from_s3(f"{source_uri}data_0.parquet", export_dir)
+    download_from_s3(f"{source_uri}data_1.parquet", export_dir)
 
     # Run process
     sync_works(index_name, export_dir, client_config, sync_config, level)
