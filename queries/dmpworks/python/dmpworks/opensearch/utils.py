@@ -70,6 +70,7 @@ def make_opensearch_client(config: OpenSearchClientConfig) -> OpenSearch:
             verify_certs=True,
             connection_class=RequestsHttpConnection,
             pool_maxsize=20,
+            timeout=5 * 60,
         )
     else:
         client = OpenSearch(
@@ -80,6 +81,7 @@ def make_opensearch_client(config: OpenSearchClientConfig) -> OpenSearch:
             ssl_assert_hostname=False,
             ssl_show_warn=False,
             pool_maxsize=20,
+            timeout=5 * 60,
         )
 
     return client
