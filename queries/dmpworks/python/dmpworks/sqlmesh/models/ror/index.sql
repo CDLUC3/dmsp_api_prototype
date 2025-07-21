@@ -8,4 +8,4 @@ MODEL (
 );
 
 SELECT *
-FROM read_parquet(@VAR('data_path') || 'ror/ror.parquet');
+FROM read_parquet(@VAR('data_path') || 'ror/parquets/ror.parquet');

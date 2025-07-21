@@ -55,7 +55,7 @@ class BatchTransformer:
         lz = self.read_func(batch, self.schema, self.low_memory)
         results = self.transform_func(lz)
         for table_name, lz_frame in results:
-            parquet_file = self.out_dir / "parquets" / f"{table_name}_{idx}.parquet"
+            parquet_file = self.out_dir / "parquets" / f"{table_name}_{idx:05d}.parquet"
             parquet_file.parent.mkdir(parents=True, exist_ok=True)
             write_parquet(lz_frame, parquet_file)
 
