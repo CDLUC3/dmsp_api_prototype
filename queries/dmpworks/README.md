@@ -72,6 +72,11 @@ export SQLMESH__VARIABLES__EXPORT_PATH=/path/to/data/export/
 export SQLMESH__VARIABLES__AUDIT_CROSSREF_METADATA_WORKS_THRESHOLD=1
 export SQLMESH__VARIABLES__AUDIT_DATACITE_WORKS_THRESHOLD=1
 export SQLMESH__VARIABLES__AUDIT_OPENALEX_WORKS_THRESHOLD=1
+export SQLMESH__VARIABLES__CROSSREF_METADATA_PATH=/path/to/crossref_metadata/parquets
+export SQLMESH__VARIABLES__DATACITE_PATH=/path/to/datacite/parquets
+export SQLMESH__VARIABLES__OPENALEX_FUNDERS_PATH=/path/to/openalex_funders/parquets
+export SQLMESH__VARIABLES__OPENALEX_WORKS_PATH=/path/to/openalex_works/parquets
+export SQLMESH__VARIABLES__ROR_PATH=/path/to/ror/parquets
 ```
 
 Source environment variables:
