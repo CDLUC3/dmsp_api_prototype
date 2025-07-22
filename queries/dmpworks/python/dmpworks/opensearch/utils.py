@@ -9,9 +9,25 @@ from opensearchpy import AWSV4SignerAuth, OpenSearch, RequestsHttpConnection
 MAX_PROCESSES = 2
 CHUNK_SIZE = 1000
 MAX_CHUNK_BYTES = 100 * 1024 * 1024
-MAX_RETRIES = 2
+MAX_RETRIES = 10
 INITIAL_BACKOFF = 2
 MAX_BACKOFF = 600
+COLUMNS = [
+    "doi",
+    "title",
+    "abstract",
+    "type",
+    "publication_date",
+    "updated_date",
+    "affiliation_rors",
+    "affiliation_names",
+    "author_names",
+    "author_orcids",
+    "award_ids",
+    "funder_ids",
+    "funder_names",
+    "source",
+]
 
 
 def validate_chunk_size(type_, value):

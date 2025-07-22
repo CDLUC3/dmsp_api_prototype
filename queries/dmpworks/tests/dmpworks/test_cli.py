@@ -1,3 +1,4 @@
+import logging
 import os
 import pathlib
 
@@ -5,25 +6,13 @@ import pytest
 from opensearchpy import OpenSearch
 
 from dmpworks.cli import cli
+from dmpworks.opensearch.utils import OpenSearchClientConfig, OpenSearchSyncConfig
 from dmpworks.utils import InstanceOf
+
 
 ##############
 # OpenSearch
 ##############
-
-
-@pytest.fixture
-def mock_measure_chunk_size(mocker):
-    return mocker.patch("dmpworks.opensearch.cli.measure_chunk_size")
-
-
-def test_opensearch_chunk_size(mock_measure_chunk_size, tmp_path: pathlib.Path):
-    in_dir = tmp_path / "input"
-    in_dir.mkdir()
-
-    cli(["opensearch", "chunk-size", str(in_dir)])
-
-    mock_measure_chunk_size.assert_called_once_with(in_dir, None, 500)
 
 
 @pytest.fixture
@@ -56,15 +45,13 @@ def test_opensearch_sync_works(mock_sync_works, tmp_path: pathlib.Path):
     cli(["opensearch", "sync-works", "works-index", str(in_dir)])
 
     mock_sync_works.assert_called_once_with(
-        InstanceOf(OpenSearch),
-        in_dir,
         "works-index",
-        None,
-        batch_size=5000,
-        thread_count=4,
-        chunk_size=5000,
-        max_chunk_bytes=100 * 1024 * 1024,
-        queue_size=4,
+        in_dir,
+        OpenSearchClientConfig(),
+        OpenSearchSyncConfig(),
+        dry_run=False,
+        measure_chunk_size=False,
+        log_level=logging.INFO,
     )
 
 
@@ -266,4 +253,5 @@ def test_demo_dataset(mock_create_demo_dataset, tmp_path: pathlib.Path):
         "University of California, Berkeley",
         in_dir,
         out_dir,
+        logging.INFO,
     )

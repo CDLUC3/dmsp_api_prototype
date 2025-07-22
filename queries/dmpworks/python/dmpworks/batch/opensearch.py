@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from cyclopts import App
 
@@ -19,8 +20,8 @@ def sync_works_cmd(
     bucket_name: str,
     export_date: DateString,
     index_name: str,
-    client_config: OpenSearchClientConfig,
-    sync_config: OpenSearchSyncConfig,
+    client_config: Optional[OpenSearchClientConfig] = None,
+    sync_config: Optional[OpenSearchSyncConfig] = None,
     log_level: LogLevel = "INFO",
 ):
     """Sync exported works with OpenSearch.
@@ -33,14 +34,15 @@ def sync_works_cmd(
         sync_config: the OpenSearch sync config settings.
     """
 
+    client_config = OpenSearchClientConfig() if client_config is None else client_config
+    sync_config = OpenSearchSyncConfig() if sync_config is None else sync_config
     level = logging.getLevelName(log_level)
     setup_multiprocessing_logging(level)
 
     # Download Parquet files from S3
     export_dir = local_path("sqlmesh", export_date, "export")
     source_uri = s3_uri(bucket_name, "sqlmesh", export_date, "export")
-    download_from_s3(f"{source_uri}data_0.parquet", export_dir)
-    download_from_s3(f"{source_uri}data_1.parquet", export_dir)
+    download_from_s3(f"{source_uri}*", export_dir)
 
     # Run process
     sync_works(index_name, export_dir, client_config, sync_config, level)
