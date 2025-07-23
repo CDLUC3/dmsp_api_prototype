@@ -65,6 +65,8 @@ class OpenSearchSyncConfig:
     max_retries: int = MAX_RETRIES
     initial_backoff: int = INITIAL_BACKOFF
     max_backoff: int = MAX_BACKOFF
+    dry_run: bool = False
+    measure_chunk_size: bool = False
 
 
 def make_opensearch_client(config: OpenSearchClientConfig) -> OpenSearch:

@@ -53,9 +53,9 @@ def stream_parquet_batches(
     batch_size: Optional[int] = None,
 ) -> Iterator[pa.RecordBatch]:
     # Yield batches from a parquet file
-    parquet_file = pq.ParquetFile(source)
-    for batch in parquet_file.iter_batches(batch_size=batch_size, columns=columns):
-        yield batch
+    with pq.ParquetFile(source) as parquet_file:
+        for batch in parquet_file.iter_batches(batch_size=batch_size, columns=columns):
+            yield batch
 
 
 def batch_to_work_actions(index_name: str, batch: pa.RecordBatch) -> Iterator[dict]:
@@ -89,13 +89,13 @@ def init_process(
     failure_value: mp.Value,
     lock: mp.Lock,
     chunk_sizes: mp.Queue,
-    dry_run: bool,
+    create_open_search: bool,
     level: int,
 ):
     global open_search, success_counter, failure_counter, counter_lock, chunk_sizes_queue
     logging.basicConfig(level=level, format="[%(asctime)s] [%(levelname)s] [%(processName)s] %(message)s")
     logging.getLogger("opensearch").setLevel(logging.WARNING)
-    if not dry_run:
+    if create_open_search:
         open_search = make_opensearch_client(config)
     success_counter = success_value
     failure_counter = failure_value
@@ -106,6 +106,113 @@ def init_process(
 def measure_chunk_bytes(chunk):
     payload = "\n".join(json.dumps(doc, separators=(",", ":")) for doc in chunk) + "\n"
     return len(payload.encode("utf-8"))
+
+
+def collect_completed_futures(futures: list):
+    finished = []
+    for fut in futures:
+        if fut.done():
+            try:
+                fut.result()
+            except Exception as e:
+                log.exception(f"Error processing future: {e}")
+            finished.append(fut)
+    for fut in finished:
+        futures.remove(fut)
+
+
+def update_progress_bar(
+    pbar: tqdm, success_count: int, failure_count: int, total: int, postfix_extra: Optional[dict] = None
+):
+    new_total = success_count + failure_count
+    delta = new_total - total
+    pbar.update(delta)
+    postfix = {"Success": f"{success_count:,}", "Fail": f"{failure_count:,}"}
+    if postfix_extra:
+        postfix.update(postfix_extra)
+    pbar.set_postfix(postfix)
+    return new_total
+
+
+def collect_chunk_sizes(
+    chunk_sizes: mp.Queue,
+    min_chunk_size: float,
+    max_chunk_size: float,
+    sum_chunk_size: float,
+    total_chunks: int,
+    drain_queue: bool = False,
+    timeout_seconds: int = 1,
+):
+    start_time = time.monotonic()
+    while drain_queue or (time.monotonic() - start_time < timeout_seconds):
+        try:
+            chunk_size = chunk_sizes.get(block=True, timeout=1)
+            min_chunk_size = min(min_chunk_size, chunk_size)
+            max_chunk_size = max(max_chunk_size, chunk_size)
+            sum_chunk_size += chunk_size
+            total_chunks += 1
+        except queue.Empty:
+            # If drain_queue is True and we get an empty queue
+            # then we can break
+            if drain_queue:
+                break
+
+    return min_chunk_size, max_chunk_size, sum_chunk_size, total_chunks
+
+
+def index_actions(
+    actions: Iterator[dict],
+    chunk_size: int,
+    max_chunk_bytes: int,
+    max_retries: int,
+    initial_backoff: int,
+    max_backoff: int,
+):
+    for ok, info in streaming_bulk(
+        open_search,
+        actions,
+        chunk_size=chunk_size,
+        max_chunk_bytes=max_chunk_bytes,
+        max_retries=max_retries,
+        initial_backoff=initial_backoff,
+        max_backoff=max_backoff,
+        raise_on_error=False,
+        raise_on_exception=False,
+    ):
+        with counter_lock:
+            if ok:
+                success_counter.value += 1
+            else:
+                failure_counter.value += 1
+
+
+def measure_chunks(
+    actions: Iterator[dict],
+    chunk_size: int,
+):
+    chunk = []
+    for action in actions:
+        chunk.append(action)
+        if len(chunk) >= chunk_size:
+            size_bytes = measure_chunk_bytes(chunk)
+            chunk_sizes_queue.put(size_bytes)
+            chunk = []
+
+        with counter_lock:
+            success_counter.value += 1
+
+    # Process final chunk if it's non-empty
+    if chunk:
+        size_bytes = measure_chunk_bytes(chunk)
+        chunk_sizes_queue.put(size_bytes)
+
+
+def dry_run_actions(
+    actions: Iterator[dict],
+):
+    for _ in actions:
+        with counter_lock:
+            success_counter.value += 1
 
 
 def index_file(
@@ -124,40 +231,27 @@ def index_file(
     batches = stream_parquet_batches(source=file_path, columns=columns, batch_size=chunk_size)
     actions = (action for batch in batches for action in batch_to_work_actions(index_name, batch))
 
-    if not dry_run:
-        for ok, info in streaming_bulk(
-            open_search,
+    if dry_run:
+        log.debug(f"Dry run on file: {file_path}")
+        dry_run_actions(
             actions,
-            chunk_size=chunk_size,
-            max_chunk_bytes=max_chunk_bytes,
-            max_retries=max_retries,
-            initial_backoff=initial_backoff,
-            max_backoff=max_backoff,
-            raise_on_error=False,
-            raise_on_exception=False,
-        ):
-            if not ok:
-                with counter_lock:
-                    failure_counter.value += 1
-            else:
-                with counter_lock:
-                    success_counter.value += 1
+        )
     elif measure_chunk_size:
-        chunk = []
-        for action in actions:
-            chunk.append(action)
-            if len(chunk) >= chunk_size:
-                size_bytes = measure_chunk_bytes(chunk)
-                chunk_sizes_queue.put(size_bytes)
-                chunk = []
-
-            with counter_lock:
-                success_counter.value += 1
-
+        log.debug(f"Measuring chunks from file: {file_path}")
+        measure_chunks(
+            actions,
+            chunk_size,
+        )
     else:
-        for _ in actions:
-            with counter_lock:
-                success_counter.value += 1
+        log.debug(f"Indexing file: {file_path}")
+        index_actions(
+            actions,
+            chunk_size,
+            max_chunk_bytes,
+            max_retries,
+            initial_backoff,
+            max_backoff,
+        )
 
 
 def bytes_to_mb(n):
@@ -170,14 +264,12 @@ def sync_works(
     in_dir: pathlib.Path,
     client_config: OpenSearchClientConfig,
     sync_config: OpenSearchSyncConfig,
-    dry_run: bool = False,
-    measure_chunk_size: bool = False,
     log_level: int = logging.INFO,
 ):
     parquet_files = list(in_dir.rglob("*.parquet"))
     log.info("Counting records...")
     total_records = count_records(in_dir)
-    log.info(f"Total records {total_records}")
+    log.info(f"Total records {total_records:,}")
 
     total = 0
     ctx = mp.get_context("spawn")
@@ -204,7 +296,7 @@ def sync_works(
                 failure,
                 lock,
                 chunk_sizes,
-                dry_run,
+                not (sync_config.dry_run or sync_config.measure_chunk_size),
                 log_level,
             ),
         ) as executor:
@@ -220,8 +312,8 @@ def sync_works(
                     max_retries=sync_config.max_retries,
                     initial_backoff=sync_config.initial_backoff,
                     max_backoff=sync_config.max_backoff,
-                    dry_run=dry_run,
-                    measure_chunk_size=measure_chunk_size,
+                    dry_run=sync_config.dry_run,
+                    measure_chunk_size=sync_config.measure_chunk_size,
                 )
                 for file_path in parquet_files
             ]
@@ -234,65 +326,62 @@ def sync_works(
                     success_count = success.value
                     failure_count = failure.value
 
-                # Get any futures have finished and are done and save failed_ids
-                log.debug("Queue futures")
-                finished = []
-                for fut in futures:
-                    if fut.done():
-                        try:
-                            fut.result()
-                        except Exception as e:
-                            log.exception(f"Error processing future: {e}")
-                            continue
-
-                        finished.append(fut)
-                for fut in finished:
-                    futures.remove(fut)
+                # Collect any futures have finished and are done and save failed_ids
+                log.debug("Collect futures")
+                collect_completed_futures(futures)
 
                 # Collect chunk sizes
-                wait_seconds = 1
-                if measure_chunk_size:
+                if sync_config.measure_chunk_size:
                     log.debug("Collect chunk sizes")
-                    cs_start = time.monotonic()
-                    while time.monotonic() - cs_start < wait_seconds:
-                        try:
-                            chunk_size = chunk_sizes.get(block=False, timeout=wait_seconds)
-                            min_chunk_size = min(min_chunk_size, chunk_size)
-                            max_chunk_size = max(max_chunk_size, chunk_size)
-                            sum_chunk_size += chunk_size
-                            total_chunks += 1
-                        except queue.Empty:
-                            pass
+                    min_chunk_size, max_chunk_size, sum_chunk_size, total_chunks = collect_chunk_sizes(
+                        chunk_sizes,
+                        min_chunk_size,
+                        max_chunk_size,
+                        sum_chunk_size,
+                        total_chunks,
+                    )
 
                 # Update progress bar
-                log.debug("Update process bar")
-                new_total = success_count + failure_count
-                delta = new_total - total
-                total = new_total
-                pbar.update(delta)
-                postfix = {"Success": f"{success_count:,}", "Fail": f"{failure_count:,}"}
-                if measure_chunk_size and math.isfinite(sum_chunk_size) and total_chunks > 0:
+                log.debug("Update progress bar")
+                postfix_extra = None
+                if sync_config.measure_chunk_size and math.isfinite(sum_chunk_size) and total_chunks > 0:
+                    log.debug(f"Calculating chunk size")
                     mean_chunk_size = bytes_to_mb(sum_chunk_size / total_chunks)
-                    postfix["Avg Chunk Size"] = f"{mean_chunk_size:.2f} MB"
-                pbar.set_postfix(postfix)
+                    postfix_extra = {"Avg Chunk Size": f"{mean_chunk_size:.2f} MB"}
+                total = update_progress_bar(pbar, success_count, failure_count, total, postfix_extra)
 
                 # Sleep
-                if not measure_chunk_size:
+                if not sync_config.measure_chunk_size:
                     log.debug("Sleep")
-                    time.sleep(wait_seconds)
+                    time.sleep(1)
 
-        end = pendulum.now()
-        docs_per_sec = total / (end - start).seconds
+            if sync_config.measure_chunk_size:
+                log.debug("Collect any remaining chunk sizes")
+                min_chunk_size, max_chunk_size, sum_chunk_size, total_chunks = collect_chunk_sizes(
+                    chunk_sizes,
+                    min_chunk_size,
+                    max_chunk_size,
+                    sum_chunk_size,
+                    total_chunks,
+                    drain_queue=True,
+                )
 
-        log.info(f"Bulk indexing complete.")
-        log.info(f"Total docs: {total:,}")
-        log.info(f"Num success: {success_count:,}")
-        log.info(f"Num failures: {failure_count:,}")
-        log.info(f"Docs/s: {round(docs_per_sec):,}")
+            log.debug("Exiting ProcessPoolExecutor...")
+    log.debug("Exited ProcessPoolExecutor")
 
-        if measure_chunk_size:
-            avg_bytes = sum_chunk_size / total_chunks
-            log.info(f"Analyzed {total_chunks} chunks from ({total:,} docs total)")
-            log.info(f"Min chunk size: {bytes_to_mb(min_chunk_size):.2f} MB")
-            log.info(f"Max chunk size: {bytes_to_mb(max_chunk_size):.2f} MB")
-            log.info(f"Avg chunk size: {bytes_to_mb(avg_bytes):.2f} MB")
+    end = pendulum.now()
+    duration_seconds = float((end - start).seconds)  # Prevent divide by zero
+    docs_per_sec = total / max(duration_seconds, 1e-6)
+
+    log.info(f"Bulk indexing complete.")
+    log.info(f"Total docs: {total:,}")
+    log.info(f"Num success: {success_count:,}")
+    log.info(f"Num failures: {failure_count:,}")
+    log.info(f"Docs/s: {round(docs_per_sec):,}")
+
+    if sync_config.measure_chunk_size:
+        avg_bytes = sum_chunk_size / total_chunks
+        log.info(f"Analyzed {total_chunks} chunks from ({total:,} docs total)")
+        log.info(f"Min chunk size: {bytes_to_mb(min_chunk_size):.2f} MB")
+        log.info(f"Max chunk size: {bytes_to_mb(max_chunk_size):.2f} MB")
+        log.info(f"Avg chunk size: {bytes_to_mb(avg_bytes):.2f} MB")

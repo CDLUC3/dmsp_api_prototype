@@ -46,8 +46,6 @@ def sync_works_cmd(
     in_dir: Directory,
     client_config: Optional[OpenSearchClientConfig] = None,
     sync_config: Optional[OpenSearchSyncConfig] = None,
-    dry_run: bool = False,
-    measure_chunk_size: bool = False,
     log_level: LogLevel = "INFO",
 ):
     """Sync the DMP Tool Works Index Table with OpenSearch.
@@ -57,8 +55,6 @@ def sync_works_cmd(
         in_dir: Path to the DMP Tool works hive partitioned index table export directory (e.g., /path/to/export).
         client_config: OpenSearch client settings.
         sync_config: OpenSearch sync settings.
-        dry_run: reads and processes files, but doesn't send data to OpenSearch.
-        measure_chunk_size: measure the average chunk size, dry-run must also be on.
         log_level: Python log level.
     """
 
@@ -77,8 +73,6 @@ def sync_works_cmd(
         in_dir,
         client_config,
         sync_config,
-        dry_run=dry_run,
-        measure_chunk_size=measure_chunk_size,
         log_level=level,
     )
 
