@@ -75,7 +75,7 @@ class BaseWorker(threading.Thread, ABC):
         self.log_level = log_level
 
     def run(self):
-        log.info("running worker")
+        log.debug("running worker")
 
         while True:
             log.debug(f"Waiting for task")
@@ -95,7 +95,7 @@ class BaseWorker(threading.Thread, ABC):
                 self.input_queue.task_done()
                 log.debug(f"Task done batch={idx}")
 
-        log.info("worker shutdown")
+        log.debug("worker shutdown")
 
     @abstractmethod
     def process_task(self, idx: int, batch: list[Path]):
@@ -259,7 +259,11 @@ class Pipeline:
             for worker in workers:
                 worker.start()
 
-            with tqdm(total=num_batches, desc="Transformation Pipeline", unit="batch") as pbar:
+            with tqdm(
+                total=num_batches,
+                desc="Transformation Pipeline",
+                unit="batch",
+            ) as pbar:
                 # Fill extract queue
                 for idx, batch in enumerate(batches):
                     log.debug(f"Queuing batch: {idx}")
@@ -270,7 +274,7 @@ class Pipeline:
                 while num_completed < len(batches):
                     try:
                         idx = self.completed_queue.get(timeout=1)
-                        log.info(f"Task completed: {idx}")
+                        log.debug(f"Task completed: {idx}")
                         if idx is None:
                             break
 

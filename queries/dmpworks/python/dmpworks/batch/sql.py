@@ -38,6 +38,7 @@ def plan(
         bucket_name: DMP Tool S3 bucket name.
         task_id: a unique task ID.
         release_dates: the release dates of each dataset.
+        log_level: Python log level.
     """
 
     setup_multiprocessing_logging(logging.getLevelName(log_level))

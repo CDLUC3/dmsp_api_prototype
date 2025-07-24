@@ -12,6 +12,7 @@ MAX_CHUNK_BYTES = 100 * 1024 * 1024
 MAX_RETRIES = 10
 INITIAL_BACKOFF = 2
 MAX_BACKOFF = 600
+MAX_ERROR_SAMPLES = 3
 COLUMNS = [
     "doi",
     "title",
@@ -67,6 +68,7 @@ class OpenSearchSyncConfig:
     max_backoff: int = MAX_BACKOFF
     dry_run: bool = False
     measure_chunk_size: bool = False
+    max_error_samples: int = MAX_ERROR_SAMPLES
 
 
 def make_opensearch_client(config: OpenSearchClientConfig) -> OpenSearch:

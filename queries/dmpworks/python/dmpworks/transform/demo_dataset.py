@@ -136,7 +136,11 @@ def create_demo_dataset(
             total_files = len(files)
             total_filtered = 0
             total_errors = 0
-            with tqdm(total=total_files, desc=f"Filter {dataset}", unit="file") as pbar:
+            with tqdm(
+                total=total_files,
+                desc=f"Filter {dataset}",
+                unit="file",
+            ) as pbar:
                 for i, future in enumerate(as_completed(futures)):
                     try:
                         total_filtered += future.result()

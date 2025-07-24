@@ -32,6 +32,7 @@ def sync_works_cmd(
         index_name: the OpenSearch index name.
         client_config: the OpenSearch client config settings.
         sync_config: the OpenSearch sync config settings.
+        log_level: Python log level.
     """
 
     client_config = OpenSearchClientConfig() if client_config is None else client_config

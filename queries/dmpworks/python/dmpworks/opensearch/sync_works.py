@@ -5,8 +5,9 @@ import multiprocessing as mp
 import pathlib
 import queue
 import time
+from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
-from typing import Iterator, List, Optional
+from typing import Iterator, List, Optional, TypedDict
 
 import pendulum
 import pyarrow as pa
@@ -24,6 +25,7 @@ from dmpworks.opensearch.utils import (
     make_opensearch_client,
     MAX_BACKOFF,
     MAX_CHUNK_BYTES,
+    MAX_ERROR_SAMPLES,
     MAX_RETRIES,
     OpenSearchClientConfig,
     OpenSearchSyncConfig,
@@ -39,6 +41,15 @@ success_counter: Optional[mp.Value] = None
 failure_counter: Optional[mp.Value] = None
 counter_lock: Optional[mp.Value] = None
 chunk_sizes_queue: Optional[mp.Queue] = None
+
+
+class Error(TypedDict):
+    count: int
+    sample_doc_ids: list[str]
+    sample_errors: list[str]
+
+
+ErrorMap = dict[int, Error]
 
 
 def count_records(source) -> int:
@@ -108,12 +119,19 @@ def measure_chunk_bytes(chunk):
     return len(payload.encode("utf-8"))
 
 
-def collect_completed_futures(futures: list):
+def collect_completed_futures(futures: list, error_map: ErrorMap, max_error_samples: int = MAX_ERROR_SAMPLES):
     finished = []
     for fut in futures:
         if fut.done():
             try:
-                fut.result()
+                new_errors = fut.result()
+                # None if dry run or measure chunk size
+                if new_errors is not None:
+                    merge_error_maps(
+                        error_map,
+                        new_errors,
+                        max_error_samples=max_error_samples,
+                    )
             except Exception as e:
                 log.exception(f"Error processing future: {e}")
             finished.append(fut)
@@ -160,6 +178,10 @@ def collect_chunk_sizes(
     return min_chunk_size, max_chunk_size, sum_chunk_size, total_chunks
 
 
+def default_error() -> Error:
+    return {"count": 0, "sample_doc_ids": [], "sample_errors": []}
+
+
 def index_actions(
     actions: Iterator[dict],
     chunk_size: int,
@@ -168,6 +190,8 @@ def index_actions(
     initial_backoff: int,
     max_backoff: int,
 ):
+    errors: ErrorMap = defaultdict(default_error)
+
     for ok, info in streaming_bulk(
         open_search,
         actions,
@@ -179,11 +203,41 @@ def index_actions(
         raise_on_error=False,
         raise_on_exception=False,
     ):
-        with counter_lock:
-            if ok:
+        if ok:
+            with counter_lock:
                 success_counter.value += 1
-            else:
+        else:
+            with counter_lock:
                 failure_counter.value += 1
+
+            error = info_to_error_map(info)
+            merge_error_maps(errors, error)
+
+    return errors
+
+
+def info_to_error_map(info: dict) -> ErrorMap:
+    update = info.get("update", {})
+    doc_id = update.get("_id")
+    status = update.get("status")
+    error = update.get("error")
+    return {status: {"count": 1, "sample_doc_ids": [doc_id], "sample_errors": [error]}}
+
+
+def merge_error_maps(merged_errors: ErrorMap, new_errors: ErrorMap, max_error_samples: int = MAX_ERROR_SAMPLES):
+    for status, error_summary in new_errors.items():
+        merged_summary = merged_errors[status]
+        merged_summary["count"] += error_summary["count"]
+
+        for doc_id in error_summary["sample_doc_ids"]:
+            if len(merged_summary["sample_doc_ids"]) >= max_error_samples:
+                break
+            merged_summary["sample_doc_ids"].append(doc_id)
+
+        for error_msg in error_summary["sample_errors"]:
+            if len(merged_summary["sample_errors"]) >= max_error_samples:
+                break
+            merged_summary["sample_errors"].append(error_msg)
 
 
 def measure_chunks(
@@ -244,7 +298,7 @@ def index_file(
         )
     else:
         log.debug(f"Indexing file: {file_path}")
-        index_actions(
+        error_map = index_actions(
             actions,
             chunk_size,
             max_chunk_bytes,
@@ -252,6 +306,7 @@ def index_file(
             initial_backoff,
             max_backoff,
         )
+        return error_map
 
 
 def bytes_to_mb(n):
@@ -272,6 +327,7 @@ def sync_works(
     log.info(f"Total records {total_records:,}")
 
     total = 0
+    error_map: ErrorMap = defaultdict(default_error)
     ctx = mp.get_context("spawn")
     success = ctx.Value("i", 0)
     failure = ctx.Value("i", 0)
@@ -285,7 +341,11 @@ def sync_works(
     total_chunks = 0
 
     start = pendulum.now()
-    with tqdm(total=total_records, desc="Sync Works with OpenSearch", unit="doc") as pbar:
+    with tqdm(
+        total=total_records,
+        desc="Sync Works with OpenSearch",
+        unit="doc",
+    ) as pbar:
         with ProcessPoolExecutor(
             mp_context=ctx,
             max_workers=sync_config.max_processes,
@@ -328,7 +388,11 @@ def sync_works(
 
                 # Collect any futures have finished and are done and save failed_ids
                 log.debug("Collect futures")
-                collect_completed_futures(futures)
+                collect_completed_futures(
+                    futures,
+                    error_map,
+                    max_error_samples=sync_config.max_error_samples,
+                )
 
                 # Collect chunk sizes
                 if sync_config.measure_chunk_size:
@@ -385,3 +449,10 @@ def sync_works(
         log.info(f"Min chunk size: {bytes_to_mb(min_chunk_size):.2f} MB")
         log.info(f"Max chunk size: {bytes_to_mb(max_chunk_size):.2f} MB")
         log.info(f"Avg chunk size: {bytes_to_mb(avg_bytes):.2f} MB")
+
+    # Log error info
+    for status, error_summary in error_map.items():
+        log.error(
+            f"Summary of errors with status {status}: %s",
+            json.dumps(error_summary),
+        )
