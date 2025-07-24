@@ -110,7 +110,12 @@ def filter_dataset(
 
 @timed
 def create_demo_dataset(
-    dataset: Dataset, ror_id: str, institution_name: Optional[str], in_dir: pathlib.Path, out_dir: pathlib.Path
+    dataset: Dataset,
+    ror_id: str,
+    institution_name: Optional[str],
+    in_dir: pathlib.Path,
+    out_dir: pathlib.Path,
+    log_level: int,
 ):
     is_empty = next(out_dir.iterdir(), None) is None
     if not is_empty:
@@ -131,7 +136,11 @@ def create_demo_dataset(
             total_files = len(files)
             total_filtered = 0
             total_errors = 0
-            with tqdm(total=total_files, desc=f"Filter {dataset}", unit="file") as pbar:
+            with tqdm(
+                total=total_files,
+                desc=f"Filter {dataset}",
+                unit="file",
+            ) as pbar:
                 for i, future in enumerate(as_completed(futures)):
                     try:
                         total_filtered += future.result()

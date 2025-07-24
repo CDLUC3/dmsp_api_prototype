@@ -23,4 +23,4 @@ MODEL (
 );
 
 SELECT *
-FROM read_parquet(@VAR('data_path') || 'openalex_works/parquets/openalex_works_[0-9]*.parquet');
+FROM read_parquet(@VAR('openalex_works_path') || '/openalex_works_[0-9]*.parquet');

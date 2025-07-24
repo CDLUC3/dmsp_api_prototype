@@ -20,8 +20,12 @@ gateways:
       # token: 
 
 variables:
-  data_path: "/path/to/parquets/"
-  export_path: "/path/to/export/"
+  crossref_metadata_path: "/path/to/crossref_metadata/parquets"
+  datacite_path: "/path/to/datacite/parquets"
+  openalex_funders_path: "/path/to/openalex_funders/parquets"
+  openalex_works_path: "/path/to/openalex_works/parquets"
+  ror_path: "/path/to/ror/parquets"
+  export_path: "/path/to/export"
   audit_crossref_metadata_works_threshold: 167008747
   audit_datacite_works_threshold: 72019576
   audit_openalex_works_threshold: 264675126

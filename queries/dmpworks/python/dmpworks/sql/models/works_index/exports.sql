@@ -34,5 +34,5 @@ SELECT @end_ds AS export_date;
       *,
       'openalex' AS source
     FROM openalex_index.openalex_index
-  ) TO @VAR('export_path') (FORMAT PARQUET, OVERWRITE true, FILE_SIZE_BYTES '100MB')
+  ) TO @VAR('export_path') (FORMAT PARQUET, OVERWRITE true, FILE_SIZE_BYTES '100MB', FILENAME_PATTERN 'export_')
 )

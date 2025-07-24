@@ -107,3 +107,7 @@ def transform_cmd(bucket_name: str, task_id: str, file_name: str):
             json_file=json_file,
             out_dir=ctx.transform_dir,
         )
+
+
+if __name__ == "__main__":
+    app()

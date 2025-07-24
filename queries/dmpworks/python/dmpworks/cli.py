@@ -3,7 +3,7 @@ from cyclopts import App
 from dmpworks.batch.cli import app as batch_app
 from dmpworks.opensearch.cli import app as opensearch_app
 
-from dmpworks.sqlmesh.cli import app as sqlmesh_app
+from dmpworks.sql.cli import app as sqlmesh_app
 from dmpworks.transform.cli import app as transform_app
 
 cli = App(name="dmpworks", help="DMP Tool Related Works Command Line Tool.")
