@@ -43,13 +43,17 @@ counter_lock: Optional[mp.Value] = None
 chunk_sizes_queue: Optional[mp.Queue] = None
 
 
-class Error(TypedDict):
+class ErrorSample(TypedDict):
+    doc_id: str
+    error: dict
+
+
+class ErrorSummary(TypedDict):
     count: int
-    sample_doc_ids: list[str]
-    sample_errors: list[str]
+    samples: list[ErrorSample]
 
 
-ErrorMap = dict[int, Error]
+ErrorMap = dict[int, ErrorSummary]
 
 
 def count_records(source) -> int:
@@ -69,7 +73,10 @@ def stream_parquet_batches(
             yield batch
 
 
-def batch_to_work_actions(index_name: str, batch: pa.RecordBatch) -> Iterator[dict]:
+def batch_to_work_actions(
+    index_name: str,
+    batch: pa.RecordBatch,
+) -> Iterator[dict]:
     # Convert date and datetimes
     batch = batch.set_column(
         batch.schema.get_field_index("publication_date"),
@@ -119,7 +126,11 @@ def measure_chunk_bytes(chunk):
     return len(payload.encode("utf-8"))
 
 
-def collect_completed_futures(futures: list, error_map: ErrorMap, max_error_samples: int = MAX_ERROR_SAMPLES):
+def collect_completed_futures(
+    futures: list,
+    error_map: ErrorMap,
+    max_error_samples: int = MAX_ERROR_SAMPLES,
+):
     finished = []
     for fut in futures:
         if fut.done():
@@ -140,7 +151,11 @@ def collect_completed_futures(futures: list, error_map: ErrorMap, max_error_samp
 
 
 def update_progress_bar(
-    pbar: tqdm, success_count: int, failure_count: int, total: int, postfix_extra: Optional[dict] = None
+    pbar: tqdm,
+    success_count: int,
+    failure_count: int,
+    total: int,
+    postfix_extra: Optional[dict] = None,
 ):
     new_total = success_count + failure_count
     delta = new_total - total
@@ -178,8 +193,8 @@ def collect_chunk_sizes(
     return min_chunk_size, max_chunk_size, sum_chunk_size, total_chunks
 
 
-def default_error() -> Error:
-    return {"count": 0, "sample_doc_ids": [], "sample_errors": []}
+def default_error() -> ErrorSummary:
+    return {"count": 0, "samples": []}
 
 
 def index_actions(
@@ -218,26 +233,35 @@ def index_actions(
 
 def info_to_error_map(info: dict) -> ErrorMap:
     update = info.get("update", {})
-    doc_id = update.get("_id")
-    status = update.get("status")
-    error = update.get("error")
-    return {status: {"count": 1, "sample_doc_ids": [doc_id], "sample_errors": [error]}}
+    doc_id: str = update.get("_id")
+    status: int = update.get("status")
+    error: dict = update.get("error")
+    return {
+        status: {
+            "count": 1,
+            "samples": [
+                {
+                    "doc_id": doc_id,
+                    "error": error,
+                }
+            ],
+        }
+    }
 
 
-def merge_error_maps(merged_errors: ErrorMap, new_errors: ErrorMap, max_error_samples: int = MAX_ERROR_SAMPLES):
+def merge_error_maps(
+    merged_errors: ErrorMap,
+    new_errors: ErrorMap,
+    max_error_samples: int = MAX_ERROR_SAMPLES,
+):
     for status, error_summary in new_errors.items():
         merged_summary = merged_errors[status]
         merged_summary["count"] += error_summary["count"]
 
-        for doc_id in error_summary["sample_doc_ids"]:
-            if len(merged_summary["sample_doc_ids"]) >= max_error_samples:
+        for doc_id in error_summary["samples"]:
+            if len(merged_summary["samples"]) >= max_error_samples:
                 break
-            merged_summary["sample_doc_ids"].append(doc_id)
-
-        for error_msg in error_summary["sample_errors"]:
-            if len(merged_summary["sample_errors"]) >= max_error_samples:
-                break
-            merged_summary["sample_errors"].append(error_msg)
+            merged_summary["samples"].append(doc_id)
 
 
 def measure_chunks(
