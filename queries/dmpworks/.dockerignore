@@ -4,3 +4,5 @@ target
 .env
 .env.demo
 .ipynb_checkpoints
+Dockerfile
+Dockerfile.aws
