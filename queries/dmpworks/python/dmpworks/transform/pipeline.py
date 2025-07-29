@@ -13,8 +13,8 @@ from typing import Callable, Optional
 from tqdm import tqdm
 
 import polars as pl
-from dmpworks.transform.utils_file import batch_files, extract_gzip, read_jsonls, write_parquet
-from dmpworks.utils import timed
+from dmpworks.transform.utils_file import extract_gzip, read_jsonls, write_parquet
+from dmpworks.utils import timed, to_batches
 from polars._typing import SchemaDefinition
 
 TransformFunc = Callable[[pl.LazyFrame], list[tuple[str, pl.LazyFrame]]]
@@ -361,7 +361,7 @@ def process_files_parallel(
 
     # Process batches in parallel
     files = list(Path(in_dir).glob(file_glob))
-    batches = list(batch_files(files, batch_size))
+    batches = list(to_batches(files, batch_size))
     if n_batches is not None:
         batches = batches[:n_batches]
     pipeline = Pipeline(
