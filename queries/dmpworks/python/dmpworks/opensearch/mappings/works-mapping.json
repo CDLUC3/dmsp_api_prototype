@@ -38,11 +38,13 @@
       },
       "title": {
         "type": "text",
-        "analyzer": "icu_analyzer"
+        "analyzer": "icu_analyzer",
+        "term_vector": "yes"
       },
       "abstract": {
         "type": "text",
-        "analyzer": "icu_analyzer"
+        "analyzer": "icu_analyzer",
+        "term_vector": "yes"
       },
       "type": {
         "type": "keyword",

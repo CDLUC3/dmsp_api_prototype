@@ -3,7 +3,7 @@ import shlex
 import subprocess
 from functools import wraps
 from typing import Generator, TypeVar
-
+import importlib
 import pendulum
 import requests
 from requests.adapters import HTTPAdapter
@@ -90,3 +90,9 @@ def retry_session(
     session.mount("http://", adapter)
 
     return session
+
+
+def import_from_path(path: str):
+    module_path, attr_name = path.rsplit(".", 1)
+    module = importlib.import_module(module_path)
+    return getattr(module, attr_name)

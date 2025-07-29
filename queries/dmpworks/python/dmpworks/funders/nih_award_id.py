@@ -2,13 +2,10 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import List, Optional, Set
+from typing import Optional, Set
 
-from dmpworks.funders.award_id import AwardID, Identifier
-from dmpworks.funders.nih_funder_api import (
-    nih_core_project_to_appl_ids,
-    NIHProjectDetails,
-)
+from dmpworks.funders.award_id import AwardID
+from dmpworks.funders.nih_funder_api import nih_core_project_to_appl_ids
 
 log = logging.getLogger(__name__)
 
@@ -25,6 +22,7 @@ class NIHAwardID(AwardID):
         serial_number: Optional[str] = None,
         support_year: Optional[str] = None,
         other_suffixes: Optional[str] = None,
+        appl_id: Optional[str] = None,
     ):
         """Construct an NIH Award ID. Details in docstrings derived from
          * https://www.era.nih.gov/files/Deciphering_NIH_Application.pdf
@@ -56,6 +54,7 @@ class NIHAwardID(AwardID):
                 "serial_number",
                 "support_year",
                 "other_suffixes",
+                "appl_id",
             ],
         )
 
@@ -65,8 +64,7 @@ class NIHAwardID(AwardID):
         self.serial_number = serial_number
         self.support_year = support_year
         self.other_suffixes = other_suffixes
-        self.nih_project_details: List[NIHProjectDetails] = []
-        self.discovered_ids: List[Identifier] = []
+        self.appl_id = appl_id
 
     def identifier_string(self) -> str:
         """The canonical identifier as a string"""
@@ -95,16 +93,16 @@ class NIHAwardID(AwardID):
 
         return "".join(parts)
 
-    def generate_variants(self) -> List[str]:
-        all_award_ids = [self] + [NIHAwardID.parse(detail.project_num) for detail in self.nih_project_details]
+    def generate_variants(self) -> list[str]:
+        all_award_ids = [self] + self.related_awards
         variants = set()
         for award_id in all_award_ids:
             variants.update(nih_awards_generate_variants(award_id))
         return list(variants)
 
     def fetch_additional_metadata(self):
-        # Convert award ID to application IDs
-        self.nih_project_details = nih_core_project_to_appl_ids(
+        # Fetch award info and related awards
+        nih_project_details = nih_core_project_to_appl_ids(
             appl_type_code=self.application_type,
             activity_code=self.activity_code,
             ic_code=self.institute_code,
@@ -112,18 +110,18 @@ class NIHAwardID(AwardID):
             support_year=self.support_year,
             suffix_code=self.other_suffixes,
         )
-
-        # Add these to the discovered IDs to save into BigQuery
-        for obj in self.nih_project_details:
-            self.discovered_ids.append(Identifier(id=obj.appl_id, type="NIH_APPL_ID"))
-            self.discovered_ids.append(Identifier(id=obj.project_num, type="NIH_PROJECT_NUM"))
+        for detail in nih_project_details:
+            # Add related awards
+            award = NIHAwardID.parse(detail.project_num)
+            award.appl_id = detail.appl_id
+            self.related_awards.append(award)
 
     @staticmethod
-    def parse(text: str | None) -> Optional[NIHAwardID]:
+    def parse(text: Optional[str]) -> Optional[NIHAwardID]:
         return parse_nih_award_id(text)
 
 
-def parse_nih_award_id(text: str | None) -> Optional[NIHAwardID]:
+def parse_nih_award_id(text: Optional[str]) -> Optional[NIHAwardID]:
     """Parse an NIH award ID string into an NIHAwardID object.
 
     :param text: the text containing the NIH award ID.

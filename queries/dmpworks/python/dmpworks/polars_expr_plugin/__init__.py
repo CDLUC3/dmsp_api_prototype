@@ -38,3 +38,21 @@ def parse_datacite_name_identifiers(expr: IntoExprColumn) -> pl.Expr:
         function_name="parse_datacite_name_identifiers",
         is_elementwise=True,
     )
+
+
+def strip_markup(expr: IntoExprColumn) -> pl.Expr:
+    return register_plugin_function(
+        args=[expr],
+        plugin_path=LIB,
+        function_name="strip_markup",
+        is_elementwise=True,
+    )
+
+
+def parse_name(expr: IntoExprColumn) -> pl.Expr:
+    return register_plugin_function(
+        args=[expr],
+        plugin_path=LIB,
+        function_name="parse_name",
+        is_elementwise=True,
+    )

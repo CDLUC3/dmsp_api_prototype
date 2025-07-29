@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import List, Optional
+from typing import Optional
 
-from dmpworks.funders.award_id import AwardID, Identifier
+from dmpworks.funders.award_id import AwardID
 from dmpworks.funders.nsf_funder_api import nsf_fetch_org_id
 
 log = logging.getLogger(__name__)
@@ -24,7 +24,6 @@ class NSFAwardID(AwardID):
         super().__init__(text, ["text", "org_id", "award_id"])
         self.org_id = org_id
         self.award_id = award_id
-        self.discovered_ids: List[Identifier] = []
 
     def generate_variants(self):
         variants = []
@@ -50,8 +49,6 @@ class NSFAwardID(AwardID):
 
         if self.org_id is None and self.award_id is not None:
             self.org_id = nsf_fetch_org_id(self.award_id)
-            if self.org_id is not None:
-                self.discovered_ids = [Identifier(f"{self.org_id}-{self.award_id}", "NSF_AWARD_ID")]
 
     def identifier_string(self) -> str:
         """The canonical identifier as a string"""
@@ -62,11 +59,11 @@ class NSFAwardID(AwardID):
         return str(self.award_id)
 
     @staticmethod
-    def parse(text: str | None) -> Optional[NSFAwardID]:
+    def parse(text: Optional[str]) -> Optional[NSFAwardID]:
         return parse_nsf_award_id(text)
 
 
-def parse_nsf_award_id(text: str | None) -> Optional[NSFAwardID]:
+def parse_nsf_award_id(text: Optional[str]) -> Optional[NSFAwardID]:
     original_text = text
 
     # Return None if None or empty string
