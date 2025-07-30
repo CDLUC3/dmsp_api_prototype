@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Dict, List, Optional, TypeVar
 
+log = logging.getLogger(__name__)
+
 T = TypeVar("T", bound="FunderID")
 
 
-class AwardId(ABC):
+class AwardID(ABC):
     ror_ids: set = {}  # The funder ROR IDs, includes children
 
     def __init__(self, text: str, fields: List[str]):

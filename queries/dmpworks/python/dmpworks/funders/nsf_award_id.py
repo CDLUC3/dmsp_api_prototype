@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import logging
 import re
 from typing import List, Optional
 
-from dmpworks.funders.award_id import AwardId, Identifier
+from dmpworks.funders.award_id import AwardID, Identifier
 from dmpworks.funders.nsf_funder_api import nsf_fetch_org_id
 
+log = logging.getLogger(__name__)
 
-class NSFAwardID(AwardId):
+
+class NSFAwardID(AwardID):
     ror_ids: set = {"021nxhr62", "05wqqhv83"}
 
     def __init__(self, text: str, org_id: Optional[str] = None, award_id: Optional[str] = None):

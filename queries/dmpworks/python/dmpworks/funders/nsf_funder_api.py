@@ -12,6 +12,8 @@ from rapidfuzz import fuzz
 from dmpworks.transforms import clean_string, extract_doi
 from dmpworks.utils import retry_session
 
+log = logging.getLogger(__name__)
+
 
 def nsf_fetch_award_publication_dois(
     award_id: str,
@@ -69,7 +71,7 @@ def nsf_fetch_award_publication_dois(
         return references
 
     except requests.exceptions.RequestException as e:
-        logging.error(f"nsf_fetch_award_publication_dois: an error occurred while fetching data: {e}")
+        log.error(f"nsf_fetch_award_publication_dois: an error occurred while fetching data: {e}")
         raise
 
 
@@ -112,7 +114,7 @@ def find_crossref_doi(
 
         return None
     except requests.exceptions.RequestException as e:
-        logging.error(f"find_crossref_doi: an error occurred while fetching data: {e}")
+        log.error(f"find_crossref_doi: an error occurred while fetching data: {e}")
         raise
 
 
@@ -157,7 +159,7 @@ def find_datacite_doi(title: str, threshold: float = 95) -> str | None:
 
         return None
     except requests.exceptions.RequestException as e:
-        logging.error(f"find_datacite_doi: an error occurred while fetching data: {e}")
+        log.error(f"find_datacite_doi: an error occurred while fetching data: {e}")
         raise
 
 
@@ -251,12 +253,12 @@ def nsf_fetch_org_id(award_id: str):
                 # Extract the NSF Org ID from the <a> tag or direct text
                 nsf_org_id = nsf_org_td.find("a").text if nsf_org_td.find("a") else nsf_org_td.text
                 org_id = nsf_org_id.strip().upper()
-                logging.info(f"nsf_fetch_org_id: found NSF Org ID {org_id} for Award ID {award_id}")
+                log.info(f"nsf_fetch_org_id: found NSF Org ID {org_id} for Award ID {award_id}")
             else:
-                logging.info(f"nsf_fetch_org_id: no NSF Org ID found for Award ID {award_id}")
+                log.info(f"nsf_fetch_org_id: no NSF Org ID found for Award ID {award_id}")
 
     except requests.exceptions.RequestException as e:
-        logging.error(f"nsf_fetch_org_id: an error occurred while fetching data: {e}")
+        log.error(f"nsf_fetch_org_id: an error occurred while fetching data: {e}")
         raise
 
     return org_id

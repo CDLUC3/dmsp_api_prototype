@@ -10,6 +10,8 @@ from bs4 import BeautifulSoup
 from dmpworks.transforms import clean_string
 from dmpworks.utils import retry_session, to_batches
 
+log = logging.getLogger(__name__)
+
 
 def nsf_fetch_org_id(award_id: str):
     base_url = "https://www.nsf.gov/awardsearch/showAward"
@@ -34,12 +36,12 @@ def nsf_fetch_org_id(award_id: str):
                 # Extract the NSF Org ID from the <a> tag or direct text
                 nsf_org_id = nsf_org_td.find("a").text if nsf_org_td.find("a") else nsf_org_td.text
                 org_id = nsf_org_id.strip().upper()
-                logging.info(f"nsf_fetch_org_id: found NSF Org ID {org_id} for Award ID {award_id}")
+                log.info(f"nsf_fetch_org_id: found NSF Org ID {org_id} for Award ID {award_id}")
             else:
-                logging.info(f"nsf_fetch_org_id: no NSF Org ID found for Award ID {award_id}")
+                log.info(f"nsf_fetch_org_id: no NSF Org ID found for Award ID {award_id}")
 
     except requests.exceptions.RequestException as e:
-        logging.error(f"nsf_fetch_org_id: an error occurred while fetching data: {e}")
+        log.error(f"nsf_fetch_org_id: an error occurred while fetching data: {e}")
         raise
 
     return org_id
@@ -117,7 +119,7 @@ def nih_core_project_to_appl_ids(
         ]
 
     except requests.exceptions.RequestException as e:
-        logging.error(f"nih_fetch_award_publication_dois: an error occurred while fetching data: {e}")
+        log.error(f"nih_fetch_award_publication_dois: an error occurred while fetching data: {e}")
         raise
 
 
@@ -164,7 +166,7 @@ def nih_fetch_award_publication_dois(
         return outputs
 
     except requests.exceptions.RequestException as e:
-        logging.error(f"nih_fetch_award_publication_dois: an error occurred while fetching data: {e}")
+        log.error(f"nih_fetch_award_publication_dois: an error occurred while fetching data: {e}")
         raise
 
 
@@ -240,5 +242,5 @@ def _pubmed_ids_to_dois(
         return outputs
 
     except requests.exceptions.RequestException as e:
-        logging.error(f"pubmed_id_converter: an error occurred while fetching data: {e}")
+        log.error(f"pubmed_id_converter: an error occurred while fetching data: {e}")
         raise

@@ -49,5 +49,5 @@ class Funder(BaseModel):
 class FundingItem(BaseModel):
     funder: Funder
     funding_opportunity_id: Optional[str]
-    status: str
+    status: Optional[str]
     grant_id: Optional[str]

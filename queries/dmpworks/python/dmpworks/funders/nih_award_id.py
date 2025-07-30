@@ -1,16 +1,19 @@
 from __future__ import annotations
 
+import logging
 import re
 from typing import List, Optional, Set
 
-from dmpworks.funders.award_id import AwardId, Identifier
+from dmpworks.funders.award_id import AwardID, Identifier
 from dmpworks.funders.nih_funder_api import (
     nih_core_project_to_appl_ids,
     NIHProjectDetails,
 )
 
+log = logging.getLogger(__name__)
 
-class NIHAwardID(AwardId):
+
+class NIHAwardID(AwardID):
     ror_ids = {"01cwqze88"}
 
     def __init__(
