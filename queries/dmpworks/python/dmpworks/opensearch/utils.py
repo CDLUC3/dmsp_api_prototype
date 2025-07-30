@@ -69,6 +69,7 @@ class OpenSearchSyncConfig:
     dry_run: bool = False
     measure_chunk_size: bool = False
     max_error_samples: int = MAX_ERROR_SAMPLES
+    staggered_start: bool = False
 
 
 def make_opensearch_client(config: OpenSearchClientConfig) -> OpenSearch:
