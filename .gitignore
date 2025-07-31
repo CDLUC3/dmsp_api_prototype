@@ -15,12 +15,14 @@
 coverage
 dist
 
+# IDE files
+.idea
+
 # Used by dotenv library to load environment variables.
 .env
 
 # OSX files
 .DS_Store
-.DS_store
 
 # Ignore Byebug command history file.
 .byebug_history
