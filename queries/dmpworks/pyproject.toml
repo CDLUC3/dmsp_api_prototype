@@ -16,7 +16,9 @@ dependencies = [
     "pyarrow>=19,<21",
     "sqlmesh>=0.188.1,<1",
     "cyclopts>=3,<4",
-    "pooch>=1,<2"
+    "pooch>=1,<2",
+    "boto3>=1,<2",
+    "orjson>=3,<4"
 ]
 
 [project.optional-dependencies]
