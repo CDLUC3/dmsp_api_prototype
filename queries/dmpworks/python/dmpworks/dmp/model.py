@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import dataclasses
 from typing import Optional
 
 import pendulum
 from pydantic import BaseModel, field_serializer, field_validator
 
 
-class DMP(BaseModel):
+class DMPModel(BaseModel):
     model_config = {
         "arbitrary_types_allowed": True,
     }
@@ -51,3 +52,20 @@ class FundingItem(BaseModel):
     funding_opportunity_id: Optional[str]
     status: Optional[str]
     grant_id: Optional[str]
+
+
+@dataclasses.dataclass(kw_only=True)
+class DMPFlat:
+    dmp_id: str
+    project_start: pendulum.Date
+    project_end: pendulum.Date
+    title: Optional[str]
+    abstract: Optional[str]
+    affiliation_rors: list[str] = dataclasses.field(default_factory=list)
+    affiliation_names: list[str] = dataclasses.field(default_factory=list)
+    author_names: list[str] = dataclasses.field(default_factory=list)
+    author_orcids: list[str] = dataclasses.field(default_factory=list)
+    award_ids: list[str] = dataclasses.field(default_factory=list)
+    funder_ids: list[str] = dataclasses.field(default_factory=list)
+    funder_names: list[str] = dataclasses.field(default_factory=list)
+    funded_dois: list[str] = dataclasses.field(default_factory=list)

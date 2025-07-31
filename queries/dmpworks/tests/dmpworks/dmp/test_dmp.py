@@ -1,6 +1,6 @@
 import pendulum
 
-from dmpworks.dmp.dmp import DMP, Funder, FundingItem
+from dmpworks.dmp.model import DMPModel, Funder, FundingItem
 
 
 def test_parse_dmp():
@@ -32,9 +32,9 @@ def test_parse_dmp():
         "visibility": "public",
         "featured": None,
     }
-    actual = DMP.model_validate(json_data, strict=True)
+    actual = DMPModel.model_validate(json_data, strict=True)
     assert (
-        DMP(
+        DMPModel(
             dmp_id="doi.org/10.48321/D00000",
             created=pendulum.date(2020, 1, 1),
             registered=pendulum.date(2020, 1, 1),

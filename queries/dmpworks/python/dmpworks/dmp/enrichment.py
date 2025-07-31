@@ -5,7 +5,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Optional, Type
 
-from dmpworks.dmp.dmp import DMP, Funder
+from dmpworks.dmp.model import DMPModel, Funder
 from dmpworks.funders.award_id import AwardID
 from dmpworks.funders.nih_award_id import NIHAwardID
 from dmpworks.funders.nih_funder_api import nih_fetch_award_publication_dois
@@ -29,7 +29,7 @@ class Award:
         }
 
 
-def parse_awards(dmp: DMP) -> list[Award]:
+def parse_awards(dmp: DMPModel) -> list[Award]:
     awards: list[Award] = []
     for funding in dmp.funding:
         # Parse award IDs
