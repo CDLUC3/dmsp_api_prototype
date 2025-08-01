@@ -8,7 +8,7 @@ from typing import Callable, Generator
 import polars as pl
 from polars._typing import SchemaDefinition
 
-BatchGenerator = Generator[list[Path], None, None]
+
 PrefetchLoaderExtractFunction = Callable[[list[Path], int], list[Path]]
 
 
@@ -21,11 +21,6 @@ def validate_directory(path: Path, expected_items: list[str]) -> bool:
         return False
 
     return True
-
-
-def batch_files(files: list[Path], batch_size: int) -> BatchGenerator:
-    for i in range(0, len(files), batch_size):
-        yield files[i : i + batch_size]
 
 
 def extract_gzip(in_file: Path, out_file: Path) -> None:
