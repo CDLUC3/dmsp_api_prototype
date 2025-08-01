@@ -69,7 +69,7 @@ class AwardID(ABC):
     def to_dict(self) -> Dict:
         """Converts the funder ID into a dict to load into BigQuery"""
         return {
-            "ror_ids": list(self.ror_ids),
+            "parent_ror_ids": list(self.parent_ror_ids),
             "identifier": self.identifier_string(),
             "text": self.text,
             "parts": [part.to_dict() for part in self.parts()],
