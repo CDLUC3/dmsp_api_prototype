@@ -2,11 +2,14 @@ import json
 import logging
 import math
 import multiprocessing as mp
+import os
 import pathlib
 import queue
 import time
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
+from functools import lru_cache
+from multiprocessing import current_process
 from typing import Iterator, List, Optional, TypedDict
 
 import pendulum
@@ -293,6 +296,29 @@ def dry_run_actions(
             success_counter.value += 1
 
 
+@lru_cache(maxsize=None)
+def wait_first_run(proc_idx: int):
+    # Runs once per process in a ProcessPoolExecutor. The return value is
+    # cached so the function body is executed only the first time it is called
+    # in each process.
+    sleep_secs = (proc_idx - 1) * 60
+    log.debug(f"Staggered start, process {proc_idx} (PID {os.getpid()}) sleeping {sleep_secs}s")
+    time.sleep(sleep_secs)
+
+
+def get_process_index() -> int:
+    proc = current_process()
+    if proc._identity:
+        idx = proc._identity[0]
+        log.debug(f"proc._identity: {idx}")
+        return idx
+
+    # Fallback
+    idx = int(proc.name.split('-')[-1])
+    log.debug(f"proc.name: {idx}")
+    return idx
+
+
 def index_file(
     *,
     file_path: pathlib.Path,
@@ -305,7 +331,13 @@ def index_file(
     max_backoff: int = MAX_BACKOFF,
     dry_run: bool = False,
     measure_chunk_size: bool = False,
+    staggered_start: bool = False,
 ):
+    if staggered_start:
+        log.debug("Staggered start")
+        idx = get_process_index()
+        wait_first_run(idx)
+
     batches = stream_parquet_batches(source=file_path, columns=columns, batch_size=chunk_size)
     actions = (action for batch in batches for action in batch_to_work_actions(index_name, batch))
 
@@ -398,6 +430,7 @@ def sync_works(
                     max_backoff=sync_config.max_backoff,
                     dry_run=sync_config.dry_run,
                     measure_chunk_size=sync_config.measure_chunk_size,
+                    staggered_start=sync_config.staggered_start,
                 )
                 for file_path in parquet_files
             ]
