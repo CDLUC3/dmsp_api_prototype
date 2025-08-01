@@ -58,7 +58,7 @@ def parse_award_ids(
     for id_type in [NIHAwardID, NSFAwardID]:
         for ror_id in id_type.parent_ror_ids:
             parser_index[ror_id] = id_type
-    parser: AwardID = parser_index.get(funder_id)
+    parser: Optional[AwardID] = parser_index.get(funder_id)
     if parser:
         inputs = [funding_opportunity_id, grant_id]
         for text in inputs:
