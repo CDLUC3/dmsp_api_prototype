@@ -27,7 +27,8 @@ LANGUAGE js AS """
 """;
 
 
-CREATE OR REPLACE TABLE `{{ crossref_norm_table_id }}` AS
+CREATE OR REPLACE TABLE `{{ crossref_norm_table_id }}`
+CLUSTER BY publication_date AS
 
 WITH ror_index AS (
   SELECT
@@ -72,11 +73,15 @@ affiliations AS (
 )
 
 SELECT
+  -- Primary Key
   {{ dataset_id }}.normalise_doi(cf.doi) AS doi,
+
+  -- Clustered fields
+  {{ dataset_id }}.date_parts_to_date(issued.date_parts) AS publication_date,
 
   -- Data to send back to DMPTool
   STRUCT(
-    {{ dataset_id }}.strip_html(cf.title[SAFE_OFFSET(0)]) AS title,
+    {{ dataset_id }}.remove_markup(cf.title[SAFE_OFFSET(0)]) AS title,
     {{ dataset_id }}.parts_to_date_string(issued.date_parts) AS publication_date,
     normalise_type(cf.type) AS type,
     (SELECT ARRAY_AGG(
@@ -98,8 +103,8 @@ SELECT
   STRUCT(
       {{ dataset_id }}.date_parts_to_date(issued.date_parts) AS publication_date,
       {{ dataset_id }}.create_content(
-        {{ dataset_id }}.strip_html(ARRAY_TO_STRING(ARRAY(SELECT t FROM UNNEST(cf.title) AS t), " ")),
-        {{ dataset_id }}.strip_html(cf.abstract)
+        {{ dataset_id }}.remove_markup(ARRAY_TO_STRING(ARRAY(SELECT t FROM UNNEST(cf.title) AS t), " ")),
+        {{ dataset_id }}.remove_markup(cf.abstract)
       ) AS content,
 
       -- Affiliations
@@ -151,7 +156,7 @@ SELECT
       ) AS funder_ids,
 
       -- Funder Opportunity IDs
-      -- ARRAY<STRING>[] AS funder_opportunity_ids,
+      -- ARRAY<STRING>[] AS funding_opportunity_ids,
 
       -- Grant IDs
       (
@@ -205,4 +210,3 @@ LEFT JOIN affiliations ON affiliations.doi = cf.doi
 LEFT JOIN `{{ openalex_norm_table_id }}` AS openalex ON openalex.doi = {{ dataset_id }}.normalise_doi(cf.doi) -- Enrich with OpenAlex identifiers
 WHERE ARRAY_LENGTH(issued.date_parts) > 0 AND ({{ dataset_id }}.date_parts_to_date(issued.date_parts) BETWEEN (SELECT min_project_start FROM min_project_start).min_project_start AND CURRENT_DATE())
 AND cf.type NOT IN ("component", "journal-issue", "grant", "proceedings", "journal", "report-component", "database", "report-series", "journal-volume", "book-series", "book-set", "proceedings-series", "book-track")
-ORDER BY match_data.publication_date DESC
