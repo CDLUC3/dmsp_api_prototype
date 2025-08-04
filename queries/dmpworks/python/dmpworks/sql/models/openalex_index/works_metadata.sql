@@ -16,6 +16,8 @@ MODEL (
   kind FULL
 );
 
+PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
+
 -- Remove works that can be found in DataCite
 WITH base AS (
   SELECT

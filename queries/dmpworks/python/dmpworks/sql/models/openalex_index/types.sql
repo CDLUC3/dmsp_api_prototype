@@ -11,6 +11,8 @@ MODEL (
   kind FULL
 );
 
+PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
+
 SELECT
   owm.doi,
   MODE(type ORDER BY type ASC) AS type,

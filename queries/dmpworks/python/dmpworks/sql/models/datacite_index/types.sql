@@ -11,6 +11,8 @@ MODEL (
   kind FULL
 );
 
+PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
+
  -- Mapping table to normalise DataCite types
 WITH type_map AS (
   SELECT * FROM (VALUES

@@ -10,6 +10,8 @@ MODEL (
   kind FULL
 );
 
+PRAGMA threads=CAST(@VAR('openalex_index_openalex_index_threads') AS INT64);
+
 WITH dois AS (
   SELECT DISTINCT doi
   FROM openalex_index.works_metadata
