@@ -16,6 +16,10 @@ MODEL (
   kind FULL
 );
 
+PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
+
+JINJA_QUERY_BEGIN;
+
 -- Remove works that can be found in DataCite
 WITH base AS (
   SELECT
@@ -37,8 +41,12 @@ SELECT
   base.id,
   base.doi,
   LENGTH(oaw.title) AS title_length,
+  {% if var('include_abstracts') %}
   LENGTH(oaw.abstract) AS abstract_length,
+  {% endif %}
   counts.doi_count > 1 AS is_duplicate
 FROM base
 LEFT JOIN counts ON base.doi = counts.doi
 LEFT JOIN openalex.works oaw ON base.id = oaw.id;
+
+JINJA_END;

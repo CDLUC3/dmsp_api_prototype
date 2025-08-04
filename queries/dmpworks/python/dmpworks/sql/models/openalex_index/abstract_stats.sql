@@ -13,8 +13,11 @@
 MODEL (
   name openalex_index.abstract_stats,
   dialect duckdb,
-  kind FULL
+  kind FULL,
+  enabled @VAR('include_abstracts')
 );
+
+PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
 
 -- Choose the id with the longest abstract for each duplicate DOI
 SELECT

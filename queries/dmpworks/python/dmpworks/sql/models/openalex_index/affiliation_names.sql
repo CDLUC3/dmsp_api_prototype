@@ -12,6 +12,8 @@ MODEL (
   kind FULL
 );
 
+PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
+
 SELECT
   owm.doi,
   @array_agg_distinct(display_name) AS affiliation_names,

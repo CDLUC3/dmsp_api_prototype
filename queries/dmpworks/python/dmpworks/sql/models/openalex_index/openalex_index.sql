@@ -10,6 +10,10 @@ MODEL (
   kind FULL
 );
 
+PRAGMA threads=CAST(@VAR('openalex_index_openalex_index_threads') AS INT64);
+
+JINJA_QUERY_BEGIN;
+
 WITH dois AS (
   SELECT DISTINCT doi
   FROM openalex_index.works_metadata
@@ -18,7 +22,9 @@ WITH dois AS (
 SELECT
   dois.doi,
   openalex_index.titles.title,
+  {% if var('include_abstracts') %}
   openalex_index.abstracts.abstract,
+  {% endif %}
   COALESCE(openalex_index.types.type, 'other') AS type,
   openalex_index.publication_dates.publication_date,
   openalex_index.updated_dates.updated_date,
@@ -31,7 +37,9 @@ SELECT
   COALESCE(openalex_index.funder_names.funder_names, []) AS funder_names
 FROM dois
 LEFT JOIN openalex_index.titles ON dois.doi = openalex_index.titles.doi
+{% if var('include_abstracts') %}
 LEFT JOIN openalex_index.abstracts ON dois.doi = openalex_index.abstracts.doi
+{% endif %}
 LEFT JOIN openalex_index.types ON dois.doi = openalex_index.types.doi
 LEFT JOIN openalex_index.publication_dates ON dois.doi = openalex_index.publication_dates.doi
 LEFT JOIN openalex_index.updated_dates ON dois.doi = openalex_index.updated_dates.doi
@@ -43,3 +51,4 @@ LEFT JOIN openalex_index.award_ids ON dois.doi = openalex_index.award_ids.doi
 LEFT JOIN openalex_index.funder_ids ON dois.doi = openalex_index.funder_ids.doi
 LEFT JOIN openalex_index.funder_names ON dois.doi = openalex_index.funder_names.doi;
 
+JINJA_END;

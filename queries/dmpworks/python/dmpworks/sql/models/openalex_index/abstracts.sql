@@ -7,8 +7,11 @@
 MODEL (
   name openalex_index.abstracts,
   dialect duckdb,
-  kind FULL
+  kind FULL,
+  enabled @VAR('include_abstracts')
 );
+
+PRAGMA threads=CAST(@VAR('openalex_index_abstracts_threads') AS INT64);
 
 SELECT
   stats.doi,

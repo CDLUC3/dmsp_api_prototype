@@ -16,6 +16,8 @@ MODEL (
   kind FULL
 );
 
+PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
+
 -- Choose the id with the longest title for each duplicate DOI
 SELECT
   COALESCE(ARG_MAX(owm.id, owm.title_length), MIN(id)) AS id,

@@ -4,6 +4,8 @@ MODEL (
   kind FULL
 );
 
+PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
+
 SELECT
   doi,
   LENGTH(title) AS title_length,

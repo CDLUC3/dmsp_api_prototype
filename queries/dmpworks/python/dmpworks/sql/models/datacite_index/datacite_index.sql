@@ -11,10 +11,16 @@ MODEL (
   kind FULL
 );
 
+PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
+
+JINJA_QUERY_BEGIN;
+
 SELECT
   datacite.works.doi,
   datacite.works.title,
+  {% if var('include_abstracts') %}
   datacite.works.abstract,
+  {% endif %}
   COALESCE(datacite_index.types.type, 'other') AS type,
   datacite.works.publication_date,
   datacite_index.updated_dates.updated_date,
@@ -35,3 +41,5 @@ LEFT JOIN datacite_index.author_orcids ON datacite.works.doi = datacite_index.au
 LEFT JOIN datacite_index.award_ids ON datacite.works.doi = datacite_index.award_ids.doi
 LEFT JOIN datacite_index.funder_ids ON datacite.works.doi = datacite_index.funder_ids.doi
 LEFT JOIN datacite_index.funder_names ON datacite.works.doi = datacite_index.funder_names.doi;
+
+JINJA_END;
