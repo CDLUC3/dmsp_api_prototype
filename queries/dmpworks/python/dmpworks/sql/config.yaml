@@ -6,18 +6,12 @@ gateways:
       # https://sqlmesh.readthedocs.io/en/stable/integrations/engines/duckdb/#connection-options
       type: duckdb
       database: /path/to/db.db
-      # concurrent_tasks: 1
-      # register_comments: True
-      # pre_ping: False
-      # pretty_sql: False
-      # catalogs: 
-      # extensions: 
       connector_config:
         threads: 1
         memory_limit: '80GB'
         preserve_insertion_order: 'false'
-      # secrets: 
-      # token: 
+        temp_directory: '/path/to/duckdb_swap'
+        max_temp_directory_size: '80GB'
 
 variables:
   crossref_metadata_path: "/path/to/crossref_metadata/parquets"
@@ -29,8 +23,12 @@ variables:
   audit_crossref_metadata_works_threshold: 167008747
   audit_datacite_works_threshold: 72019576
   audit_openalex_works_threshold: 264675126
-
-
+  default_threads: 32
+  openalex_index_author_names_threads: 2
+  openalex_index_author_orcids_threads: 32
+  openalex_index_abstracts_threads: 2
+  openalex_index_titles_threads: 2
+  openalex_index_openalex_index_threads: 2
 
 default_gateway: duckdb
 

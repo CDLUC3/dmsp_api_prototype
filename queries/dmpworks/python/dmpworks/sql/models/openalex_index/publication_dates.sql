@@ -12,6 +12,8 @@ MODEL (
   kind FULL
 );
 
+PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
+
 SELECT
   owm.doi,
   MAX(publication_date) AS publication_date

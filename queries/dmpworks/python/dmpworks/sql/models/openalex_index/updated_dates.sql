@@ -12,6 +12,8 @@ MODEL (
   kind FULL
 );
 
+PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
+
 SELECT
   doi,
   MAX(updated_date) AS updated_date

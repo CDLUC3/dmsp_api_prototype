@@ -13,6 +13,8 @@ MODEL (
   kind FULL
 );
 
+PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
+
 SELECT
   doi,
   @array_agg_distinct(award_id) AS award_ids

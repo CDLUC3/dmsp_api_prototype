@@ -12,6 +12,8 @@ MODEL (
   kind FULL
 );
 
+PRAGMA threads=CAST(@VAR('openalex_index_author_names_threads') AS INT64);
+
 SELECT
   owm.doi,
   @array_agg_distinct(display_name) AS author_names,
