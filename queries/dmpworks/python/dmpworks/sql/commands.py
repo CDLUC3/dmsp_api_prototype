@@ -9,7 +9,7 @@ from sqlmesh.core.test import ModelTextTestResult
 from sqlmesh.utils import Verbosity
 
 
-def sqlmesh_dir(module_name: str = "dmpworks.sqlmesh") -> pathlib.Path:
+def sqlmesh_dir(module_name: str = "dmpworks.sql") -> pathlib.Path:
     spec = find_spec(module_name)
     if spec is None or not spec.origin:
         raise ModuleNotFoundError(module_name)
