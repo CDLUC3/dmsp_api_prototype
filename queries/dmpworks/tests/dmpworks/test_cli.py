@@ -49,8 +49,6 @@ def test_opensearch_sync_works(mock_sync_works, tmp_path: pathlib.Path):
         in_dir,
         OpenSearchClientConfig(),
         OpenSearchSyncConfig(),
-        dry_run=False,
-        measure_chunk_size=False,
         log_level=logging.INFO,
     )
 

@@ -2,8 +2,12 @@ import logging
 import shlex
 import subprocess
 from functools import wraps
+from typing import Generator, TypeVar
 
 import pendulum
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3 import Retry
 
 log = logging.getLogger(__name__)
 
@@ -56,3 +60,33 @@ class InstanceOf:
 
 def copy_dict(original_dict: dict, keys_to_remove: list) -> dict:
     return {k: v for k, v in original_dict.items() if k not in keys_to_remove}
+
+
+T = TypeVar("T")
+BatchGenerator = Generator[list[T], None, None]
+
+
+def to_batches(items: list[T], batch_size: int) -> BatchGenerator:
+    for i in range(0, len(items), batch_size):
+        yield items[i : i + batch_size]
+
+
+def retry_session(
+    total_retries: int = 3,
+    backoff_factor: float = 0.5,
+    status_forcelist: tuple = (429, 500, 502, 503, 504),
+    raise_on_status: bool = True,
+):
+    retry_strategy = Retry(
+        total=total_retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=status_forcelist,
+        raise_on_status=raise_on_status,
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+
+    session = requests.Session()
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+
+    return session
