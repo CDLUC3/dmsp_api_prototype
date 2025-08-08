@@ -48,25 +48,25 @@ def nsf_fetch_award_publication_dois(
         references = [parse_reference(ref) for ref in references]
 
         # Attempt to find missing DOIs from Crossref Metadata and DataCite
-        for ref in references:
-            doi = ref.get("doi")
-            title = ref.get("title")
-            journal = ref.get("journal")
-
-            # Try Crossref Metadata first
-            if doi is None:
-                doi = find_crossref_doi(
-                    title,
-                    journal,
-                    threshold=threshold,
-                    email=email,
-                )
-
-            # If DOI is still None, then try DataCite
-            if doi is None:
-                doi = find_datacite_doi(title, threshold=threshold)
-
-            ref["doi"] = doi
+        # for ref in references:
+        #     doi = ref.get("doi")
+        #     title = ref.get("title")
+        #     journal = ref.get("journal")
+        #
+        #     # Try Crossref Metadata first
+        #     if doi is None:
+        #         doi = find_crossref_doi(
+        #             title,
+        #             journal,
+        #             threshold=threshold,
+        #             email=email,
+        #         )
+        #
+        #     # If DOI is still None, then try DataCite
+        #     if doi is None:
+        #         doi = find_datacite_doi(title, threshold=threshold)
+        #
+        #     ref["doi"] = doi
 
         return references
 

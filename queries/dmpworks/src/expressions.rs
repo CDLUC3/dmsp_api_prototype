@@ -4,6 +4,9 @@ use polars::prelude::*;
 use polars_core::series::Series;
 use pyo3_polars::derive::polars_expr;
 use serde_json;
+use voca_rs::*;
+use human_name::Name;
+use log::{warn};
 
 #[polars_expr(output_type=String)]
 fn revert_inverted_index(inputs: &[Series]) -> PolarsResult<Series> {
@@ -234,4 +237,106 @@ fn parse_datacite_name_identifiers(inputs: &[Series]) -> PolarsResult<Series> {
         .collect::<ListChunked>();
 
     Ok(list_ca.into_series())
+}
+
+#[polars_expr(output_type=String)]
+fn strip_markup(inputs: &[Series]) -> PolarsResult<Series> {
+    let ca: &StringChunked = inputs[0].str()?;
+    let out: StringChunked = ca.apply_into_string_amortized(|value: &str, output: &mut String| {
+        output.push_str(&strip::strip_tags(value));
+    });
+    Ok(out.into_series())
+}
+
+fn parse_name_output(input_fields: &[Field]) -> PolarsResult<Field> {
+    Ok(Field::new(
+        input_fields[0].name.clone(),
+        DataType::Struct(vec![
+            Field::new("first_initial".into(), DataType::String),
+            Field::new("given_name".into(), DataType::String),
+            Field::new("middle_initials".into(), DataType::String),
+            Field::new("middle_names".into(), DataType::String),
+            Field::new("surname".into(), DataType::String),
+            Field::new("full".into(), DataType::String),
+        ]),
+    ))
+}
+
+fn fallback_parse_name(text: &str) -> (Option<String>, Option<String>, String) {
+    let name_parts = if let Some((surname, given_name)) = text.split_once(",") {
+        Some((given_name.trim(), surname.trim()))
+    } else if let Some((given_name, surname)) = text.rsplit_once(" ") {
+        Some((given_name.trim(), surname.trim()))
+    } else {
+        None
+    };
+
+    match name_parts {
+        Some((given, surname)) => (
+            Some(given.to_string()),
+            Some(surname.to_string()),
+            format!("{} {}", given, surname),
+        ),
+        None => (None, None, text.to_string()),
+    }
+}
+
+#[polars_expr(output_type_func=parse_name_output)]
+fn parse_name(inputs: &[Series]) -> PolarsResult<Series> {
+    let ca: &StringChunked = inputs[0].str()?;
+    let len = ca.len();
+
+    let mut first_initials: Vec<Option<String>> = Vec::with_capacity(len);
+    let mut given_names: Vec<Option<String>> = Vec::with_capacity(len);
+    let mut middle_initials: Vec<Option<String>> = Vec::with_capacity(len);
+    let mut middle_names: Vec<Option<String>> = Vec::with_capacity(len);
+    let mut surnames: Vec<Option<String>> = Vec::with_capacity(len);
+    let mut fulls: Vec<Option<String>> = Vec::with_capacity(len);
+
+    for opt_s in ca {
+        if let Some(s) = opt_s {
+            if let Some(person) = Name::parse(s) {
+                first_initials.push(Some(person.first_initial().to_string()));
+                given_names.push(person.given_name().map(|s| s.to_string()));
+                middle_initials.push(person.middle_initials().map(|s| s.to_string()));
+                middle_names.push(person.middle_names().map(|v| v.join(" ")));
+                surnames.push(Some(person.surname().to_string()));
+                fulls.push(Some(person.display_full().into_owned()));
+            } else {
+                let (given_name, surname, full) = fallback_parse_name(s);
+                warn!("fallback_parse_name: given_name='{:?}', surname='{:?}', full='{}'", given_name, surname, full);
+                first_initials.push(None);
+                given_names.push(given_name);
+                middle_initials.push(None);
+                middle_names.push(None);
+                surnames.push(surname);
+                fulls.push(Some(full));
+            }
+        } else {
+            first_initials.push(None);
+            given_names.push(None);
+            middle_initials.push(None);
+            middle_names.push(None);
+            surnames.push(None);
+            fulls.push(None);
+        }
+    }
+
+    let first_initial_series = Series::new("first_initial".into(), first_initials);
+    let given_name_series = Series::new("given_name".into(), given_names);
+    let middle_initials_series = Series::new("middle_initials".into(), middle_initials);
+    let middle_names_series = Series::new("middle_names".into(), middle_names);
+    let surname_series = Series::new("surname".into(), surnames);
+    let full_series = Series::new("full".into(), fulls);
+
+    let fields: Vec<&Series> = vec![
+        &first_initial_series,
+        &given_name_series,
+        &middle_initials_series,
+        &middle_names_series,
+        &surname_series,
+        &full_series,
+    ];
+    let struct_chunked = StructChunked::from_series("".into(), len, fields.into_iter())?;
+    Ok(struct_chunked.into_series())
 }

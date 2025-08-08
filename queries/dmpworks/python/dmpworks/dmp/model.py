@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import datetime
 from typing import Optional
 
 import pendulum
@@ -8,35 +9,31 @@ from pydantic import BaseModel, field_serializer, field_validator
 
 
 class DMPModel(BaseModel):
-    """This model will eventually match DMP schema"""
-
     model_config = {
         "arbitrary_types_allowed": True,
     }
 
-    dmp_id: str
-    created: pendulum.Date
-    registered: pendulum.Date
-    modified: pendulum.Date
-    title: str
-    description: str
-    project_start: pendulum.Date
-    project_end: pendulum.Date
-    affiliation_ids: list[str]
-    affiliations: list[str]
-    people: list[str]
-    people_ids: list[str]
+    doi: str
+    created: Optional[pendulum.Date]
+    registered: Optional[pendulum.Date]
+    modified: Optional[pendulum.Date]
+    title: Optional[str]
+    abstract: Optional[str]
+    project_start: Optional[pendulum.Date]
+    project_end: Optional[pendulum.Date]
+    affiliation_rors: list[str]
+    affiliation_names: list[str]
+    author_names: list[AuthorName]
+    author_orcids: list[str]
     funding: list[FundingItem]
-    repo_ids: list[str]
-    repos: list[str]
-    visibility: str
-    featured: Optional[str]
 
     @field_validator("created", "registered", "modified", "project_start", "project_end", mode="before")
     @classmethod
     def parse_pendulum_date(cls, v):
         if isinstance(v, str):
             return pendulum.parse(v).date()
+        elif isinstance(v, datetime.date):
+            return pendulum.instance(v)
         return v
 
     @field_serializer("created", "registered", "modified", "project_start", "project_end")
@@ -45,22 +42,29 @@ class DMPModel(BaseModel):
 
 
 class Funder(BaseModel):
-    name: str
-    id: str
+    name: Optional[str]
+    id: Optional[str]
 
 
 class FundingItem(BaseModel):
-    funder: Funder
+    funder: Optional[Funder]
     funding_opportunity_id: Optional[str]
     status: Optional[str]
-    grant_id: Optional[str]
+    award_id: Optional[str]
+
+
+class AuthorName(BaseModel):
+    first_initial: Optional[str]
+    given_name: Optional[str]
+    middle_initials: Optional[str]
+    middle_names: Optional[str]
+    surname: Optional[str]
+    full: Optional[str]
 
 
 @dataclasses.dataclass(kw_only=True)
-class DMPFlat:
-    """The flattened DMP schema used for matching"""
-
-    dmp_id: str
+class DMPSearchModel:
+    doi: str
     project_start: pendulum.Date
     project_end: pendulum.Date
     title: Optional[str]
