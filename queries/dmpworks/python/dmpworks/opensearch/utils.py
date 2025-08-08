@@ -1,10 +1,15 @@
+import logging
+import pathlib
 from dataclasses import dataclass
 from typing import Annotated, Literal, Optional, Sequence
 
 import boto3
 import pendulum
+import pyarrow.dataset as ds
 from cyclopts import Parameter, Token
 from opensearchpy import AWSV4SignerAuth, OpenSearch, RequestsHttpConnection
+
+log = logging.getLogger(__name__)
 
 MAX_PROCESSES = 2
 CHUNK_SIZE = 1000
@@ -13,22 +18,6 @@ MAX_RETRIES = 10
 INITIAL_BACKOFF = 2
 MAX_BACKOFF = 600
 MAX_ERROR_SAMPLES = 3
-COLUMNS = [
-    "doi",
-    "title",
-    "abstract",
-    "type",
-    "publication_date",
-    "updated_date",
-    "affiliation_rors",
-    "affiliation_names",
-    "author_names",
-    "author_orcids",
-    "award_ids",
-    "funder_ids",
-    "funder_names",
-    "source",
-]
 
 
 def validate_chunk_size(type_, value):
@@ -98,3 +87,14 @@ def make_opensearch_client(config: OpenSearchClientConfig) -> OpenSearch:
         )
 
     return client
+
+
+def load_dataset(in_dir: pathlib.Path) -> ds.Dataset:
+    dataset = ds.dataset(in_dir, format="parquet")
+    return dataset
+
+
+def count_records(in_dir: pathlib.Path) -> int:
+    log.info(f"Counting records: {in_dir}")
+    dataset = load_dataset(in_dir)
+    return dataset.count_rows()

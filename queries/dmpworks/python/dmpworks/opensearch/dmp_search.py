@@ -1,8 +1,6 @@
-import logging
 import pathlib
 from typing import Any, Generator, Optional
 
-import pyarrow.dataset as ds
 from opensearchpy import OpenSearch
 from tqdm import tqdm
 
@@ -10,19 +8,6 @@ from dmpworks.dmp.enrichment import fetch_funded_dois, parse_award_text
 from dmpworks.dmp.model import DMPModel, DMPSearchModel
 from dmpworks.opensearch.utils import make_opensearch_client, OpenSearchClientConfig
 from dmpworks.utils import timed
-
-log = logging.getLogger(__name__)
-
-
-def load_dataset(in_dir: pathlib.Path) -> ds.Dataset:
-    dataset = ds.dataset(in_dir, format="parquet")
-    return dataset
-
-
-def count_records(in_dir: pathlib.Path) -> int:
-    log.info(f"Counting records: {in_dir}")
-    dataset = load_dataset(in_dir)
-    return dataset.count_rows()
 
 
 def to_dmp_search_model(

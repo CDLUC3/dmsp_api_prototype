@@ -179,45 +179,6 @@
             "normalizer": "lowercase"
           }
         }
-      },
-      "external_data": {
-        "type": "nested",
-        "properties": {
-          "updated": {
-            "type": "date"
-          },
-          "awards": {
-            "type": "nested",
-            "properties": {
-              "funder": {
-                "type": "nested",
-                "properties": {
-                  "id": {
-                    "type": "keyword",
-                    "normalizer": "lowercase"
-                  },
-                  "name": {
-                    "type": "text",
-                    "analyzer": "icu_analyzer",
-                    "fields": {
-                      "keyword": {
-                        "type": "keyword",
-                        "normalizer": "name_normalizer"
-                      }
-                    }
-                  }
-                }
-              },
-              "award_id": {
-
-              },
-              "funded_works": {
-                "type": "keyword",
-                "normalizer": "lowercase"
-              }
-            }
-          }
-        }
       }
     }
   }
