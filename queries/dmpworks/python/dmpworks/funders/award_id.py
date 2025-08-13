@@ -73,12 +73,14 @@ class AwardID(ABC):
         """Construct an AwardID from a dict, you must pass the correct subclass"""
 
         cls_ = cls
-        if not issubclass(cls_, AwardID):
+        if cls == AwardID:
             # Fallback to class path stored in dict_
             class_path = import_from_path(dict_.get("class"))
             if not issubclass(class_path, AwardID):
                 raise TypeError(f"AwardID.from_dict: cls {class_path} must be a subclass of AwardID")
             cls_ = class_path
+        elif not issubclass(cls, AwardID):
+            raise TypeError(f"AwardID.from_dict: cls {cls_} must be a subclass of AwardID")
 
         parts = [IdentifierPart.from_dict(part) for part in dict_.get("parts", [])]
         parts_dict = {part.type: part.value for part in parts}

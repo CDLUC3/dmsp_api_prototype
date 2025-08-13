@@ -104,20 +104,3 @@ class Award(BaseModel):
     @field_serializer("award_id")
     def serialize_award_id(self, v: AwardID):
         return v.to_dict()
-
-
-@dataclasses.dataclass(kw_only=True)
-class DMPSearchModel:
-    doi: str
-    project_start: pendulum.Date
-    project_end: pendulum.Date
-    title: Optional[str]
-    abstract: Optional[str]
-    affiliation_rors: list[str] = dataclasses.field(default_factory=list)
-    affiliation_names: list[str] = dataclasses.field(default_factory=list)
-    author_names: list[str] = dataclasses.field(default_factory=list)
-    author_orcids: list[str] = dataclasses.field(default_factory=list)
-    award_ids: list[str] = dataclasses.field(default_factory=list)
-    funder_ids: list[str] = dataclasses.field(default_factory=list)
-    funder_names: list[str] = dataclasses.field(default_factory=list)
-    funded_dois: list[str] = dataclasses.field(default_factory=list)
