@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, TypeVar
+from typing import Optional, Self, TypeVar
 
 from dmpworks.utils import import_from_path
 
@@ -18,7 +18,7 @@ class AwardID(ABC):
     def __init__(self, text: str, fields: list[str]):
         self.text: str = text
         self.fields: list[str] = fields
-        self.related_awards: list[T] = []
+        self.related_awards: list[Self] = []
 
     @abstractmethod
     def fetch_additional_metadata(self):
@@ -39,6 +39,11 @@ class AwardID(ABC):
     @abstractmethod
     def identifier_string(self) -> str:
         """The canonical identifier as a string"""
+        raise NotImplementedError("Please implement")
+
+    @abstractmethod
+    def funded_dois_source(self) -> Optional[FundedDOIsSource]:
+        """Returns the data about the source of the funded DOIs"""
         raise NotImplementedError("Please implement")
 
     def parts(self) -> list[IdentifierPart]:
@@ -98,6 +103,13 @@ class AwardID(ABC):
             "parts": [part.to_dict() for part in self.parts()],
             "related_awards": [award.to_dict() for award in self.related_awards],
         }
+
+
+@dataclass(kw_only=True)
+class FundedDOIsSource:
+    parent_award_id: str
+    award_id: str
+    award_url: str
 
 
 @dataclass

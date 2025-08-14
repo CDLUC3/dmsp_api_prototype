@@ -53,7 +53,9 @@ def fetch_funded_dois(
     # awards point to the same set of publications
     if isinstance(award_id, NIHAwardID):
         log.debug(f"NIHAwardID fetch works via application IDs")
-        for award in award_id.related_awards:
+        awards = [award_id]
+        awards.extend(award_id.related_awards)
+        for award in awards:
             log.debug(f"Fetch works for {canonical_id} with appl_id={award.appl_id}")
             results = nih_fetch_award_publication_dois(
                 award.appl_id,

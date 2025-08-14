@@ -4,8 +4,8 @@ from typing import Optional
 import pendulum
 from tqdm import tqdm
 
-from dmpworks.dmp.enrichment import fetch_funded_dois, parse_award_text
-from dmpworks.dmp.model import Award, ExternalData
+from dmpworks.funders.parser import fetch_funded_dois, parse_award_text
+from dmpworks.model.dmp_model import Award, ExternalData
 from dmpworks.opensearch.utils import make_opensearch_client, OpenSearchClientConfig, yield_dmps
 
 log = logging.getLogger(__name__)
@@ -78,13 +78,7 @@ def enrich_dmps(
                     # Fetch additional data for each award ID
                     for award_id in award_ids:
                         dois = fetch_funded_dois(award_id, email=email)
-                        awards.append(
-                            Award(
-                                funder=fund.funder,
-                                award_id=award_id,
-                                funded_dois=dois,
-                            )
-                        )
+                        awards.append(Award(funder=fund.funder, award_id=award_id, funded_dois=dois, award_url=""))
 
                 log.debug(f"Save additional metadata for DMP: {dmp.doi}")
                 external_data = ExternalData(updated=pendulum.now(tz="UTC"), awards=awards).model_dump()

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import dataclasses
 import datetime
+from functools import cached_property
 from typing import Optional
 
 import pendulum
@@ -29,6 +29,55 @@ class DMPModel(BaseModel):
     author_orcids: list[str]
     funding: list[FundingItem]
     external_data: Optional[ExternalData] = None
+
+    @cached_property
+    def author_surnames(self) -> list[str]:
+        surnames = set()
+        for name in self.author_names:
+            if name.surname is not None:
+                surnames.add(name.surname)
+            else:
+                surnames.add(name.full)
+        return list(surnames)
+
+    @cached_property
+    def funder_ids(self) -> list[str]:
+        funder_ids = set()
+        for fund in self.funding:
+            if fund.funder.id is not None:
+                funder_ids.add(fund.funder.id)
+        return list(funder_ids)
+
+    @cached_property
+    def funder_names(self) -> list[str]:
+        funder_names = set()
+        for fund in self.funding:
+            if fund.funder.name is not None:
+                funder_names.add(fund.funder.name)
+        return list(funder_names)
+
+    @cached_property
+    def funded_dois(self) -> list[str]:
+        funded_dois = set()
+        for award in self.external_data.awards:
+            for doi in award.funded_dois:
+                funded_dois.add(doi)
+        return list(funded_dois)
+
+    @cached_property
+    def award_ids(self) -> list[str]:
+        award_ids = set()
+        for award in self.external_data.awards:
+            # Add variants for root award
+            for award_id in award.award_id.generate_variants():
+                award_ids.add(award_id)
+
+            # Add award IDs for related awards
+            for related_award in award.award_id.related_awards:
+                for award_id in related_award.generate_variants():
+                    award_ids.add(award_id)
+
+        return list(award_ids)
 
     @field_validator("created", "registered", "modified", "project_start", "project_end", mode="before")
     @classmethod
@@ -91,6 +140,11 @@ class Award(BaseModel):
     funder: Optional[Funder]
     award_id: Optional[AwardID]
     funded_dois: list[str]
+    award_url: Optional[str] = None
+
+    @cached_property
+    def funded_dois_set(self) -> frozenset[str]:
+        return frozenset(self.funded_dois)
 
     @field_validator("award_id", mode="before")
     @classmethod

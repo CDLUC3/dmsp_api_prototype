@@ -1,233 +1,15 @@
-import dataclasses
-import datetime
-from typing import Any, Optional
-
-import pendulum
 from opensearchpy import OpenSearch
-from pydantic import BaseModel, field_serializer, field_validator
 from tqdm import tqdm
-from fold_to_ascii import fold
-from dmpworks.dmp.model import DMPModel
+
+from dmpworks.model.dmp_model import DMPModel
+from dmpworks.model.work_model import WorkModel
+from dmpworks.opensearch.explanations import explain_match, Explanation
 from dmpworks.opensearch.utils import (
     make_opensearch_client,
     OpenSearchClientConfig,
     yield_dmps,
 )
 from dmpworks.utils import timed
-
-
-MatchedQueries = dict[str, float]
-
-
-@dataclasses.dataclass(kw_only=True)
-class DMPMatchModel:
-    doi: str
-    project_start: pendulum.Date
-    project_end: pendulum.Date
-    title: Optional[str]
-    abstract: Optional[str]
-    affiliation_rors: list[str] = dataclasses.field(default_factory=list)
-    affiliation_names: list[str] = dataclasses.field(default_factory=list)
-    author_names: list[str] = dataclasses.field(default_factory=list)
-    author_orcids: list[str] = dataclasses.field(default_factory=list)
-    award_ids: list[str] = dataclasses.field(default_factory=list)
-    funder_ids: list[str] = dataclasses.field(default_factory=list)
-    funder_names: list[str] = dataclasses.field(default_factory=list)
-    funded_dois: list[str] = dataclasses.field(default_factory=list)
-
-
-class WorkModel(BaseModel):
-    model_config = {
-        "arbitrary_types_allowed": True,
-    }
-
-    doi: str
-    publication_date: pendulum.Date
-    updated_date: pendulum.DateTime
-    source: str
-    type: str
-    title: Optional[str] = None
-    abstract: Optional[str] = None
-    affiliation_rors: list[str]
-    affiliation_names: list[str]
-    author_names: list[str]
-    author_orcids: list[str]
-    award_ids: list[str]
-    funder_ids: list[str]
-    funder_names: list[str]
-
-    @field_validator("publication_date", mode="before")
-    @classmethod
-    def parse_pendulum_date(cls, v):
-        if isinstance(v, str):
-            return pendulum.parse(v).date()
-        elif isinstance(v, datetime.date):
-            return pendulum.instance(v)
-        return v
-
-    @field_validator("updated_date", mode="before")
-    @classmethod
-    def parse_pendulum_datetime(cls, v):
-        if isinstance(v, str):
-            return pendulum.parse(v)
-        elif isinstance(v, datetime.datetime):
-            return pendulum.instance(v)
-        return v
-
-    @field_serializer("publication_date")
-    def serialize_pendulum_date(self, v: pendulum.Date):
-        return v.to_date_string()
-
-    @field_serializer("updated_date")
-    def serialize_pendulum_datetime(self, v: pendulum.DateTime):
-        return v.to_iso8601_string()
-
-
-def to_dmp_match_model(model: DMPModel) -> DMPMatchModel:
-    funder_ids = set()
-    funder_names = set()
-    funded_dois = set()
-    award_ids = set()
-    for award in model.external_data.awards:
-        funder_ids.add(award.funder.id)
-        funder_names.add(award.funder.name)
-        for doi in award.funded_dois:
-            funded_dois.add(doi)
-        for award_id in award.award_id.generate_variants():
-            award_ids.add(award_id)
-
-    author_names = []
-    for name in model.author_names:
-        if name.surname is not None:
-            author_names.append(name.surname)
-        else:
-            author_names.append(name.full)
-
-    return DMPMatchModel(
-        doi=model.doi,
-        project_start=model.project_start,
-        project_end=model.project_end,
-        title=model.title,
-        abstract=model.abstract,
-        affiliation_rors=model.affiliation_rors,
-        affiliation_names=model.affiliation_names,
-        author_names=author_names,
-        author_orcids=model.author_orcids,
-        award_ids=list(award_ids),
-        funder_ids=list(funder_ids),
-        funder_names=list(funder_names),
-        funded_dois=list(funded_dois),
-    )
-
-
-def match_ids(dmp_ids: list[str], work_ids: list[str]) -> list[str]:
-    values = []
-    work_norm = {work_id.lower() for work_id in work_ids}
-    for dmp_id in dmp_ids:
-        if dmp_id.lower() in work_norm:
-            values.append(dmp_id)
-    return values
-
-
-def match_text(dmp_items: list[str], work_items: list[str]) -> list[str]:
-    values = []
-    work_norm = fold(" ".join([text for text in work_items]).lower())
-    for dmp_item in dmp_items:
-        if fold(dmp_item.lower()) in work_norm:
-            values.append(dmp_item)
-    return values
-
-
-@dataclasses.dataclass(kw_only=True)
-class Explanation:
-    name: str
-    score: float
-    values: list[Any] = dataclasses.field(default_factory=list)
-
-
-def explain_match(
-    dmp: DMPMatchModel,
-    work: WorkModel,
-    max_score: float,
-    matched_queries: MatchedQueries,
-) -> list[Explanation]:
-    # TODO: when we have the structured DMP, we can return more structured
-    # information here
-    explanations = []
-
-    for name, score in matched_queries.items():
-        # Funded DOIs
-        if name == "funded_dois":
-            explanations.append(
-                Explanation(
-                    name=name,
-                    score=score,
-                    values=[dmp.doi],
-                    # TODO: which specific award did we find it from and where is the link where you can view the
-                    # TODO: publications?
-                    # description="Work DOI was found at https://xxx associated with Award XXX",
-                )
-            )
-
-        # Award IDs
-        if name == "awards":
-            explanations.append(
-                Explanation(
-                    name=name,
-                    score=score,
-                    values=[dmp.award_ids],
-                )
-            )
-
-        # Authors
-        # ORCiD ID, surname
-        if name == "authors":
-            values = match_ids(dmp.author_orcids, work.author_orcids)
-            values.extend(match_ids(dmp.author_names, work.author_names))
-            explanations.append(
-                Explanation(
-                    name=name,
-                    score=score,
-                    values=values,
-                )
-            )
-
-        # Affiliations
-        # ROR and names
-        if name == "affiliations":
-            values = match_ids(dmp.affiliation_rors, work.affiliation_rors)
-            values.extend(match_ids(dmp.affiliation_names, work.affiliation_names))
-            explanations.append(
-                Explanation(
-                    name=name,
-                    score=score,
-                    values=values,
-                )
-            )
-
-        # Funders
-        # Name and ROR
-        if name == "funders":
-            values = match_ids(dmp.funder_ids, work.funder_ids)
-            values.extend(match_ids(dmp.funder_names, work.funder_names))
-            explanations.append(
-                Explanation(
-                    name=name,
-                    score=score,
-                    values=values,
-                )
-            )
-
-        # title and abstract
-        if name == "content":
-            explanations.append(
-                Explanation(
-                    name=name,
-                    score=score,
-                )
-            )
-
-    return explanations
 
 
 @timed
@@ -246,7 +28,7 @@ def dmp_match_search(
     all_matches = []
     with tqdm(
         total=0,
-        desc="Find DMP matches with OpenSearch",
+        desc="Find DMP work matches with OpenSearch",
         unit="doc",
     ) as pbar:
         with yield_dmps(
@@ -269,6 +51,13 @@ def dmp_match_search(
                 all_matches.extend(matches)
                 pbar.update(1)
     all_matches.sort(key=lambda x: x[2], reverse=True)
+    filtered = []
+    for match in all_matches:
+        explanation = match[4]
+        for exp in explanation:
+            if exp.name == "authors" and len(exp.fields):
+                filtered.append(match)
+                break
     a = 1
 
 
@@ -280,8 +69,7 @@ def opensearch_dmp_match_search(
     project_end_buffer_years: int = 3,
 ) -> list[tuple[str, str, float, WorkModel, list[Explanation]]]:
     # Execute search
-    dmp_match_model = to_dmp_match_model(dmp)
-    query = build_query(dmp_match_model, max_results, project_end_buffer_years)
+    query = build_query(dmp, max_results, project_end_buffer_years)
     response = client.search(
         body=query,
         index=index_name,
@@ -293,19 +81,20 @@ def opensearch_dmp_match_search(
     results = []
     total_hits = response.get("hits", {}).get("total", {}).get("value", 0)
     max_score = response.get("hits", {}).get("max_score")
-    hits = response["hits"]["hits"]
+    hits = response.get("hits", {}).get("hits", [])
     for hit in hits:
-        work_doi: str = hit["_id"]
-        score: float = hit["_score"]
-        work = WorkModel.model_validate(hit["_source"])
-        matched_queries = hit["matched_queries"]
-        explanation = explain_match(dmp_match_model, work, max_score, matched_queries)
+        work_doi: str = hit.get("_id")
+        score: float = hit.get("_score")
+        work = WorkModel.model_validate(hit.get("_source"))
+        matched_queries = hit.get("matched_queries")
+        highlights = hit.get("highlight")
+        explanation = explain_match(dmp, work, matched_queries, highlights)
         results.append((dmp.doi, work_doi, score, work, explanation))
 
     return results
 
 
-def build_query(dmp: DMPMatchModel, max_results: int, project_end_buffer_years: int) -> dict:
+def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) -> dict:
     # Funded DOIs
     should = [
         {
@@ -359,11 +148,11 @@ def build_query(dmp: DMPMatchModel, max_results: int, project_end_buffer_years: 
                                 {
                                     "match_phrase": {
                                         "author_names": {
-                                            "query": name,
+                                            "query": surname,
                                         }
                                     }
                                 }
-                                for name in dmp.author_names
+                                for surname in dmp.author_surnames
                             ],
                         ],
                         "minimum_should_match": 1,
@@ -508,13 +297,38 @@ def build_query(dmp: DMPMatchModel, max_results: int, project_end_buffer_years: 
                 "minimum_should_match": 1,
             },
         },
+        "highlight": {
+            "pre_tags": ["<mark>"],
+            "post_tags": ["</mark>"],
+            "order": "score",
+            "require_field_match": True,
+            "fields": {
+                "title": {
+                    "type": "fvh",
+                    "number_of_fragments": 0,
+                },
+                "abstract": {
+                    "type": "fvh",
+                    "fragment_size": 160,
+                    "number_of_fragments": 2,
+                    "no_match_size": 160,
+                },
+            },
+            "highlight_query": {
+                "more_like_this": {
+                    "fields": ["title", "abstract"],
+                    "like": content,
+                    "min_term_freq": 1,
+                }
+            },
+        },
     }
 
 
 if __name__ == "__main__":
     dmp_match_search(
         "dmps-index",
-        "works-index-demo",
+        "works-index-demo-2",
         OpenSearchClientConfig(),
         max_results=5,
     )

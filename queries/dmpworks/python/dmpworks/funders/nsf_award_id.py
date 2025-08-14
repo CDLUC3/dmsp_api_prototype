@@ -4,7 +4,7 @@ import logging
 import re
 from typing import Optional
 
-from dmpworks.funders.award_id import AwardID
+from dmpworks.funders.award_id import AwardID, FundedDOIsSource
 from dmpworks.funders.nsf_funder_api import nsf_fetch_org_id
 
 log = logging.getLogger(__name__)
@@ -57,6 +57,15 @@ class NSFAwardID(AwardID):
             return f"{self.org_id}-{self.award_id}"
 
         return str(self.award_id)
+
+    def funded_dois_source(self) -> Optional[FundedDOIsSource]:
+        if self.award_id is not None:
+            return FundedDOIsSource(
+                parent_award_id=self.identifier_string(),
+                award_id=self.identifier_string(),
+                award_url=f"https://www.nsf.gov/awardsearch/showAward?AWD_ID={self.award_id}&HistoricalAwards=true",
+            )
+        return None
 
     @staticmethod
     def parse(text: Optional[str]) -> Optional[NSFAwardID]:

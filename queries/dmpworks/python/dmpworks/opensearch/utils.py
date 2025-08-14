@@ -10,7 +10,7 @@ import pyarrow.dataset as ds
 from cyclopts import Parameter, Token
 from opensearchpy import AWSV4SignerAuth, OpenSearch, RequestsHttpConnection
 
-from dmpworks.dmp.model import DMPModel
+from dmpworks.model.dmp_model import DMPModel
 
 log = logging.getLogger(__name__)
 
@@ -148,39 +148,3 @@ def yield_dmps(
     finally:
         if scroll_id is not None:
             client.clear_scroll(scroll_id=scroll_id)
-
-
-#
-#
-# def yield_dmps(
-#     client: OpenSearch,
-#     index_name: str,
-#     query: dict,
-#     page_size: int = 500,
-#     scroll_time: str = "60m",
-# ) -> Generator[tuple[int, DMPModel], Any, Any]:
-#     response = client.search(
-#         index=index_name,
-#         body=query,
-#         scroll=scroll_time,
-#         size=page_size,
-#         track_total_hits=True,
-#     )
-#     scroll_id = response["_scroll_id"]
-#     total_hits = response["hits"]["total"]["value"]
-#     hits = response["hits"]["hits"]
-#
-#     while hits:
-#         for doc in hits:
-#             source = doc['_source']
-#             source = DMPModel.model_validate(source)
-#             yield total_hits, source
-#
-#         # Get next batch
-#         response = client.scroll(
-#             scroll_id=scroll_id,
-#             scroll=scroll_time,
-#         )
-#         scroll_id = response["_scroll_id"]
-#         hits = response["hits"]["hits"]
-#     client.clear_scroll(scroll_id=scroll_id)
