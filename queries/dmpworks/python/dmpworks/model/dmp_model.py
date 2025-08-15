@@ -68,15 +68,8 @@ class DMPModel(BaseModel):
     def award_ids(self) -> list[str]:
         award_ids = set()
         for award in self.external_data.awards:
-            # Add variants for root award
-            for award_id in award.award_id.generate_variants():
+            for award_id in award.award_id.all_variants:
                 award_ids.add(award_id)
-
-            # Add award IDs for related awards
-            for related_award in award.award_id.related_awards:
-                for award_id in related_award.generate_variants():
-                    award_ids.add(award_id)
-
         return list(award_ids)
 
     @field_validator("created", "registered", "modified", "project_start", "project_end", mode="before")

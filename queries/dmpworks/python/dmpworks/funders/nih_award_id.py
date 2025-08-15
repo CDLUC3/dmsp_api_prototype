@@ -4,7 +4,7 @@ import logging
 import re
 from typing import Optional, Set
 
-from dmpworks.funders.award_id import AwardID, FundedDOIsSource
+from dmpworks.funders.award_id import AwardID
 from dmpworks.funders.nih_funder_api import nih_core_project_to_appl_ids
 
 log = logging.getLogger(__name__)
@@ -93,17 +93,17 @@ class NIHAwardID(AwardID):
 
         return "".join(parts)
 
-    def funded_dois_source(self) -> Optional[FundedDOIsSource]:
+    def funded_dois_source(self) -> dict:
         awards = [self]
         awards.extend(self.related_awards)
         for award in self.related_awards:
             if award.appl_id is not None:
-                return FundedDOIsSource(
+                return dict(
                     parent_award_id=self.identifier_string(),
                     award_id=award.identifier_string(),
                     award_url=f"https://reporter.nih.gov/project-details/{award.appl_id}",
                 )
-        return None
+        return {}
 
     def generate_variants(self) -> list[str]:
         all_award_ids = [self] + self.related_awards

@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from functools import cached_property
 from typing import Optional, Self, TypeVar
 
 from dmpworks.utils import import_from_path
@@ -42,9 +43,24 @@ class AwardID(ABC):
         raise NotImplementedError("Please implement")
 
     @abstractmethod
-    def funded_dois_source(self) -> Optional[FundedDOIsSource]:
+    def funded_dois_source(self) -> dict:
         """Returns the data about the source of the funded DOIs"""
         raise NotImplementedError("Please implement")
+
+    @cached_property
+    def all_variants(self) -> list[str]:
+        award_ids = set()
+
+        # Award IDs for this award
+        for award_id in self.generate_variants():
+            award_ids.add(award_id)
+
+        # Add award IDs for related awards
+        for related_award in self.related_awards:
+            for award_id in related_award.generate_variants():
+                award_ids.add(award_id)
+
+        return list(award_ids)
 
     def parts(self) -> list[IdentifierPart]:
         """The parts that make up the ID"""
@@ -103,13 +119,6 @@ class AwardID(ABC):
             "parts": [part.to_dict() for part in self.parts()],
             "related_awards": [award.to_dict() for award in self.related_awards],
         }
-
-
-@dataclass(kw_only=True)
-class FundedDOIsSource:
-    parent_award_id: str
-    award_id: str
-    award_url: str
 
 
 @dataclass

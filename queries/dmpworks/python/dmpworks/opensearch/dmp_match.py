@@ -1,9 +1,11 @@
+import json
+
 from opensearchpy import OpenSearch
 from tqdm import tqdm
 
 from dmpworks.model.dmp_model import DMPModel
 from dmpworks.model.work_model import WorkModel
-from dmpworks.opensearch.explanations import explain_match, Explanation
+from dmpworks.opensearch.explanations import explain_match, Group
 from dmpworks.opensearch.utils import (
     make_opensearch_client,
     OpenSearchClientConfig,
@@ -51,13 +53,6 @@ def dmp_match_search(
                 all_matches.extend(matches)
                 pbar.update(1)
     all_matches.sort(key=lambda x: x[2], reverse=True)
-    filtered = []
-    for match in all_matches:
-        explanation = match[4]
-        for exp in explanation:
-            if exp.name == "authors" and len(exp.fields):
-                filtered.append(match)
-                break
     a = 1
 
 
@@ -67,7 +62,7 @@ def opensearch_dmp_match_search(
     dmp: DMPModel,
     max_results: int = 100,
     project_end_buffer_years: int = 3,
-) -> list[tuple[str, str, float, WorkModel, list[Explanation]]]:
+) -> list[tuple[str, str, float, WorkModel, list[Group]]]:
     # Execute search
     query = build_query(dmp, max_results, project_end_buffer_years)
     response = client.search(
@@ -75,6 +70,7 @@ def opensearch_dmp_match_search(
         index=index_name,
         track_total_hits=True,
         include_named_queries_score=True,
+        # explain=True,
     )
 
     # Process results
@@ -94,170 +90,202 @@ def opensearch_dmp_match_search(
     return results
 
 
+def name_group(group: str) -> str:
+    return json.dumps({"g": group, "lvl": "group"}, separators=(",", ":"))
+
+
+def name_entity(group: str, idx: int) -> str:
+    return json.dumps({"g": group, "lvl": "entity", "i": idx}, separators=(",", ":"))
+
+
+def name_value(group: str, idx: int, key: str, value: str) -> str:
+    return json.dumps({"g": group, "lvl": "value", "i": idx, "k": key, "v": value}, separators=(",", ":"))
+
+
 def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) -> dict:
+    should = []
+
     # Funded DOIs
-    should = [
-        {
-            "terms": {
-                "_name": "funded_dois",
-                "doi": dmp.funded_dois,
-                "boost": 25,
-            },
-        }
-    ]
+    if len(dmp.funded_dois):
+        should.append(
+            {
+                "constant_score": {
+                    "_name": name_group("funded_dois"),
+                    "boost": 15,
+                    "filter": {
+                        "ids": {"values": dmp.funded_dois},
+                    },
+                }
+            }
+        )
 
     # Award IDs
-    weight = 20
-    num_awards = len(dmp.award_ids)
-    should.append(
-        {
-            "function_score": {
-                "_name": "awards",
-                "query": {
-                    "terms": {
-                        "award_ids": dmp.award_ids,
+    award_queries = []
+    group = "awards"
+    for idx, award in enumerate(dmp.external_data.awards):
+        queries = []
+        for award_id in award.award_id.all_variants:
+            queries.append(
+                {
+                    "constant_score": {
+                        "_name": name_value(group, idx, "award_id", award_id),
+                        "filter": {"term": {"award_ids": award_id}},
+                        "boost": 10,
                     }
-                },
-                "functions": [
-                    {
-                        "filter": {"match_all": {}},
-                        "weight": 1.0 * weight,
-                        "_name": "award_ids",
-                    }
-                ],
-                "score_mode": "sum",
-                "boost_mode": "replace",
-                "max_boost": num_awards * weight,
+                }
+            )
+
+        award_queries.append(
+            {
+                "dis_max": {
+                    "_name": name_entity(group, idx),
+                    "tie_breaker": 0,
+                    "queries": queries,
+                }
             }
-        },
-    )
+        )
+    if len(award_queries):
+        should.append(
+            {
+                "bool": {
+                    "_name": name_group(group),
+                    "minimum_should_match": 1,
+                    "should": award_queries,
+                },
+            }
+        )
 
     # Authors
     # Combines author_orcids and author surnames into a single feature
-    weight = 2.0
-    num_authors = max(len(dmp.affiliation_rors), len(dmp.affiliation_names))
+    # TODO: should be made to operate like funders
+    group = "authors"
     should.append(
         {
-            "function_score": {
-                "_name": "authors",
-                "query": {
-                    "bool": {
-                        "should": [
-                            {"terms": {"author_orcids": dmp.author_orcids}},
-                            *[
-                                {
+            "bool": {
+                "_name": name_group(group),
+                "minimum_should_match": 1,
+                "should": [
+                    *[
+                        {
+                            "constant_score": {
+                                "_name": name_value(group, idx, "orcid", orcid),
+                                "boost": 2,
+                                "filter": {
+                                    "term": {
+                                        "author_orcids": {
+                                            "value": orcid,
+                                        },
+                                    },
+                                },
+                            }
+                        }
+                        for idx, orcid in enumerate(dmp.author_orcids)
+                    ],
+                    *[
+                        {
+                            "constant_score": {
+                                "_name": name_value(group, idx, "surname", surname),
+                                "boost": 1,
+                                "filter": {
                                     "match_phrase": {
                                         "author_names": {
                                             "query": surname,
                                         }
                                     }
-                                }
-                                for surname in dmp.author_surnames
-                            ],
-                        ],
-                        "minimum_should_match": 1,
-                    },
-                },
-                "functions": [
-                    {
-                        "filter": {"match_all": {}},
-                        "weight": 1.0 * weight,
-                        "_name": "author_score",
-                    },
+                                },
+                            }
+                        }
+                        for idx, surname in enumerate(dmp.author_surnames)
+                    ],
                 ],
-                "score_mode": "sum",
-                "boost_mode": "replace",
-                "max_boost": num_authors * weight,
-            }
+            },
         }
     )
 
     # Affiliations
     # Combines both affiliation_rors and affiliation_names into a single feature
-    weight = 1.0
-    num_affiliations = max(len(dmp.affiliation_rors), len(dmp.affiliation_names))
+    # TODO: should be made to operate like funders
+    group = "affiliations"
     should.append(
         {
-            "function_score": {
-                "_name": "affiliations",
-                "query": {
-                    "bool": {
-                        "should": [
-                            {
-                                "terms": {
-                                    "affiliation_rors": dmp.affiliation_rors,
-                                }
-                            },
-                            *[
-                                {
+            "bool": {
+                "_name": name_group(group),
+                "minimum_should_match": 1,
+                "should": [
+                    *[
+                        {
+                            "constant_score": {
+                                "_name": name_value(group, idx, "ror", ror),
+                                "boost": 2,
+                                "filter": {
+                                    "term": {
+                                        "affiliation_rors": {
+                                            "value": ror,
+                                        },
+                                    },
+                                },
+                            }
+                        }
+                        for idx, ror in enumerate(dmp.affiliation_rors)
+                    ],
+                    *[
+                        {
+                            "constant_score": {
+                                "_name": name_value(group, idx, "name", name),
+                                "filter": {
                                     "match_phrase": {
                                         "affiliation_names": {
                                             "query": name,
                                             "slop": 3,
-                                        }
+                                        },
                                     },
-                                }
-                                for name in dmp.affiliation_names
-                            ],
-                        ],
-                        "minimum_should_match": 1,
-                    },
-                },
-                "functions": [
-                    {
-                        "filter": {"match_all": {}},
-                        "weight": 1.0 * weight,
-                        "_name": "affiliation_score",
-                    },
+                                },
+                            }
+                        }
+                        for idx, name in enumerate(dmp.affiliation_names)
+                    ],
                 ],
-                "score_mode": "sum",
-                "boost_mode": "replace",
-                "max_boost": num_affiliations * weight,
-            }
+            },
         }
     )
 
     # Funders
     # Combines both funder_ids and funder_names into a single feature
-    weight = 1.0
-    num_funders = max(len(dmp.funder_ids), len(dmp.funder_names))
+    group = "funders"
     should.append(
         {
-            "function_score": {
-                "_name": "funders",
-                "query": {
-                    "bool": {
-                        "should": [
-                            {
-                                "terms": {
-                                    "funder_ids": dmp.funder_ids,
-                                }
-                            },
-                            *[
-                                {
-                                    "match_phrase": {
-                                        "funder_names": {
-                                            "query": name,
-                                            "slop": 3,
+            "bool": {
+                "_name": name_group(group),
+                "minimum_should_match": 1,
+                "should": [
+                    *[
+                        {
+                            "dis_max": {
+                                "_name": name_entity(group, idx),
+                                "tie_breaker": 0,
+                                "queries": [
+                                    {
+                                        "constant_score": {
+                                            "_name": name_value(group, idx, "id", fund.funder.id),
+                                            "filter": {"term": {"funder_ids": fund.funder.id}},
+                                            "boost": 2,
                                         }
-                                    }
-                                }
-                                for name in dmp.funder_names
-                            ],
-                        ],
-                        "minimum_should_match": 1,
-                    },
-                },
-                "functions": [
-                    {
-                        "filter": {"match_all": {}},
-                        "weight": 1.0 * weight,
-                        "_name": "funder_score",
-                    },
+                                    },
+                                    {
+                                        "constant_score": {
+                                            "_name": name_value(group, idx, "name", fund.funder.name),
+                                            "filter": {
+                                                "match_phrase": {"funder_names": {"query": fund.funder.name, "slop": 3}}
+                                            },
+                                            "boost": 1,
+                                        }
+                                    },
+                                ],
+                            },
+                        }
+                        for idx, fund in enumerate(dmp.funding)
+                    ]
                 ],
-                "score_mode": "sum",
-                "boost_mode": "replace",
-                "max_boost": num_funders * weight,
             }
         }
     )
@@ -267,7 +295,7 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
     should.append(
         {
             "more_like_this": {
-                "_name": "content",
+                "_name": name_group("content"),
                 "fields": ["title", "abstract"],
                 "like": content,
                 "min_term_freq": 1,
@@ -279,7 +307,7 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
     gte = dmp.project_start.format("YYYY-MM-DD")
     lte = dmp.project_end.add(years=project_end_buffer_years).format("YYYY-MM-DD")
 
-    return {
+    query = {
         "size": max_results,
         "query": {
             "bool": {
@@ -323,6 +351,8 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
             },
         },
     }
+
+    return query
 
 
 if __name__ == "__main__":

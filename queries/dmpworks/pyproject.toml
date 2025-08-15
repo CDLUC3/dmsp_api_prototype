@@ -23,7 +23,6 @@ dependencies = [
     "rapidfuzz>=3,<4",
     "beautifulsoup4>=4,<5",
     "pydantic>=2,<3",
-    "Whoosh>=2,<3"
 ]
 
 [project.optional-dependencies]
