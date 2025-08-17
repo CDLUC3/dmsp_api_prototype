@@ -1,9 +1,11 @@
 import logging
-from typing import Optional
+import pathlib
+from typing import Annotated, Optional
 
-from cyclopts import App
+from cyclopts import App, Parameter, validators
 
 from dmpworks.cli_utils import Directory, LogLevel
+from dmpworks.opensearch.dmp_works import dmp_works_search
 from dmpworks.opensearch.enrich_dmps import enrich_dmps
 from dmpworks.opensearch.index import create_index, update_mapping
 from dmpworks.opensearch.sync_dmps import sync_dmps
@@ -143,11 +145,18 @@ def sync_dmps_cmd(
 
 @app.command(name="enrich-dmps")
 def enrich_dmps_cmd(
-    index_name: str,
+    dmp_index_name: str,
     client_config: Optional[OpenSearchClientConfig] = None,
     log_level: LogLevel = "INFO",
 ):
-    """"""
+    """Enrich DMPs in OpenSearch, including fetching publications that can be
+    found on funder award pages.
+
+    Args:
+        dmp_index_name: the name of the DMP index to update.
+        client_config: OpenSearch client settings.
+        log_level: Python log level.
+    """
 
     if client_config is None:
         client_config = OpenSearchClientConfig()
@@ -157,8 +166,78 @@ def enrich_dmps_cmd(
     logging.getLogger("opensearch").setLevel(logging.WARNING)
 
     enrich_dmps(
-        index_name,
+        dmp_index_name,
         client_config,
+    )
+
+
+@app.command(name="dmp-works-search")
+def dmp_works_search_cmd(
+    dmp_index_name: str,
+    works_index_name: str,
+    out_dir: Annotated[
+        pathlib.Path,
+        Parameter(
+            validator=validators.Path(
+                dir_okay=False,
+                file_okay=False,
+                exists=False,
+            )
+        ),
+    ],
+    scroll_time: str = "60m",
+    batch_size: int = 250,
+    max_results: int = 100,
+    project_end_buffer_years: int = 3,
+    parallel_search: bool = True,
+    include_named_queries_score: bool = False,
+    max_concurrent_searches: int = 125,
+    max_concurrent_shard_requests: int = 12,
+    client_config: Optional[OpenSearchClientConfig] = None,
+    log_level: LogLevel = "INFO",
+):
+    """Enrich DMPs in OpenSearch, including fetching publications that can be
+    found on funder award pages.
+
+    Args:
+        dmp_index_name: the name of the DMP index in OpenSearch.
+        works_index_name: the name of the works index in OpenSearch.
+        out_dir: the output directory where search results will be saved.
+        scroll_time: the length of time the OpenSearch scroll used to iterate
+        through DMPs will stay active. Set it to a value greater than the length
+        of this process.
+        batch_size: the number of searches run in parallel when include_scores=False.
+        max_results: the maximum number of matches per DMP.
+        project_end_buffer_years: the number of years to add to the end of the
+        project end date when searching for works.
+        parallel_search: whether to run parallel search or not.
+        include_named_queries_score: whether to include scores for subqueries.
+        max_concurrent_searches: the maximum number of concurrent searches.
+        max_concurrent_shard_requests: the maximum number of shards searched per node.
+        client_config: OpenSearch client settings.
+        log_level: Python log level.
+    """
+
+    if client_config is None:
+        client_config = OpenSearchClientConfig()
+
+    level = logging.getLevelName(log_level)
+    logging.basicConfig(level=level)
+    logging.getLogger("opensearch").setLevel(logging.WARNING)
+
+    dmp_works_search(
+        dmp_index_name,
+        works_index_name,
+        out_dir,
+        client_config,
+        scroll_time=scroll_time,
+        batch_size=batch_size,
+        max_results=max_results,
+        project_end_buffer_years=project_end_buffer_years,
+        parallel_search=parallel_search,
+        include_named_queries_score=include_named_queries_score,
+        max_concurrent_searches=max_concurrent_searches,
+        max_concurrent_shard_requests=max_concurrent_shard_requests,
     )
 
 

@@ -8,7 +8,7 @@ from typing import Optional
 from dmpworks.model.dmp_model import DMPModel
 from dmpworks.model.work_model import WorkModel
 
-MatchedQueries = dict[str, float]
+MatchedQueries = dict[str, float] | list[str]
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -18,6 +18,14 @@ class Group:
     fields: list[Entity] = dataclasses.field(default_factory=list)
     entities: dict[int, Entity] = dataclasses.field(default_factory=lambda: defaultdict(Entity))
 
+    def to_dict(self) -> dict:
+        return {
+            "name": self.name,
+            "score": self.score,
+            "fields": [entity.to_dict() for entity in self.fields],
+            "entities": {idx: entity.to_dict() for idx, entity in sorted(self.entities.items())},
+        }
+
 
 @dataclasses.dataclass(kw_only=True)
 class Match:
@@ -25,6 +33,14 @@ class Match:
     score: Optional[float] = None
     source: Optional[dict] = dataclasses.field(default_factory=dict)
     matched: bool = False
+
+    def to_dict(self) -> dict:
+        return {
+            "value": self.value,
+            "score": self.score,
+            "source": self.source,
+            "matched": self.matched,
+        }
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -34,13 +50,31 @@ class Entity(defaultdict[str, Match]):
     def __post_init__(self):
         defaultdict.__init__(self, Match)
 
+    def to_dict(self) -> dict:
+        fields = {}
+        for key, match in self.items():
+            if isinstance(match, Match):
+                fields[key] = match.to_dict()
+        return {
+            "score": self.score,
+            **fields,
+        }
+
 
 def parse_matched_queries(matched_queries: MatchedQueries):
     groups = []
     entities = []
     values = []
 
-    for key, score in matched_queries.items():
+    # When queries is a list add None scores
+    if isinstance(matched_queries, list):
+        queries = [(key, None) for key in matched_queries]
+    elif isinstance(matched_queries, dict):
+        queries = list(matched_queries.items())
+    else:
+        raise TypeError(f"parse_matched_queries: unknown matched_queries type {type(matched_queries)}")
+
+    for key, score in queries:
         try:
             data = json.loads(key)
         except Exception:
@@ -67,6 +101,9 @@ def explain_match(
 ) -> dict[str, Group]:
     # TODO: merge DMP data when we have full DMP schema, as then we can
     # show what did not match
+
+    if matched_queries is None:
+        return {}
 
     explanations = {}
     groups, entities, values = parse_matched_queries(matched_queries)
