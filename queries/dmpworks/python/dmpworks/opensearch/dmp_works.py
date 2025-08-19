@@ -393,9 +393,9 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
     )
 
     # Final query and filter based on date range
+    # also remove DMPs from search results (output-management-plan type)
     gte = dmp.project_start.format("YYYY-MM-DD")
     lte = dmp.project_end.add(years=project_end_buffer_years).format("YYYY-MM-DD")
-
     query = {
         "size": max_results,
         "query": {
@@ -409,6 +409,15 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
                                 "lte": lte,
                             },
                         }
+                    },
+                    {
+                        "bool": {
+                            "must_not": {
+                                "term": {
+                                    "type": "output-management-plan",
+                                }
+                            }
+                        },
                     },
                 ],
                 "minimum_should_match": 1,
