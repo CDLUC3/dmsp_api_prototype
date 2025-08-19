@@ -1,0 +1,82 @@
+[
+  {
+    "people_ids": [
+      "0000-0002-0068-716X",
+      "0000-0001-6551-8140"
+    ],
+    "affiliation_ids": [
+      "00dmfq477"
+    ],
+    "narrative_url": "https://dmphub.uc3prd.cdlib.net/narratives/0000000000000000.pdf",
+    "project_end": "2030-01-01",
+    "visibility": "public",
+    "created": "2020-03-01",
+    "affiliations": [
+      "curtin university"
+    ],
+    "repos": [
+    ],
+    "repo_ids": [
+    ],
+    "dmp_id": "doi.org/10.48321/000000",
+    "registered": "2022-09-26",
+    "funding": [
+      {
+        "status": "Planned",
+        "funder": {
+          "id": "051z6e826",
+          "name": "Arcadia Fund"
+        },
+        "funding_opportunity_id": null,
+        "grant_id": "360G-ArcadiaFund-4191"
+      },
+      {
+        "status": "Planned",
+        "funder": {
+          "id": "051z6e826",
+          "name": "Arcadia Fund"
+        },
+        "funding_opportunity_id": null,
+        "grant_id": "360G-ArcadiaFund-4191"
+      },
+      {
+        "status": "Planned",
+        "funder": {
+          "id": "02n415q13",
+          "name": "Curtin University"
+        },
+        "funding_opportunity_id": null,
+        "grant_id": null
+      },
+      {
+        "status": "Planned",
+        "funder": {
+          "id": null,
+          "name": "curtin university research office"
+        },
+        "funding_opportunity_id": null,
+        "grant_id": null
+      },
+      {
+        "status": "Planned",
+        "funder": {
+          "id": null,
+          "name": "curtin university faculty of humanities"
+        },
+        "funding_opportunity_id": null,
+        "grant_id": null
+      }
+    ],
+    "project_start": "2020-01-01",
+    "people": [
+      "cameron neylon",
+      "lucy montgomery"
+    ],
+    "SK": "METADATA",
+    "description": "The Curtin Open Knowledge Initiative (COKI) explores how data can illuminate the role of universities in the knowledge ecosystem, with a focus on equity, inclusion, and openness. By combining large-scale datasets with innovative analytical methods, COKI provides evidence to inform institutional decision-making and policy development. This Data Management Plan underpins the project’s commitment to transparency, reproducibility, and ethical stewardship of data. It outlines processes to ensure the integrity, accessibility, and long-term usability of data, supporting our mission to create an open and equitable knowledge landscape that empowers diverse communities worldwide.",
+    "PK": "DMP#doi.org/10.48321/000000",
+    "featured": "0",
+    "modified": "2023-04-21",
+    "title": "Curtin Open Knowledge Initiative (COKI) Data Management Plan"
+  }
+]

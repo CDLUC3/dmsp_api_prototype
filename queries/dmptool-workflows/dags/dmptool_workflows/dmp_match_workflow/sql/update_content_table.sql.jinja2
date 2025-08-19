@@ -1,0 +1,69 @@
+-- Create content table if it doesn't exist and make sure it doesn't expire
+CREATE TABLE IF NOT EXISTS `{{ content_table_id }}` (
+  doi STRING,
+  content STRING,
+  updated TIMESTAMP
+)
+CLUSTER BY doi, updated;
+
+ALTER TABLE `{{ content_table_id }}`
+SET OPTIONS (expiration_timestamp = NULL);
+
+-- Create embedding table if it doesn't exist and make sure it doesn't expire
+CREATE TABLE IF NOT EXISTS `{{ embeddings_table_id }}` (
+  ml_generate_embedding_result ARRAY<FLOAT64>,
+  ml_generate_embedding_statistics JSON,
+  ml_generate_embedding_status STRING,
+  doi STRING,
+  content STRING,
+  updated TIMESTAMP
+)
+CLUSTER BY doi, updated;
+
+ALTER TABLE `{{ embeddings_table_id }}`
+SET OPTIONS (expiration_timestamp = NULL);
+
+-- Merge and delete in the same transaction
+BEGIN TRANSACTION;
+
+-- Update the content table:
+-- When DOIs match and content has changed then update data
+-- When DOIs do not match then insert
+MERGE `{{ content_table_id }}` AS content_data
+USING (
+  {% if dataset_name == "dmps" %}
+
+  SELECT dmps.doi, dmps.content, CURRENT_TIMESTAMP() AS updated
+  FROM `{{ norm_table_id }}` AS dmps
+  WHERE dmps.content IS NOT NULL AND TRIM(dmps.content) != ""
+
+  {% else %}
+
+  SELECT unique_works.doi, match.match_data.content, CURRENT_TIMESTAMP() AS updated
+  FROM (
+    SELECT DISTINCT match.match_doi AS doi
+    FROM `{{ match_intermediate_table_id }}` AS matches, UNNEST(matches.matches) AS match
+  ) AS unique_works
+  LEFT JOIN `{{ norm_table_id }}` AS match ON match.doi = unique_works.doi
+  WHERE match.match_data.content IS NOT NULL AND TRIM(match.match_data.content) != ""
+
+  {% endif %}
+) AS upsert_data
+ON content_data.doi = upsert_data.doi
+WHEN MATCHED AND content_data.content <> upsert_data.content THEN
+  UPDATE SET
+    content_data.content = upsert_data.content,
+    content_data.updated = upsert_data.updated
+WHEN NOT MATCHED THEN
+  INSERT (doi, content, updated)
+  VALUES (upsert_data.doi, upsert_data.content, upsert_data.updated);
+
+-- Delete existing embeddings when the content that they have been generated from has changed
+DELETE FROM `{{ embeddings_table_id }}` AS embeddings
+WHERE EXISTS (
+  SELECT 1
+  FROM `{{ content_table_id }}` AS match_content
+  WHERE embeddings.doi = match_content.doi AND embeddings.updated < match_content.updated
+);
+
+COMMIT;

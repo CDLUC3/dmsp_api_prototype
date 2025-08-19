@@ -14,3 +14,10 @@ def project_path(*subpaths: str) -> str:
     if not os.path.exists(path):
         raise FileNotFoundError(f"project_path: path or file {path} does not exist!")
     return path
+
+
+class TestConfig:
+    """Common parameters for end to end and unit testing"""
+
+    gcp_project_id: str = os.getenv("TEST_GCP_PROJECT_ID")
+    gcp_data_location: str = os.getenv("TEST_GCP_DATA_LOCATION")

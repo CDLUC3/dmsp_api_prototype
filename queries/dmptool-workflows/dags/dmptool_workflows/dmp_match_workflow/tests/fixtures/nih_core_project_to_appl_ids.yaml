@@ -1,0 +1,59 @@
+interactions:
+- request:
+    body: '{"criteria": {"project_nums": ["5P41GM108569-08"]}, "include_fields": ["ApplId",
+      "ProjectNum"]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '95'
+      Content-Type:
+      - application/json
+      User-Agent:
+      - python-requests/2.31.0
+    method: POST
+    uri: https://api.reporter.nih.gov/v2/projects/search
+  response:
+    body:
+      string: '{"meta":{"search_id":"q0G3z7q5V0iO8KK-uKR0HQ","total":7,"offset":0,"limit":50,"sort_field":null,"sort_order":"ASC","sorted_by_relevance":true,"properties":{"URL":"https:/reporter.nih.gov/search/q0G3z7q5V0iO8KK-uKR0HQ/projects"}},"results":[{"appl_id":10438551,"project_num":"5P41GM108569-08"},{"appl_id":10438555,"project_num":"5P41GM108569-08"},{"appl_id":10438547,"project_num":"5P41GM108569-08"},{"appl_id":10438553,"project_num":"5P41GM108569-08"},{"appl_id":10438548,"project_num":"5P41GM108569-08"},{"appl_id":10438552,"project_num":"5P41GM108569-08"},{"appl_id":10438554,"project_num":"5P41GM108569-08"}]}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '612'
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Tue, 04 Feb 2025 00:42:24 GMT
+      Server:
+      - nginx
+      Set-Cookie:
+      - AWSALB=7QH/Cwmav7E+BtbSXB4w3EksFYHd1Jvpm+1YZxzHiN8q4v1mtOjEQ2ZAP9sEfczteN5m1B/0rZ+lpg1ojKGyiZxnkylqWeBTiF4CYZEQaqB7rP4n902EZC4gxRzz;
+        Expires=Tue, 11 Feb 2025 00:42:24 GMT; Path=/
+      - AWSALBCORS=7QH/Cwmav7E+BtbSXB4w3EksFYHd1Jvpm+1YZxzHiN8q4v1mtOjEQ2ZAP9sEfczteN5m1B/0rZ+lpg1ojKGyiZxnkylqWeBTiF4CYZEQaqB7rP4n902EZC4gxRzz;
+        Expires=Tue, 11 Feb 2025 00:42:24 GMT; Path=/; SameSite=None; Secure
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      - max-age=31536000; includeSubDomains; preload;
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-Rate-Limit-Limit:
+      - 1m
+      X-Rate-Limit-Remaining:
+      - '199'
+      X-Rate-Limit-Reset:
+      - '2025-02-04T00:43:24.8895749Z'
+      X-XSS-Protection:
+      - 1; mode=block
+      api-supported-versions:
+      - '2.0'
+    status:
+      code: 200
+      message: OK
+version: 1

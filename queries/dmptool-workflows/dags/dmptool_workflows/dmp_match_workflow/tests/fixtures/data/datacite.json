@@ -1,0 +1,1115 @@
+[
+  {
+    "id": "10.5281/zenodo.6399462",
+    "type": "dois",
+    "attributes": {
+      "alternateIdentifiers": [],
+      "citationCount": "0",
+      "citationsOverTime": [],
+      "container": {
+        "firstPage": null,
+        "identifier": "https://zenodo.org/communities/coki",
+        "identifierType": "URL",
+        "issue": null,
+        "lastPage": null,
+        "title": null,
+        "type": "DataRepository",
+        "volume": null
+      },
+      "contentUrl": [],
+      "contributors": [],
+      "created": "2022-03-30 20:49:06.000000 UTC",
+      "creators": [
+        {
+          "affiliation": [
+            {
+              "affiliationIdentifier": null,
+              "affiliationIdentifierScheme": null,
+              "name": "Centre for Culture and Technology, Curtin University",
+              "schemeUri": null
+            }
+          ],
+          "familyName": "Hosking",
+          "givenName": "Richard",
+          "lang": null,
+          "name": "Hosking, Richard",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0001-8288-5241",
+              "nameIdentifierScheme": "ORCID",
+              "schemeUri": null
+            }
+          ],
+          "nameType": "Personal"
+        },
+        {
+          "affiliation": [
+            {
+              "affiliationIdentifier": null,
+              "affiliationIdentifierScheme": null,
+              "name": "Centre for Culture and Technology, Curtin University",
+              "schemeUri": null
+            }
+          ],
+          "familyName": "Diprose",
+          "givenName": "James P.",
+          "lang": null,
+          "name": "Diprose, James P.",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-5094-3571",
+              "nameIdentifierScheme": "ORCID",
+              "schemeUri": null
+            }
+          ],
+          "nameType": "Personal"
+        },
+        {
+          "affiliation": [
+            {
+              "affiliationIdentifier": null,
+              "affiliationIdentifierScheme": null,
+              "name": "Curtin Institute for Data Science, Curtin University",
+              "schemeUri": null
+            }
+          ],
+          "familyName": "Roelofs",
+          "givenName": "Aniek",
+          "lang": null,
+          "name": "Roelofs, Aniek",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0003-0485-3388",
+              "nameIdentifierScheme": "ORCID",
+              "schemeUri": null
+            }
+          ],
+          "nameType": "Personal"
+        },
+        {
+          "affiliation": [
+            {
+              "affiliationIdentifier": null,
+              "affiliationIdentifierScheme": null,
+              "name": "Centre for Culture and Technology, Curtin University",
+              "schemeUri": null
+            }
+          ],
+          "familyName": "Chien",
+          "givenName": "Tuan-Yow",
+          "lang": null,
+          "name": "Chien, Tuan-Yow",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-6237-7423",
+              "nameIdentifierScheme": "ORCID",
+              "schemeUri": null
+            }
+          ],
+          "nameType": "Personal"
+        },
+        {
+          "affiliation": [
+            {
+              "affiliationIdentifier": null,
+              "affiliationIdentifierScheme": null,
+              "name": "Centre for Culture and Technology, Curtin University",
+              "schemeUri": null
+            }
+          ],
+          "familyName": "Montgomery",
+          "givenName": "Lucy",
+          "lang": null,
+          "name": "Montgomery, Lucy",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0001-6551-8140",
+              "nameIdentifierScheme": "ORCID",
+              "schemeUri": null
+            }
+          ],
+          "nameType": "Personal"
+        },
+        {
+          "affiliation": [
+            {
+              "affiliationIdentifier": null,
+              "affiliationIdentifierScheme": null,
+              "name": "Centre for Culture and Technology, Curtin University",
+              "schemeUri": null
+            }
+          ],
+          "familyName": "Neylon",
+          "givenName": "Cameron",
+          "lang": null,
+          "name": "Neylon, Cameron",
+          "nameIdentifiers": [
+            {
+              "nameIdentifier": "0000-0002-0068-716X",
+              "nameIdentifierScheme": "ORCID",
+              "schemeUri": null
+            }
+          ],
+          "nameType": "Personal"
+        }
+      ],
+      "dates": [
+        {
+          "date": "2024-12-08",
+          "dateInformation": null,
+          "dateType": "Issued"
+        }
+      ],
+      "descriptions": [
+        {
+          "description": "The COKI Open Access Dataset measures open access performance for 225 countries and 50,000 institutions and is available in JSON Lines format. The data is visualised at the COKI Open Access Dashboard: https://open.coki.ac/.\n\nThe COKI Open Access Dataset is created with the COKI Academic Observatory data collection pipeline, which fetches data about research publications from multiple sources, synthesises the datasets and creates the open access calculations for each country and institution.\n\nEach week a number of specialised research publication datasets are collected. The datasets that are used for the COKI Open Access Dataset release include Crossref Metadata, OpenAlex, Unpaywall and the Research Organization Registry.\n\nAfter fetching the datasets, they are synthesised to produce aggregate time series statistics for each country and institution in the dataset. The aggregate timeseries statistics include publication count, open access status and citation count. \n\nSee https://open.coki.ac/data/ for the dataset schema. A new version of the dataset is deposited every week.\n\nCode\n\n\n\nThe COKI Academic Observatory data collection pipeline is used to create the dataset.\n\nThe COKI OA Website Github project contains the code for the web app that visualises the dataset at open.coki.ac. It can be found on Zenodo here.\n\n\nLicenseCOKI Open Access Dataset © 2022 by Curtin University is licenced under CC BY 4.0.\n\nAttributionsThis work contains information from:\n\n\n\nOpenAlex which is made available under the CC0 license.\n\nCrossref Metadata via the Metadata Plus program. Bibliographic metadata is made available without copyright restriction and Crossref generated data under a CC0 licence. See metadata licence information for more details.\n\nUnpaywall. The Unpaywall Data Feed is used under license. Data is freely available from Unpaywall via the API, data dumps and as a data feed.\n\nResearch Organization Registry which is made available under a CC0 licence.",
+          "descriptionType": "Abstract",
+          "lang": null
+        }
+      ],
+      "doi": "10.5281/zenodo.6399462",
+      "downloadCount": "0",
+      "downloadsOverTime": [],
+      "formats": [],
+      "fundingReferences": [],
+      "geoLocations": [],
+      "identifiers": [],
+      "isActive": "true",
+      "language": "en",
+      "metadataVersion": "58",
+      "partCount": "0",
+      "partOfCount": "0",
+      "prefix": "10.5281",
+      "publicationYear": "2024",
+      "published": "2024-12-08",
+      "publisher": {
+        "lang": null,
+        "name": "Zenodo",
+        "publisherIdentifier": null,
+        "publisherIdentifierScheme": null,
+        "schemeUri": null
+      },
+      "reason": null,
+      "referenceCount": "0",
+      "registered": "2022-03-30 20:49:09.000000 UTC",
+      "relatedIdentifiers": [
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.13308890",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.6990689",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.8106647",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.13899728",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.6971429",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.7116564",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.8191459",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.10035612",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.11906016",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.7090742",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.8303766",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.6585452",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.8401372",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.8166539",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.10403615",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.6815932",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.6946164",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.10819630",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.8287888",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.7048603",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.6509991",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.11188486",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.14064013",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.13119713",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.6595475",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.6665697",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.6399463",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.7030235",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.8127223",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.10565380",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.6792576",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.7013852",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.6558579",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.6850303",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.10360311",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.6636574",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.8207115",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.6910912",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.12775935",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.13766178",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.7063121",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.6757430",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.8245399",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.8058174",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.6496550",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.8436633",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        },
+        {
+          "id": null,
+          "relatedIdentifier": "10.5281/zenodo.14319828",
+          "relatedIdentifierType": "DOI",
+          "relatedMetadataScheme": null,
+          "relationType": "HasVersion",
+          "resourceTypeGeneral": null,
+          "schemeType": null,
+          "schemeUri": null,
+          "title": null,
+          "type": null
+        }
+      ],
+      "relatedItems": [],
+      "rightsList": [
+        {
+          "lang": null,
+          "rights": "Creative Commons Attribution 4.0 International",
+          "rightsIdentifier": "cc-by-4.0",
+          "rightsIdentifierScheme": "SPDX",
+          "rightsUri": "https://creativecommons.org/licenses/by/4.0/legalcode",
+          "schemeUri": "https://spdx.org/licenses/"
+        }
+      ],
+      "schemaVersion": "http://datacite.org/schema/kernel-4",
+      "sizes": [],
+      "source": "mds",
+      "state": "findable",
+      "subjects": [
+        {
+          "classificationCode": null,
+          "lang": null,
+          "schemeUri": null,
+          "subject": "open access",
+          "subjectScheme": null,
+          "valueUri": null
+        },
+        {
+          "classificationCode": null,
+          "lang": null,
+          "schemeUri": null,
+          "subject": "open access performance",
+          "subjectScheme": null,
+          "valueUri": null
+        },
+        {
+          "classificationCode": null,
+          "lang": null,
+          "schemeUri": null,
+          "subject": "open access publications",
+          "subjectScheme": null,
+          "valueUri": null
+        },
+        {
+          "classificationCode": null,
+          "lang": null,
+          "schemeUri": null,
+          "subject": "research outputs",
+          "subjectScheme": null,
+          "valueUri": null
+        },
+        {
+          "classificationCode": null,
+          "lang": null,
+          "schemeUri": null,
+          "subject": "dataset",
+          "subjectScheme": null,
+          "valueUri": null
+        },
+        {
+          "classificationCode": null,
+          "lang": null,
+          "schemeUri": null,
+          "subject": "data",
+          "subjectScheme": null,
+          "valueUri": null
+        },
+        {
+          "classificationCode": null,
+          "lang": null,
+          "schemeUri": null,
+          "subject": "countries",
+          "subjectScheme": null,
+          "valueUri": null
+        },
+        {
+          "classificationCode": null,
+          "lang": null,
+          "schemeUri": null,
+          "subject": "regions",
+          "subjectScheme": null,
+          "valueUri": null
+        },
+        {
+          "classificationCode": null,
+          "lang": null,
+          "schemeUri": null,
+          "subject": "universities",
+          "subjectScheme": null,
+          "valueUri": null
+        },
+        {
+          "classificationCode": null,
+          "lang": null,
+          "schemeUri": null,
+          "subject": "companies",
+          "subjectScheme": null,
+          "valueUri": null
+        },
+        {
+          "classificationCode": null,
+          "lang": null,
+          "schemeUri": null,
+          "subject": "institutions",
+          "subjectScheme": null,
+          "valueUri": null
+        }
+      ],
+      "suffix": "zenodo.6399462",
+      "titles": [
+        {
+          "lang": null,
+          "title": "COKI Open Access Dataset",
+          "titleType": null
+        }
+      ],
+      "types": {
+        "bibtex": "misc",
+        "citeproc": "dataset",
+        "resourceType": "",
+        "resourceTypeGeneral": "Dataset",
+        "ris": "DATA",
+        "schemaOrg": "Dataset"
+      },
+      "updated": "2024-12-08 23:34:24.000000 UTC",
+      "url": "https://zenodo.org/doi/10.5281/zenodo.6399462",
+      "version": "2024-12-08",
+      "versionCount": "47",
+      "versionOfCount": "0",
+      "viewCount": "0",
+      "viewsOverTime": []
+    },
+    "relationships": {
+      "citations": {
+        "data": []
+      },
+      "client": {
+        "data": {
+          "id": "cern.zenodo",
+          "type": "clients"
+        }
+      },
+      "media": {
+        "data": []
+      },
+      "partOf": {
+        "data": []
+      },
+      "parts": {
+        "data": []
+      },
+      "provider": {
+        "data": {
+          "id": "cern",
+          "type": "providers"
+        }
+      },
+      "references": {
+        "data": []
+      },
+      "versionOf": {
+        "data": []
+      },
+      "versions": {
+        "data": [
+          {
+            "id": "10.5281/zenodo.6399463",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.6496550",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.6509991",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.6558579",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.6585452",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.6595475",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.6636574",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.6665697",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.6757430",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.6792576",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.6815932",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.6850303",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.6910912",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.6946164",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.6971429",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.6990689",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.7013852",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.7030235",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.7048603",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.7063121",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.7090742",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.7116564",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.8058174",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.8106647",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.8127223",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.8166539",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.8191459",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.8207115",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.8245399",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.8287888",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.8303766",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.8401372",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.8436633",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.10035612",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.10360311",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.10403615",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.10565380",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.10819630",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.11188486",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.11906016",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.12775935",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.13119713",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.13308890",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.13766178",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.13899728",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.14064013",
+            "type": "dois"
+          },
+          {
+            "id": "10.5281/zenodo.14319828",
+            "type": "dois"
+          }
+        ]
+      }
+    }
+  }
+]

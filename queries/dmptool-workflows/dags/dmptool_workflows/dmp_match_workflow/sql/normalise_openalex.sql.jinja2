@@ -7,7 +7,8 @@ LANGUAGE js AS """
   return {given: given, family: family};
 """;
 
-CREATE OR REPLACE TABLE `{{ openalex_norm_table_id }}` AS
+CREATE OR REPLACE TABLE `{{ openalex_norm_table_id }}`
+CLUSTER BY publication_date AS
 
 WITH min_project_start AS (
   SELECT MIN(project_start) AS min_project_start
@@ -115,6 +116,7 @@ openalex AS (
     openalex.id,
     {{ dataset_id }}.normalise_doi(openalex.doi) as doi,
     title,
+    abstract_inverted_index,
     type,
     publication_date,
     authorships,
@@ -131,8 +133,11 @@ openalex AS (
 SELECT
   openalex.doi,
 
+  -- Clustered fields
+  openalex.publication_date,
+
   STRUCT(
-    {{ dataset_id }}.strip_html(openalex.title) AS title,
+    {{ dataset_id }}.remove_markup(openalex.title) AS title,
     FORMAT_DATE('%Y-%m-%d', openalex.publication_date) AS publication_date,
     openalex.type,
     (SELECT ARRAY_AGG(split_name(author.author.display_name)) FROM UNNEST(openalex.authorships) AS author WHERE author.author.display_name IS NOT NULL) AS authors,
@@ -148,12 +153,13 @@ SELECT
   STRUCT(
     openalex.publication_date,
     {{ dataset_id }}.create_content(
-      {{ dataset_id }}.strip_html(openalex.title),
+      {{ dataset_id }}.remove_markup(openalex.title),
       COALESCE(
-        NULLIF(TRIM({{ dataset_id }}.strip_html(crossref.abstract)), ''),
-        NULLIF(TRIM({{ dataset_id }}.strip_html(ARRAY_TO_STRING(ARRAY(SELECT d.description FROM UNNEST(datacite.descriptions) AS d), " "))), ''),
+        NULLIF(TRIM({{ dataset_id }}.remove_markup({{ dataset_id }}.revert_inverted_index(openalex.abstract_inverted_index))), ''),
+        NULLIF(TRIM({{ dataset_id }}.remove_markup(crossref.abstract)), ''),
+        NULLIF(TRIM({{ dataset_id }}.remove_markup(ARRAY_TO_STRING(ARRAY(SELECT d.description FROM UNNEST(datacite.attributes.descriptions) AS d), " "))), ''),
         NULL
-      ) -- Choose abstracts from Crossref first, then DataCite.
+      ) -- Choose abstracts from OpenAlex first, then Crossref, then DataCite.
     ) AS content,
 
     -- Affiliations
@@ -168,7 +174,7 @@ SELECT
     -- Funder IDs
     (SELECT ARRAY_AGG(DISTINCT funder_id IGNORE NULLS) FROM UNNEST(funders.funder_ids) AS funder_id WHERE funder_id IS NOT NULL) AS funder_ids,
 
-    -- ARRAY<STRING>[] AS funder_opportunity_ids,
+    -- ARRAY<STRING>[] AS funding_opportunity_ids,
 
     -- Grant IDs
     (SELECT ARRAY_AGG(DISTINCT LOWER(TRIM(grant.award_id)) IGNORE NULLS) FROM UNNEST(grants) AS grant WHERE grant.award_id IS NOT NULL) AS grant_ids,
@@ -182,5 +188,4 @@ SELECT
 FROM openalex
 LEFT JOIN funders ON funders.id = openalex.id
 LEFT JOIN `{{ crossref_metadata_table_id }}` as crossref ON {{ dataset_id }}.normalise_doi(crossref.doi) = openalex.doi
-LEFT JOIN `{{ datacite_table_id }}` as datacite ON {{ dataset_id }}.normalise_doi(datacite.doi) = openalex.doi
-ORDER BY match_data.publication_date DESC
+LEFT JOIN `{{ datacite_table_id }}` as datacite ON {{ dataset_id }}.normalise_doi(datacite.id) = openalex.doi
