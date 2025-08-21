@@ -3,20 +3,23 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Dict, List, Optional, TypeVar
+from functools import cached_property
+from typing import Optional, Self, TypeVar
+
+from dmpworks.utils import import_from_path
 
 log = logging.getLogger(__name__)
 
-T = TypeVar("T", bound="FunderID")
+T = TypeVar("T", bound="AwardID")
 
 
 class AwardID(ABC):
     parent_ror_ids: list = []  # The funder ROR IDs
 
-    def __init__(self, text: str, fields: List[str]):
-        self.text = text
-        self.fields = fields
-        self.discovered_ids = []
+    def __init__(self, text: str, fields: list[str]):
+        self.text: str = text
+        self.fields: list[str] = fields
+        self.related_awards: list[Self] = []
 
     @abstractmethod
     def fetch_additional_metadata(self):
@@ -24,13 +27,13 @@ class AwardID(ABC):
         raise NotImplementedError("Please implement")
 
     @abstractmethod
-    def generate_variants(self) -> List[str]:
+    def generate_variants(self) -> list[str]:
         """Generates variants of the funder ID"""
         raise NotImplementedError("Please implement")
 
     @staticmethod
     @abstractmethod
-    def parse(text: str | None) -> Optional[T]:
+    def parse(text: Optional[str]) -> Optional[T]:
         """Parses a funder ID"""
         raise NotImplementedError("Please implement")
 
@@ -39,12 +42,32 @@ class AwardID(ABC):
         """The canonical identifier as a string"""
         raise NotImplementedError("Please implement")
 
-    def parts(self) -> List[IdentifierPart]:
+    @abstractmethod
+    def funded_dois_source(self) -> dict:
+        """Returns the data about the source of the funded DOIs"""
+        raise NotImplementedError("Please implement")
+
+    @cached_property
+    def all_variants(self) -> list[str]:
+        award_ids = set()
+
+        # Award IDs for this award
+        for award_id in self.generate_variants():
+            award_ids.add(award_id)
+
+        # Add award IDs for related awards
+        for related_award in self.related_awards:
+            for award_id in related_award.generate_variants():
+                award_ids.add(award_id)
+
+        return list(award_ids)
+
+    def parts(self) -> list[IdentifierPart]:
         """The parts that make up the ID"""
         parts = []
         for field in self.fields:
             value = getattr(self, field)
-            parts.append(IdentifierPart(value, field.upper()))
+            parts.append(IdentifierPart(value, field))
         return parts
 
     def __eq__(self, other):
@@ -66,15 +89,35 @@ class AwardID(ABC):
         attrs = ", ".join(f"{field}={getattr(self, field)!r}" for field in self.fields)
         return f"{class_name}({attrs})"
 
-    def to_dict(self) -> Dict:
-        """Converts the funder ID into a dict to load into BigQuery"""
+    @classmethod
+    def from_dict(cls, dict_: dict) -> AwardID:
+        """Construct an AwardID from a dict, you must pass the correct subclass"""
+
+        cls_ = cls
+        if cls == AwardID:
+            # Fallback to class path stored in dict_
+            class_path = import_from_path(dict_.get("class"))
+            if not issubclass(class_path, AwardID):
+                raise TypeError(f"AwardID.from_dict: cls {class_path} must be a subclass of AwardID")
+            cls_ = class_path
+        elif not issubclass(cls, AwardID):
+            raise TypeError(f"AwardID.from_dict: cls {cls_} must be a subclass of AwardID")
+
+        parts = [IdentifierPart.from_dict(part) for part in dict_.get("parts", [])]
+        parts_dict = {part.type: part.value for part in parts}
+
+        obj = cls_(**parts_dict)
+        obj.related_awards = [cls_.from_dict(award) for award in dict_.get("related_awards", [])]
+
+        return obj
+
+    def to_dict(self) -> dict:
+        """Converts the Award ID into a dict"""
+
         return {
-            "parent_ror_ids": list(self.parent_ror_ids),
-            "identifier": self.identifier_string(),
-            "text": self.text,
+            "class": f"{self.__class__.__module__}.{self.__class__.__name__}",
             "parts": [part.to_dict() for part in self.parts()],
-            "discovered_ids": [identifier.to_dict() for identifier in self.discovered_ids],
-            "variants": self.generate_variants(),
+            "related_awards": [award.to_dict() for award in self.related_awards],
         }
 
 
@@ -83,7 +126,14 @@ class Identifier:
     id: str
     type: str
 
-    def to_dict(self) -> Dict:
+    @classmethod
+    def from_dict(cls, dict_) -> Identifier:
+        return Identifier(
+            dict_.get("id"),
+            dict_.get("type"),
+        )
+
+    def to_dict(self) -> dict:
         return {
             "id": self.id,
             "type": self.type,
@@ -95,7 +145,14 @@ class IdentifierPart:
     value: str
     type: str
 
-    def to_dict(self) -> Dict:
+    @classmethod
+    def from_dict(cls, dict_) -> IdentifierPart:
+        return IdentifierPart(
+            dict_.get("value"),
+            dict_.get("type"),
+        )
+
+    def to_dict(self) -> dict:
         return {
             "value": self.value,
             "type": self.type,

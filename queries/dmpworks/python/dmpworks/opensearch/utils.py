@@ -1,10 +1,18 @@
+import logging
+import pathlib
+from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import Annotated, Literal, Optional, Sequence
+from typing import Annotated, Generator, Iterator, Literal, Optional, Sequence
 
 import boto3
 import pendulum
+import pyarrow.dataset as ds
 from cyclopts import Parameter, Token
 from opensearchpy import AWSV4SignerAuth, OpenSearch, RequestsHttpConnection
+
+from dmpworks.model.dmp_model import DMPModel
+
+log = logging.getLogger(__name__)
 
 MAX_PROCESSES = 2
 CHUNK_SIZE = 1000
@@ -13,22 +21,6 @@ MAX_RETRIES = 10
 INITIAL_BACKOFF = 2
 MAX_BACKOFF = 600
 MAX_ERROR_SAMPLES = 3
-COLUMNS = [
-    "doi",
-    "title",
-    "abstract",
-    "type",
-    "publication_date",
-    "updated_date",
-    "affiliation_rors",
-    "affiliation_names",
-    "author_names",
-    "author_orcids",
-    "award_ids",
-    "funder_ids",
-    "funder_names",
-    "source",
-]
 
 
 def validate_chunk_size(type_, value):
@@ -98,3 +90,61 @@ def make_opensearch_client(config: OpenSearchClientConfig) -> OpenSearch:
         )
 
     return client
+
+
+def load_dataset(in_dir: pathlib.Path) -> ds.Dataset:
+    dataset = ds.dataset(in_dir, format="parquet")
+    return dataset
+
+
+def count_records(in_dir: pathlib.Path) -> int:
+    log.info(f"Counting records: {in_dir}")
+    dataset = load_dataset(in_dir)
+    return dataset.count_rows()
+
+
+@dataclass(kw_only=True)
+class ScrollDmps:
+    total_dmps: str
+    dmps: Iterator[DMPModel]
+
+
+@contextmanager
+def yield_dmps(
+    client: OpenSearch,
+    index_name: str,
+    query: dict,
+    page_size: int = 500,
+    scroll_time: str = "60m",
+) -> Generator[ScrollDmps, None, None]:
+    scroll_id: Optional[str] = None
+
+    try:
+        response = client.search(
+            index=index_name,
+            body=query,
+            scroll=scroll_time,
+            size=page_size,
+            track_total_hits=True,
+        )
+        scroll_id = response["_scroll_id"]
+        total_hits = response.get("hits", {}).get("total", {}).get("value", 0)
+        hits = response.get("hits", {}).get("hits", [])
+
+        def dmp_generator():
+            nonlocal scroll_id, hits, response
+
+            while hits:
+                for doc in hits:
+                    source = doc['_source']
+                    yield DMPModel.model_validate(source)
+
+                # Get next batch
+                response = client.scroll(scroll_id=scroll_id, scroll=scroll_time)
+                scroll_id = response["_scroll_id"]
+                hits = response.get("hits", {}).get("hits", [])
+
+        yield ScrollDmps(total_dmps=total_hits, dmps=dmp_generator())
+    finally:
+        if scroll_id is not None:
+            client.clear_scroll(scroll_id=scroll_id)

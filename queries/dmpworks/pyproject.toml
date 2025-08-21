@@ -22,7 +22,8 @@ dependencies = [
     "fold_to_ascii>=1,<=2",
     "rapidfuzz>=3,<4",
     "beautifulsoup4>=4,<5",
-    "pydantic>=2,<3"
+    "pydantic>=2,<3",
+    "jsonlines>=4,<5"
 ]
 
 [project.optional-dependencies]

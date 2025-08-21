@@ -10,6 +10,7 @@ from dmpworks.cli_utils import Directory, LogLevel
 from dmpworks.transform.crossref_metadata import transform_crossref_metadata
 from dmpworks.transform.datacite import transform_datacite
 from dmpworks.transform.demo_dataset import create_demo_dataset
+from dmpworks.transform.dmps import transform_dmps
 from dmpworks.transform.openalex_funders import transform_openalex_funders
 from dmpworks.transform.openalex_works import transform_openalex_works
 from dmpworks.transform.ror import transform_ror
@@ -246,6 +247,46 @@ def openalex_works_cmd(
     config = OpenAlexWorksConfig() if config is None else config
     setup_multiprocessing_logging(logging.getLevelName(config.log_level))
     transform_openalex_works(
+        in_dir,
+        out_dir,
+        **copy_dict(vars(config), ["log_level"]),
+    )
+
+
+@Parameter(name="*")
+@dataclass
+class DMPsConfig:
+    batch_size: BatchSize = os.cpu_count()
+    extract_workers: NumExtractWorkers = 1
+    transform_workers: NumTransformWorkers = 1
+    cleanup_workers: NumCleanupWorkers = 1
+    extract_queue_size: ExtractQueueSize = 0
+    transform_queue_size: TransformQueueSize = 1
+    cleanup_queue_size: CleanupQueueSize = 0
+    max_file_processes: MaxFileProcesses = os.cpu_count()
+    n_batches: NumBatches = None
+    low_memory: LowMemory = False
+    log_level: LogLevel = "INFO"
+
+
+@app.command(name="dmps")
+def dmps_cmd(
+    in_dir: Directory,
+    out_dir: Directory,
+    *,
+    config: Optional[DMPsConfig] = None,
+):
+    """Transform DMPs to Parquet.
+
+    Args:
+        in_dir: Path to the DMPs directory (e.g. /path/to/dmps).
+        out_dir: "Path to the output directory (e.g. /path/to/parquets/dmps)."
+        config: optional configuration parameters.
+    """
+
+    config = DMPsConfig() if config is None else config
+    setup_multiprocessing_logging(logging.getLevelName(config.log_level))
+    transform_dmps(
         in_dir,
         out_dir,
         **copy_dict(vars(config), ["log_level"]),

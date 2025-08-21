@@ -49,7 +49,7 @@ def nsf_fetch_org_id(award_id: str):
 
 @dataclass
 class NIHProjectDetails:
-    appl_id: Optional[int] = None
+    appl_id: Optional[str] = None
     project_num: Optional[str] = None
 
 
@@ -124,7 +124,7 @@ def nih_core_project_to_appl_ids(
 
 
 def nih_fetch_award_publication_dois(
-    appl_id: int,
+    appl_id: str,
     pubmed_api_email: Optional[str] = None,
 ) -> list[dict]:
     """Fetch the publications associated with an NIH award.
@@ -136,7 +136,7 @@ def nih_fetch_award_publication_dois(
 
     base_url = "https://reporter.nih.gov/services/Projects/Publications"
     params = {
-        "projectId": str(appl_id),
+        "projectId": appl_id,
     }
 
     try:
