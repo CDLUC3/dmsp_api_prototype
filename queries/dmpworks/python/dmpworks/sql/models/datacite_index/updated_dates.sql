@@ -10,6 +10,8 @@ MODEL (
   kind FULL
 );
 
+PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
+
 -- Choose the most recent updated date from DataCite and OpenAlex
 SELECT
   doi,

@@ -16,6 +16,8 @@ MODEL (
   depends_on (datacite_index.datacite_index, openalex_index.openalex_index) -- must manually specify these as they are not used within the query itself
 );
 
+PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
+
 -- Record export date
 SELECT @end_ds AS export_date;
 

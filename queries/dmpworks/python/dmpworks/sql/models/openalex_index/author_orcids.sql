@@ -13,6 +13,8 @@ MODEL (
   kind FULL
 );
 
+PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
+
 SELECT
   owm.doi,
   @array_agg_distinct(orcid) AS author_orcids,

@@ -7,6 +7,8 @@ MODEL (
   )
 );
 
+PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
+
 SELECT *
 FROM read_parquet(@VAR('ror_path') || '/ror.parquet');
 
