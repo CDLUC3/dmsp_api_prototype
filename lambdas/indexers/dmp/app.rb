@@ -394,20 +394,18 @@ module Functions
         return {} unless hash.is_a?(Hash)
 
         id = hash.fetch('funder_id', {}).fetch('M', {}).fetch('identifier', {})['S']
-        id = id&.gsub('https://doi.org/10.13039/', '')&.gsub('https://ror.org/', '')&.to_s
-        {
-          funding: [
-            {
-              status: hash.fetch('funding_status', {}).fetch('S', 'planned')&.to_s,
-              grant_id: hash.fetch('grant_id', {}).fetch('M', {}).fetch('identifier', {})['S']&.strip,
-              funding_opportunity_id: hash.fetch('dmproadmap_funding_opportunity_id', {}).fetch('M', {}).fetch('identifier', {})['S']&.strip,
-              funder: {
-                name: _prep_org_name(text: hash.fetch('name', {})['S']),
-                id: id
-              }
-            }
-          ]
+        # id = id&.gsub('https://doi.org/10.13039/', '')&.gsub('https://ror.org/', '')&.to_s
+        fund = {
+          status: hash.fetch('funding_status', {}).fetch('S', 'planned')&.to_s,
+          grant_id: hash.fetch('grant_id', {}).fetch('M', {}).fetch('identifier', {})['S']&.strip,
+          funding_opportunity_id: hash.fetch('dmproadmap_funding_opportunity_id', {}).fetch('M', {}).fetch('identifier', {})['S']&.strip,
+          funder: {
+            name: _prep_org_name(text: hash.fetch('name', {})['S']),
+            id: id
+          }
         }
+        has_data = fund[:grant_id] || fund[:funding_opportunity_id] || fund.dig(:funder, :id) || fund.dig(:funder, :name)
+        { funding: has_data ? [fund] : [] }
       end
 
       # Remove any URL prefixes from the grant id
