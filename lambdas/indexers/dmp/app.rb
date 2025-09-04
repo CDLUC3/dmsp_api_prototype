@@ -266,17 +266,15 @@ module Functions
         # Calculate the project start and end dates
         project_dates = _getProjectDates(project: project)
 
+        # Add authors and institutions
+        doc = _extract_people(hash: hash, logger: logger)
+
+        # Add funding
         funding = project.fetch('funding', {}).fetch('L', [{}]).first.fetch('M', {})
         funding_entry = _extract_funding(hash: funding, logger:)
-        # Only include the funding entry if it has data
-        doc = {}
-        if funding_entry.is_a?(Hash)
-          entry = funding_entry[:funding]&.first
-          if entry && (entry[:grant_id] != nil || entry[:funding_opportunity_id] != nil ||
-            entry.fetch(:funder, {})[:id] != nil || entry.fetch(:funder, {})[:name])
-            doc = people.merge(funding_entry)
-          end
-        end
+        doc = doc.merge(funding_entry)
+
+        # Add repository data
         doc = doc.merge(_repos_to_os_doc_parts(datasets: hash.fetch('dataset', {}).fetch('L', [])))
 
         doc = doc.merge({
@@ -459,24 +457,31 @@ module Functions
 
       # Combine all of the people metadata into arrays for our OpenSearch Doc
       def _people_to_os_doc_parts(people:)
-        parts = { people: [], people_ids: [], affiliations: [], affiliation_ids: [] }
+        authors = {}
+        institutions = {}
 
         # Add each person's info to the appropriate part or the OpenSearch doc
         people.each do |person|
-          parts[:people] << person[:name] unless person[:name].nil?
-          parts[:people] << person[:email] unless person[:email].nil?
-          parts[:people_ids] << person[:id].gsub(/\s/, '') unless person[:id].nil?
-          parts[:affiliations] << person[:affiliation] unless person[:affiliation].nil?
-          parts[:affiliation_ids] << person[:affiliation_id] unless person[:affiliation_id].nil?
+          # Add author details
+          author_hash = { orcid: person[:id]&.gsub(/\s/, ''), name: person[:name] }
+          if !author_hash.values.all?(&:nil?) && !authors.key?(author_hash) then
+              authors[author_hash] = true
+          end
+
+          # Add institution details
+          inst_hash = { ror: person[:affiliation_id], name: person[:affiliation] }
+          if !inst_hash.values.all?(&:nil?) && !institutions.key?(inst_hash) then
+              institutions[inst_hash] = true
+          end
+
         end
+        parts = { authors: authors.keys, institutions: institutions.keys }
         parts
       end
 
       # Retrieve all of the repositories defined for the research outputs
       def _repos_to_os_doc_parts(datasets:)
-        parts = { repos: [], repo_ids: [] }
-        return parts unless datasets.is_a?(Array) && datasets.any?
-
+        repos = {}
         outputs = datasets.map { |dataset| dataset.fetch('M', {}) }
 
         outputs.each do |output|
@@ -486,19 +491,17 @@ module Functions
           hosts.each do |host|
             next if host.nil?
 
-            parts[:repos] << host.fetch('title', {})['S']&.to_s
-            parts[:repo_ids] << host.fetch('url', {})['S']&.to_s
-
-            re3url = 'https://www.re3data.org/api/v1/repository/'
+            repo_url = host.fetch('url', {})['S']&.to_s
             host_id = host.fetch('dmproadmap_host_id', {}).fetch('M', {}).fetch('identifier', {})['S']&.to_s
-            parts[:repo_ids] << host_id
-            # Include a cn entry for the re3data id without the full URL
-            parts[:repo_ids] << host_id.gsub(re3url, '') if host_id&.start_with?(re3url)
+            repo_hash = { name: host.fetch('title', {})['S']&.to_s, repo_ids: [repo_url, host_id].compact.uniq }
+
+            if !repo_hash.values.all?(&:nil?) && !repos.key?(repo_hash) then
+              repos[repo_hash] = true
+            end
           end
         end
 
-        parts[:repo_ids] = parts[:repo_ids].compact.uniq
-        parts[:repos] = parts[:repos].compact.uniq
+        parts = { repos: repos.keys }
         parts
       end
 
