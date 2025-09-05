@@ -394,7 +394,6 @@ module Functions
         return {} unless hash.is_a?(Hash)
 
         id = hash.fetch('funder_id', {}).fetch('M', {}).fetch('identifier', {})['S']
-        # id = id&.gsub('https://doi.org/10.13039/', '')&.gsub('https://ror.org/', '')&.to_s
         fund = {
           status: hash.fetch('funding_status', {}).fetch('S', 'planned')&.to_s,
           grant_id: hash.fetch('grant_id', {}).fetch('M', {}).fetch('identifier', {})['S']&.strip,
@@ -473,8 +472,7 @@ module Functions
           end
 
         end
-        parts = { authors: authors.keys, institutions: institutions.keys }
-        parts
+        { authors: authors.keys, institutions: institutions.keys }
       end
 
       # Retrieve all of the repositories defined for the research outputs
@@ -498,9 +496,7 @@ module Functions
             end
           end
         end
-
-        parts = { repos: repos.keys }
-        parts
+        { repos: repos.keys }
       end
 
       # Extract the important patrts of the contact/contributor from the DynamoStream image
