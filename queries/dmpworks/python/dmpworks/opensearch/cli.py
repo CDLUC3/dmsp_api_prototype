@@ -189,8 +189,7 @@ def dmp_works_search_cmd(
     batch_size: int = 250,
     max_results: int = 100,
     project_end_buffer_years: int = 3,
-    parallel_search: bool = True,
-    include_named_queries_score: bool = False,
+    include_named_queries_score: bool = True,
     max_concurrent_searches: int = 125,
     max_concurrent_shard_requests: int = 12,
     client_config: Optional[OpenSearchClientConfig] = None,
@@ -210,7 +209,6 @@ def dmp_works_search_cmd(
         max_results: the maximum number of matches per DMP.
         project_end_buffer_years: the number of years to add to the end of the
         project end date when searching for works.
-        parallel_search: whether to run parallel search or not.
         include_named_queries_score: whether to include scores for subqueries.
         max_concurrent_searches: the maximum number of concurrent searches.
         max_concurrent_shard_requests: the maximum number of shards searched per node.
@@ -234,7 +232,6 @@ def dmp_works_search_cmd(
         batch_size=batch_size,
         max_results=max_results,
         project_end_buffer_years=project_end_buffer_years,
-        parallel_search=parallel_search,
         include_named_queries_score=include_named_queries_score,
         max_concurrent_searches=max_concurrent_searches,
         max_concurrent_shard_requests=max_concurrent_shard_requests,
