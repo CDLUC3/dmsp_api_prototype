@@ -454,30 +454,25 @@ module Functions
 
       # Combine all of the people metadata into arrays for our OpenSearch Doc
       def _people_to_os_doc_parts(people:)
-        authors = {}
-        institutions = {}
+        authors = Set.new
+        institutions = Set.new
 
         # Add each person's info to the appropriate part or the OpenSearch doc
         people.each do |person|
           # Add author details
           author_hash = { orcid: person[:id]&.gsub(/\s/, ''), name: person[:name] }
-          if !author_hash.values.all?(&:nil?) && !authors.key?(author_hash) then
-              authors[author_hash] = true
-          end
+          authors << author_hash unless author_hash.values.all?(&:nil?)
 
           # Add institution details
           inst_hash = { ror: person[:affiliation_id], name: person[:affiliation] }
-          if !inst_hash.values.all?(&:nil?) && !institutions.key?(inst_hash) then
-              institutions[inst_hash] = true
-          end
-
+          institutions << inst_hash unless inst_hash.values.all?(&:nil?)
         end
-        { authors: authors.keys, institutions: institutions.keys }
+        { authors: authors, institutions: institutions }
       end
 
       # Retrieve all of the repositories defined for the research outputs
       def _repos_to_os_doc_parts(datasets:)
-        repos = {}
+        repos = Set.new
         outputs = datasets.map { |dataset| dataset.fetch('M', {}) }
 
         outputs.each do |output|
@@ -490,13 +485,10 @@ module Functions
             repo_url = host.fetch('url', {})['S']&.to_s
             host_id = host.fetch('dmproadmap_host_id', {}).fetch('M', {}).fetch('identifier', {})['S']&.to_s
             repo_hash = { name: host.fetch('title', {})['S']&.to_s, repo_ids: [repo_url, host_id].compact.uniq }
-
-            if !repo_hash.values.all?(&:nil?) && !repos.key?(repo_hash) then
-              repos[repo_hash] = true
-            end
+            repos << repo_hash unless repo_hash.values.all?(&:nil?)
           end
         end
-        { repos: repos.keys }
+        { repos: repos }
       end
 
       # Extract the important patrts of the contact/contributor from the DynamoStream image
