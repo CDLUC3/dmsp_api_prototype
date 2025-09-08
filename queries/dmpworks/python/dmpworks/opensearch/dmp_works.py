@@ -2,6 +2,7 @@ import dataclasses
 import json
 import logging
 import pathlib
+from typing import Callable
 
 import jsonlines
 from opensearchpy import OpenSearch
@@ -223,7 +224,6 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
                     }
                 }
             )
-
         award_queries.append(
             {
                 "dis_max": {
@@ -246,137 +246,35 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
 
     # Authors
     # Combines author_orcids and author surnames into a single feature
-    # TODO: should be made to operate like funders
-    group = "authors"
-    should.append(
-        {
-            "bool": {
-                "_name": name_group(group),
-                "minimum_should_match": 1,
-                "should": [
-                    *[
-                        {
-                            "constant_score": {
-                                "_name": name_value(group, idx, "orcid", orcid),
-                                "boost": 2,
-                                "filter": {
-                                    "term": {
-                                        "author_orcids": {
-                                            "value": orcid,
-                                        },
-                                    },
-                                },
-                            }
-                        }
-                        for idx, orcid in enumerate(dmp.author_orcids)
-                    ],
-                    *[
-                        {
-                            "constant_score": {
-                                "_name": name_value(group, idx, "surname", surname),
-                                "boost": 1,
-                                "filter": {
-                                    "match_phrase": {
-                                        "author_names": {
-                                            "query": surname,
-                                        }
-                                    }
-                                },
-                            }
-                        }
-                        for idx, surname in enumerate(dmp.author_surnames)
-                    ],
-                ],
-            },
-        }
+    build_entity_query(
+        "authors",
+        "author_orcids",
+        "author_names",
+        dmp.authors,
+        lambda author: author.ror,
+        lambda author: author.surname,
     )
 
-    # Affiliations
+    # Institutions
     # Combines both affiliation_rors and affiliation_names into a single feature
-    # TODO: should be made to operate like funders
-    group = "affiliations"
-    should.append(
-        {
-            "bool": {
-                "_name": name_group(group),
-                "minimum_should_match": 1,
-                "should": [
-                    *[
-                        {
-                            "constant_score": {
-                                "_name": name_value(group, idx, "ror", ror),
-                                "boost": 2,
-                                "filter": {
-                                    "term": {
-                                        "affiliation_rors": {
-                                            "value": ror,
-                                        },
-                                    },
-                                },
-                            }
-                        }
-                        for idx, ror in enumerate(dmp.affiliation_rors)
-                    ],
-                    *[
-                        {
-                            "constant_score": {
-                                "_name": name_value(group, idx, "name", name),
-                                "filter": {
-                                    "match_phrase": {
-                                        "affiliation_names": {
-                                            "query": name,
-                                            "slop": 3,
-                                        },
-                                    },
-                                },
-                            }
-                        }
-                        for idx, name in enumerate(dmp.affiliation_names)
-                    ],
-                ],
-            },
-        }
+    build_entity_query(
+        "institutions",
+        "affiliation_rors",
+        "affiliation_names",
+        dmp.institutions,
+        lambda inst: inst.ror,
+        lambda inst: inst.name,
     )
 
     # Funders
     # Combines both funder_ids and funder_names into a single feature
-    group = "funders"
-    should.append(
-        {
-            "bool": {
-                "_name": name_group(group),
-                "minimum_should_match": 1,
-                "should": [
-                    *[
-                        {
-                            "dis_max": {
-                                "_name": name_entity(group, idx),
-                                "tie_breaker": 0,
-                                "queries": [
-                                    {
-                                        "constant_score": {
-                                            "_name": name_value(group, idx, "id", fund.funder.id),
-                                            "filter": {"term": {"funder_ids": fund.funder.id}},
-                                            "boost": 2,
-                                        }
-                                    },
-                                    {
-                                        "constant_score": {
-                                            "_name": name_value(group, idx, "name", fund.funder.name),
-                                            "filter": {
-                                                "match_phrase": {"funder_names": {"query": fund.funder.name, "slop": 3}}
-                                            },
-                                            "boost": 1,
-                                        }
-                                    },
-                                ],
-                            },
-                        }
-                        for idx, fund in enumerate(dmp.funding)
-                    ]
-                ],
-            }
-        }
+    build_entity_query(
+        "funders",
+        "funder_ids",
+        "funder_names",
+        dmp.funding,
+        lambda fund: fund.funder.id,
+        lambda fund: fund.funder.name,
     )
 
     # Title and abstract
@@ -451,3 +349,48 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
     }
 
     return query
+
+
+def build_entity_query(
+    group_name: str,
+    id_field: str,
+    name_field: str,
+    items: list,
+    id_accessor: Callable,
+    name_accessor: Callable,
+) -> dict:
+    return {
+        "bool": {
+            "_name": name_group(group_name),
+            "minimum_should_match": 1,
+            "should": [
+                *[
+                    {
+                        "dis_max": {
+                            "_name": name_entity(group_name, idx),
+                            "tie_breaker": 0,
+                            "queries": [
+                                {
+                                    "constant_score": {
+                                        "_name": name_value(group_name, idx, "id", id_accessor(item)),
+                                        "filter": {"term": {id_field: id_accessor(item)}},
+                                        "boost": 2,
+                                    }
+                                },
+                                {
+                                    "constant_score": {
+                                        "_name": name_value(group_name, idx, "name", name_accessor(item)),
+                                        "filter": {
+                                            "match_phrase": {name_field: {"query": name_accessor(item), "slop": 3}}
+                                        },
+                                        "boost": 1,
+                                    }
+                                },
+                            ],
+                        },
+                    }
+                    for idx, item in enumerate(items)
+                ]
+            ],
+        }
+    }

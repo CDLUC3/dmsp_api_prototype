@@ -23,38 +23,10 @@ class DMPModel(BaseModel):
     abstract: Optional[str]
     project_start: Optional[pendulum.Date]
     project_end: Optional[pendulum.Date]
-    affiliation_rors: list[str]
-    affiliation_names: list[str]
-    author_names: list[AuthorName]
-    author_orcids: list[str]
+    institutions: list[Institution]
+    authors: list[Author]
     funding: list[FundingItem]
     external_data: Optional[ExternalData] = None
-
-    @cached_property
-    def author_surnames(self) -> list[str]:
-        surnames = set()
-        for name in self.author_names:
-            if name.surname is not None:
-                surnames.add(name.surname)
-            else:
-                surnames.add(name.full)
-        return list(surnames)
-
-    @cached_property
-    def funder_ids(self) -> list[str]:
-        funder_ids = set()
-        for fund in self.funding:
-            if fund.funder.id is not None:
-                funder_ids.add(fund.funder.id)
-        return list(funder_ids)
-
-    @cached_property
-    def funder_names(self) -> list[str]:
-        funder_names = set()
-        for fund in self.funding:
-            if fund.funder.name is not None:
-                funder_names.add(fund.funder.name)
-        return list(funder_names)
 
     @cached_property
     def funded_dois(self) -> list[str]:
@@ -63,14 +35,6 @@ class DMPModel(BaseModel):
             for doi in award.funded_dois:
                 funded_dois.add(doi)
         return list(funded_dois)
-
-    @cached_property
-    def award_ids(self) -> list[str]:
-        award_ids = set()
-        for award in self.external_data.awards:
-            for award_id in award.award_id.all_variants:
-                award_ids.add(award_id)
-        return list(award_ids)
 
     @field_validator("created", "registered", "modified", "project_start", "project_end", mode="before")
     @classmethod
@@ -98,7 +62,13 @@ class FundingItem(BaseModel):
     award_id: Optional[str]
 
 
-class AuthorName(BaseModel):
+class Institution(BaseModel):
+    name: Optional[str]
+    ror: Optional[str]
+
+
+class Author(BaseModel):
+    orcid: Optional[str]
     first_initial: Optional[str]
     given_name: Optional[str]
     middle_initials: Optional[str]

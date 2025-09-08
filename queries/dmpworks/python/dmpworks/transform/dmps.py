@@ -60,10 +60,22 @@ SCHEMA: SchemaDefinition = {
     "description": pl.String,
     "project_start": pl.Date,
     "project_end": pl.Date,
-    "affiliation_ids": pl.List(pl.String),
-    "affiliations": pl.List(pl.String),
-    "people": pl.List(pl.String),
-    "people_ids": pl.List(pl.String),
+    "institutions": pl.List(
+        pl.Struct(
+            {
+                "name": pl.String,
+                "ror": pl.String,
+            }
+        )
+    ),
+    "authors": pl.List(
+        pl.Struct(
+            {
+                "name": pl.String,
+                "orcid": pl.String,
+            }
+        )
+    ),
     "funding": pl.List(
         pl.Struct(
             {
@@ -119,21 +131,51 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         abstract=clean_string(pe.strip_markup(pl.col("description"))),
         project_start=pl.col("project_start"),
         project_end=pl.col("project_end"),
-        affiliation_rors=pl.col("affiliation_ids").list.eval(clean_string(pl.element())).list.drop_nulls(),
-        affiliation_names=pl.col("affiliations").list.eval(clean_string(pl.element())).list.drop_nulls(),
-        # people: remove emails, remove empty strings, split into name parts
-        author_names=pl.col("people")
-        .list.eval(clean_name(pl.element()))
-        .list.drop_nulls()
-        .list.eval(pe.parse_name(pl.element())),
-        # people_ids: extract ORCID IDs, which also removes emails
-        author_orcids=pl.col("people_ids").list.eval(extract_orcid(pl.element())).list.drop_nulls(),
+        # institutions: strip name and ror
+        institutions=pl.col("institutions")
+        .list.eval(
+            pl.struct(
+                ror=clean_string(pl.element().struct.field("ror")),
+                name=clean_string(pl.element().struct.field("name")),
+            )
+        )
+        .filter(pl.any_horizontal([pl.element().struct.field(field).is_not_null() for field in ["name", "ror"]]))
+        .list.drop_nulls(),
+        # authors: remove empty strings, split into name parts, extract ORCID IDs
+        authors=pl.col("authors")
+        .list.eval(
+            pl.struct(
+                [
+                    extract_orcid(pl.element().struct.field("orcid")).alias("orcid"),
+                    pe.parse_name(pl.element().struct.field("name")).struct.unnest(),
+                ]
+            )
+        )
+        .filter(
+            pl.any_horizontal(
+                [
+                    pl.element().struct.field(field).is_not_null()
+                    for field in [
+                        "orcid",
+                        "first_initial",
+                        "given_name",
+                        "middle_initials",
+                        "middle_names",
+                        "surname",
+                        "full",
+                    ]
+                ]
+            )
+        )
+        .list.drop_nulls(),
         # funding: remove values that are likely not award IDs, e.g. empty strings, na, n/a etc
         funding=pl.col("funding")
         .list.eval(
             pl.struct(
                 funder=pl.struct(
-                    id=clean_string(pl.element().struct.field("funder").struct.field("id")),
+                    id=clean_string(
+                        pl.element().struct.field("funder").struct.field("id")
+                    ),  # TODO: check if these also include Crossref IDs
                     name=clean_string(
                         pl.element().struct.field("funder").struct.field("name"),
                     ),
@@ -149,8 +191,17 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
                 ),
             )
         )
+        .filter(
+            pl.any_horizontal(
+                [pl.element().struct.field("funder").struct.field(field).is_not_null() for field in ["id", "name"]]
+                + [
+                    pl.element().struct.field(field).is_not_null()
+                    for field in ["funder", "status", "funding_opportunity_id", "award_id"]
+                ]
+            )
+        )
         .list.drop_nulls(),
-    ).filter(
+    ).filter(  # TODO: remove these filters
         pl.col("funding")
         .list.eval(
             pl.element().struct.field("funder").struct.field("id").is_in(["01cwqze88", "021nxhr62", "05wqqhv83"])
