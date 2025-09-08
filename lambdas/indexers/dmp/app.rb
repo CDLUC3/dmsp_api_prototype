@@ -266,17 +266,15 @@ module Functions
         # Calculate the project start and end dates
         project_dates = _getProjectDates(project: project)
 
+        # Add authors and institutions
+        doc = _extract_people(hash: hash, logger: logger)
+
+        # Add funding
         funding = project.fetch('funding', {}).fetch('L', [{}]).first.fetch('M', {})
         funding_entry = _extract_funding(hash: funding, logger:)
-        # Only include the funding entry if it has data
-        doc = {}
-        if funding_entry.is_a?(Hash)
-          entry = funding_entry[:funding]&.first
-          if entry && (entry[:grant_id] != nil || entry[:funding_opportunity_id] != nil ||
-            entry.fetch(:funder, {})[:id] != nil || entry.fetch(:funder, {})[:name])
-            doc = people.merge(funding_entry)
-          end
-        end
+        doc = doc.merge(funding_entry)
+
+        # Add repository data
         doc = doc.merge(_repos_to_os_doc_parts(datasets: hash.fetch('dataset', {}).fetch('L', [])))
 
         doc = doc.merge({
@@ -396,20 +394,17 @@ module Functions
         return {} unless hash.is_a?(Hash)
 
         id = hash.fetch('funder_id', {}).fetch('M', {}).fetch('identifier', {})['S']
-        id = id&.gsub('https://doi.org/10.13039/', '')&.gsub('https://ror.org/', '')&.to_s
-        {
-          funding: [
-            {
-              status: hash.fetch('funding_status', {}).fetch('S', 'planned')&.to_s,
-              grant_id: hash.fetch('grant_id', {}).fetch('M', {}).fetch('identifier', {})['S']&.strip,
-              funding_opportunity_id: hash.fetch('dmproadmap_funding_opportunity_id', {}).fetch('M', {}).fetch('identifier', {})['S']&.strip,
-              funder: {
-                name: _prep_org_name(text: hash.fetch('name', {})['S']),
-                id: id
-              }
-            }
-          ]
+        fund = {
+          status: hash.fetch('funding_status', {}).fetch('S', 'planned')&.to_s,
+          grant_id: hash.fetch('grant_id', {}).fetch('M', {}).fetch('identifier', {})['S']&.strip,
+          funding_opportunity_id: hash.fetch('dmproadmap_funding_opportunity_id', {}).fetch('M', {}).fetch('identifier', {})['S']&.strip,
+          funder: {
+            name: _prep_org_name(text: hash.fetch('name', {})['S']),
+            id: id
+          }
         }
+        has_data = fund[:grant_id] || fund[:funding_opportunity_id] || fund.dig(:funder, :id) || fund.dig(:funder, :name)
+        { funding: has_data ? [fund] : [] }
       end
 
       # Remove any URL prefixes from the grant id
@@ -459,24 +454,25 @@ module Functions
 
       # Combine all of the people metadata into arrays for our OpenSearch Doc
       def _people_to_os_doc_parts(people:)
-        parts = { people: [], people_ids: [], affiliations: [], affiliation_ids: [] }
+        authors = Set.new
+        institutions = Set.new
 
         # Add each person's info to the appropriate part or the OpenSearch doc
         people.each do |person|
-          parts[:people] << person[:name] unless person[:name].nil?
-          parts[:people] << person[:email] unless person[:email].nil?
-          parts[:people_ids] << person[:id].gsub(/\s/, '') unless person[:id].nil?
-          parts[:affiliations] << person[:affiliation] unless person[:affiliation].nil?
-          parts[:affiliation_ids] << person[:affiliation_id] unless person[:affiliation_id].nil?
+          # Add author details
+          author_hash = { orcid: person[:id]&.gsub(/\s/, ''), name: person[:name] }
+          authors << author_hash unless author_hash.values.all?(&:nil?)
+
+          # Add institution details
+          inst_hash = { ror: person[:affiliation_id], name: person[:affiliation] }
+          institutions << inst_hash unless inst_hash.values.all?(&:nil?)
         end
-        parts
+        { authors: authors, institutions: institutions }
       end
 
       # Retrieve all of the repositories defined for the research outputs
       def _repos_to_os_doc_parts(datasets:)
-        parts = { repos: [], repo_ids: [] }
-        return parts unless datasets.is_a?(Array) && datasets.any?
-
+        repos = Set.new
         outputs = datasets.map { |dataset| dataset.fetch('M', {}) }
 
         outputs.each do |output|
@@ -486,20 +482,13 @@ module Functions
           hosts.each do |host|
             next if host.nil?
 
-            parts[:repos] << host.fetch('title', {})['S']&.to_s
-            parts[:repo_ids] << host.fetch('url', {})['S']&.to_s
-
-            re3url = 'https://www.re3data.org/api/v1/repository/'
+            repo_url = host.fetch('url', {})['S']&.to_s
             host_id = host.fetch('dmproadmap_host_id', {}).fetch('M', {}).fetch('identifier', {})['S']&.to_s
-            parts[:repo_ids] << host_id
-            # Include a cn entry for the re3data id without the full URL
-            parts[:repo_ids] << host_id.gsub(re3url, '') if host_id&.start_with?(re3url)
+            repo_hash = { name: host.fetch('title', {})['S']&.to_s, repo_ids: [repo_url, host_id].compact.uniq }
+            repos << repo_hash unless repo_hash.values.all?(&:nil?)
           end
         end
-
-        parts[:repo_ids] = parts[:repo_ids].compact.uniq
-        parts[:repos] = parts[:repos].compact.uniq
-        parts
+        { repos: repos }
       end
 
       # Extract the important patrts of the contact/contributor from the DynamoStream image
