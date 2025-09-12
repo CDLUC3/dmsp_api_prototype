@@ -19,10 +19,8 @@ COLUMNS = [
     "abstract",
     "project_start",
     "project_end",
-    "affiliation_rors",
-    "affiliation_names",
-    "author_names",
-    "author_orcids",
+    "institutions",
+    "authors",
     "funding",
 ]
 

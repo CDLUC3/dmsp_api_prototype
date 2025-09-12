@@ -5,7 +5,7 @@ import pathlib
 import dmpworks.polars_expr_plugin as pe
 import polars as pl
 from dmpworks.transform.pipeline import process_files_parallel
-from dmpworks.transform.transforms import clean_string, extract_orcid, replace_with_null
+from dmpworks.transform.transforms import clean_string, extract_orcid, normalise_identifier, replace_with_null
 from dmpworks.transform.utils_file import read_jsonls
 from polars._typing import SchemaDefinition
 
@@ -139,7 +139,11 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
                 name=clean_string(pl.element().struct.field("name")),
             )
         )
-        .filter(pl.any_horizontal([pl.element().struct.field(field).is_not_null() for field in ["name", "ror"]]))
+        .list.eval(
+            pl.element().filter(
+                pl.any_horizontal([pl.element().struct.field(field).is_not_null() for field in ["name", "ror"]])
+            )
+        )
         .list.drop_nulls(),
         # authors: remove empty strings, split into name parts, extract ORCID IDs
         authors=pl.col("authors")
@@ -151,20 +155,22 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
                 ]
             )
         )
-        .filter(
-            pl.any_horizontal(
-                [
-                    pl.element().struct.field(field).is_not_null()
-                    for field in [
-                        "orcid",
-                        "first_initial",
-                        "given_name",
-                        "middle_initials",
-                        "middle_names",
-                        "surname",
-                        "full",
+        .list.eval(
+            pl.element().filter(
+                pl.any_horizontal(
+                    [
+                        pl.element().struct.field(field).is_not_null()
+                        for field in [
+                            "orcid",
+                            "first_initial",
+                            "given_name",
+                            "middle_initials",
+                            "middle_names",
+                            "surname",
+                            "full",
+                        ]
                     ]
-                ]
+                )
             )
         )
         .list.drop_nulls(),
@@ -173,9 +179,7 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         .list.eval(
             pl.struct(
                 funder=pl.struct(
-                    id=clean_string(
-                        pl.element().struct.field("funder").struct.field("id")
-                    ),  # TODO: check if these also include Crossref IDs
+                    id=normalise_identifier(pl.element().struct.field("funder").struct.field("id")),
                     name=clean_string(
                         pl.element().struct.field("funder").struct.field("name"),
                     ),
@@ -191,26 +195,18 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
                 ),
             )
         )
-        .filter(
-            pl.any_horizontal(
-                [pl.element().struct.field("funder").struct.field(field).is_not_null() for field in ["id", "name"]]
-                + [
-                    pl.element().struct.field(field).is_not_null()
-                    for field in ["funder", "status", "funding_opportunity_id", "award_id"]
-                ]
+        .list.eval(
+            pl.element().filter(
+                pl.any_horizontal(
+                    [pl.element().struct.field("funder").struct.field(field).is_not_null() for field in ["id", "name"]]
+                    + [
+                        pl.element().struct.field(field).is_not_null()
+                        for field in ["funder", "status", "funding_opportunity_id", "award_id"]
+                    ]
+                )
             )
         )
         .list.drop_nulls(),
-    ).filter(  # TODO: remove these filters
-        pl.col("funding")
-        .list.eval(
-            pl.element().struct.field("funder").struct.field("id").is_in(["01cwqze88", "021nxhr62", "05wqqhv83"])
-            & (
-                pl.element().struct.field("funding_opportunity_id").is_not_null()
-                | pl.element().struct.field("award_id").is_not_null()
-            )
-        )
-        .list.any()
     )
 
     return [

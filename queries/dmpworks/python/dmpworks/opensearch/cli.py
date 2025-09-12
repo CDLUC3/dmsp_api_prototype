@@ -175,7 +175,7 @@ def enrich_dmps_cmd(
 def dmp_works_search_cmd(
     dmp_index_name: str,
     works_index_name: str,
-    out_dir: Annotated[
+    out_file: Annotated[
         pathlib.Path,
         Parameter(
             validator=validators.Path(
@@ -202,7 +202,7 @@ def dmp_works_search_cmd(
     Args:
         dmp_index_name: the name of the DMP index in OpenSearch.
         works_index_name: the name of the works index in OpenSearch.
-        out_dir: the output directory where search results will be saved.
+        out_file: the output directory where search results will be saved.
         scroll_time: the length of time the OpenSearch scroll used to iterate
         through DMPs will stay active. Set it to a value greater than the length
         of this process.
@@ -228,7 +228,7 @@ def dmp_works_search_cmd(
     dmp_works_search(
         dmp_index_name,
         works_index_name,
-        out_dir,
+        out_file,
         client_config,
         scroll_time=scroll_time,
         batch_size=batch_size,
