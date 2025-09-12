@@ -26,16 +26,12 @@ def dmp_works_search(
     batch_size: int = 100,
     max_results: int = 100,
     project_end_buffer_years: int = 3,
-    parallel_search: bool = True,
-    include_named_queries_score: bool = False,
+    include_named_queries_score: bool = True,
     max_concurrent_searches: int = 125,
     max_concurrent_shard_requests: int = 12,
 ):
     client = make_opensearch_client(client_config)
     query = {"query": {"match_all": {}}}
-
-    if parallel_search and include_named_queries_score:
-        log.warning("Unable to use include_named_queries_score with msearch, query scores will not be returned.")
 
     def write_works(works: list[DMPWorksSearchResult], count: int):
         for work in works:
@@ -52,45 +48,37 @@ def dmp_works_search(
         ) as results:
             pbar.total = results.total_dmps
 
+            # Run queries in batches
             with jsonlines.open(out_file, mode='w') as writer:
                 batch = []
                 for dmp in results.dmps:
-                    if not parallel_search or include_named_queries_score:
-                        works = search_dmp_works(
+                    batch.append(dmp)
+                    if len(batch) >= batch_size:
+                        works = msearch_dmp_works(
                             client,
                             works_index_name,
-                            dmp,
+                            batch,
                             max_results=max_results,
                             project_end_buffer_years=project_end_buffer_years,
+                            max_concurrent_searches=max_concurrent_searches,
+                            max_concurrent_shard_requests=max_concurrent_shard_requests,
                             include_named_queries_score=include_named_queries_score,
                         )
-                        write_works(works, 1)
-                    else:
-                        batch.append(dmp)
-                        if len(batch) >= batch_size:
-                            works = msearch_dmp_works(
-                                client,
-                                works_index_name,
-                                batch,
-                                max_results=max_results,
-                                project_end_buffer_years=project_end_buffer_years,
-                                max_concurrent_searches=max_concurrent_searches,
-                                max_concurrent_shard_requests=max_concurrent_shard_requests,
-                            )
-                            write_works(works, len(batch))
-                            batch = []
+                        write_works(works, len(batch))
+                        batch = []
 
-                if parallel_search and batch:
-                    works = msearch_dmp_works(
-                        client,
-                        works_index_name,
-                        batch,
-                        max_results=max_results,
-                        project_end_buffer_years=project_end_buffer_years,
-                        max_concurrent_searches=max_concurrent_searches,
-                        max_concurrent_shard_requests=max_concurrent_shard_requests,
-                    )
-                    write_works(works, len(batch))
+            # Query last batch
+            works = msearch_dmp_works(
+                client,
+                works_index_name,
+                batch,
+                max_results=max_results,
+                project_end_buffer_years=project_end_buffer_years,
+                max_concurrent_searches=max_concurrent_searches,
+                max_concurrent_shard_requests=max_concurrent_shard_requests,
+                include_named_queries_score=include_named_queries_score,
+            )
+            write_works(works, len(batch))
 
 
 @dataclasses.dataclass
@@ -119,6 +107,7 @@ def msearch_dmp_works(
     project_end_buffer_years: int = 3,
     max_concurrent_searches: int = 125,
     max_concurrent_shard_requests: int = 12,
+    include_named_queries_score: bool = True,
 ) -> list[DMPWorksSearchResult]:
     # Execute searches
     body = []
@@ -131,6 +120,7 @@ def msearch_dmp_works(
         index=index_name,
         max_concurrent_searches=max_concurrent_searches,
         max_concurrent_shard_requests=max_concurrent_shard_requests,
+        include_named_queries_score=include_named_queries_score,
     )
 
     # Collate results
@@ -149,7 +139,7 @@ def search_dmp_works(
     dmp: DMPModel,
     max_results: int = 100,
     project_end_buffer_years: int = 3,
-    include_named_queries_score: bool = False,
+    include_named_queries_score: bool = True,
 ) -> list[DMPWorksSearchResult]:
     body = build_query(dmp, max_results, project_end_buffer_years)
     response = client.search(
