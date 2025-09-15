@@ -61,27 +61,32 @@
       "project_end": {
         "type": "date"
       },
-      "affiliation_rors": {
-        "type": "keyword",
-        "normalizer": "lowercase"
-      },
-      "affiliation_names": {
-        "type": "text",
-        "analyzer": "icu_analyzer",
-        "fields": {
-          "keyword": {
+      "institutions": {
+        "type": "nested",
+        "properties": {
+          "ror": {
             "type": "keyword",
-            "normalizer": "name_normalizer"
+            "normalizer": "lowercase"
+          },
+          "name": {
+            "type": "text",
+            "analyzer": "icu_analyzer",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "normalizer": "name_normalizer"
+              }
+            }
           }
         }
       },
-      "author_orcids": {
-        "type": "keyword",
-        "normalizer": "lowercase"
-      },
-      "author_names": {
+      "authors": {
         "type": "nested",
         "properties": {
+          "orcid": {
+            "type": "keyword",
+            "normalizer": "lowercase"
+          },
           "first_initial": {
             "type": "text",
             "analyzer": "icu_analyzer",

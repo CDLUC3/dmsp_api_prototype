@@ -56,6 +56,10 @@ def fetch_funded_dois(
         awards = [award_id]
         awards.extend(award_id.related_awards)
         for award in awards:
+            if award.appl_id is None:
+                log.debug(f"Skipping fetching works for {canonical_id} as appl_id is None")
+                continue
+
             log.debug(f"Fetch works for {canonical_id} with appl_id={award.appl_id}")
             results = nih_fetch_award_publication_dois(
                 award.appl_id,

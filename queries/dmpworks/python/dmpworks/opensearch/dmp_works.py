@@ -2,6 +2,7 @@ import dataclasses
 import json
 import logging
 import pathlib
+from typing import Callable, Optional
 
 import jsonlines
 from opensearchpy import OpenSearch
@@ -195,7 +196,7 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
     should = []
 
     # Funded DOIs
-    if len(dmp.funded_dois):
+    if dmp.funded_dois:
         should.append(
             {
                 "constant_score": {
@@ -223,7 +224,6 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
                     }
                 }
             )
-
         award_queries.append(
             {
                 "dis_max": {
@@ -246,184 +246,98 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
 
     # Authors
     # Combines author_orcids and author surnames into a single feature
-    # TODO: should be made to operate like funders
-    group = "authors"
-    should.append(
-        {
-            "bool": {
-                "_name": name_group(group),
-                "minimum_should_match": 1,
-                "should": [
-                    *[
-                        {
-                            "constant_score": {
-                                "_name": name_value(group, idx, "orcid", orcid),
-                                "boost": 2,
-                                "filter": {
-                                    "term": {
-                                        "author_orcids": {
-                                            "value": orcid,
-                                        },
-                                    },
-                                },
-                            }
-                        }
-                        for idx, orcid in enumerate(dmp.author_orcids)
-                    ],
-                    *[
-                        {
-                            "constant_score": {
-                                "_name": name_value(group, idx, "surname", surname),
-                                "boost": 1,
-                                "filter": {
-                                    "match_phrase": {
-                                        "author_names": {
-                                            "query": surname,
-                                        }
-                                    }
-                                },
-                            }
-                        }
-                        for idx, surname in enumerate(dmp.author_surnames)
-                    ],
-                ],
-            },
-        }
+    authors = build_entity_query(
+        "authors",
+        "author_orcids",
+        "author_names",
+        dmp.authors,
+        lambda author: author.orcid,
+        lambda author: author.surname,
     )
+    if authors is not None:
+        should.append(authors)
 
-    # Affiliations
+    # Institutions
     # Combines both affiliation_rors and affiliation_names into a single feature
-    # TODO: should be made to operate like funders
-    group = "affiliations"
-    should.append(
-        {
-            "bool": {
-                "_name": name_group(group),
-                "minimum_should_match": 1,
-                "should": [
-                    *[
-                        {
-                            "constant_score": {
-                                "_name": name_value(group, idx, "ror", ror),
-                                "boost": 2,
-                                "filter": {
-                                    "term": {
-                                        "affiliation_rors": {
-                                            "value": ror,
-                                        },
-                                    },
-                                },
-                            }
-                        }
-                        for idx, ror in enumerate(dmp.affiliation_rors)
-                    ],
-                    *[
-                        {
-                            "constant_score": {
-                                "_name": name_value(group, idx, "name", name),
-                                "filter": {
-                                    "match_phrase": {
-                                        "affiliation_names": {
-                                            "query": name,
-                                            "slop": 3,
-                                        },
-                                    },
-                                },
-                            }
-                        }
-                        for idx, name in enumerate(dmp.affiliation_names)
-                    ],
-                ],
-            },
-        }
+    institutions = build_entity_query(
+        "institutions",
+        "affiliation_rors",
+        "affiliation_names",
+        dmp.institutions,
+        lambda inst: inst.ror,
+        lambda inst: inst.name,
     )
+    if institutions is not None:
+        should.append(institutions)
 
     # Funders
     # Combines both funder_ids and funder_names into a single feature
-    group = "funders"
-    should.append(
-        {
-            "bool": {
-                "_name": name_group(group),
-                "minimum_should_match": 1,
-                "should": [
-                    *[
-                        {
-                            "dis_max": {
-                                "_name": name_entity(group, idx),
-                                "tie_breaker": 0,
-                                "queries": [
-                                    {
-                                        "constant_score": {
-                                            "_name": name_value(group, idx, "id", fund.funder.id),
-                                            "filter": {"term": {"funder_ids": fund.funder.id}},
-                                            "boost": 2,
-                                        }
-                                    },
-                                    {
-                                        "constant_score": {
-                                            "_name": name_value(group, idx, "name", fund.funder.name),
-                                            "filter": {
-                                                "match_phrase": {"funder_names": {"query": fund.funder.name, "slop": 3}}
-                                            },
-                                            "boost": 1,
-                                        }
-                                    },
-                                ],
-                            },
-                        }
-                        for idx, fund in enumerate(dmp.funding)
-                    ]
-                ],
-            }
-        }
+    funders = build_entity_query(
+        "funders",
+        "funder_ids",
+        "funder_names",
+        dmp.funding,
+        lambda fund: fund.funder.id,
+        lambda fund: fund.funder.name,
     )
+    if funders is not None:
+        should.append(funders)
 
     # Title and abstract
+    has_text = dmp.title is not None or dmp.abstract is not None
     content: str = " ".join([text for text in [dmp.title, dmp.abstract] if text is not None and text != ""])
-    should.append(
-        {
-            "more_like_this": {
-                "_name": name_group("content"),
-                "fields": ["title", "abstract"],
-                "like": content,
-                "min_term_freq": 1,
+    if has_text:
+        should.append(
+            {
+                "more_like_this": {
+                    "_name": name_group("content"),
+                    "fields": ["title", "abstract"],
+                    "like": content,
+                    "min_term_freq": 1,
+                }
             }
-        }
-    )
+        )
 
     # Final query and filter based on date range
     # also remove DMPs from search results (output-management-plan type)
-    gte = dmp.project_start.format("YYYY-MM-DD")
-    lte = dmp.project_end.add(years=project_end_buffer_years).format("YYYY-MM-DD")
+    filters = [
+        {
+            "bool": {
+                "must_not": {
+                    "term": {
+                        "type": "output-management-plan",
+                    }
+                }
+            },
+        }
+    ]
+    if dmp.project_start is not None:
+        gte = dmp.project_start.format("YYYY-MM-DD")
+        lte = dmp.project_end.add(years=project_end_buffer_years).format("YYYY-MM-DD")
+        filters.append(
+            {
+                "range": {
+                    "publication_date": {
+                        "gte": gte,
+                        "lte": lte,
+                    },
+                }
+            }
+        )
+
     query = {
         "size": max_results,
         "query": {
             "bool": {
                 "should": should,
-                "filter": [
-                    {
-                        "range": {
-                            "publication_date": {
-                                "gte": gte,
-                                "lte": lte,
-                            },
-                        }
-                    },
-                    {
-                        "bool": {
-                            "must_not": {
-                                "term": {
-                                    "type": "output-management-plan",
-                                }
-                            }
-                        },
-                    },
-                ],
+                "filter": filters,
                 "minimum_should_match": 1,
             },
         },
-        "highlight": {
+    }
+
+    if has_text:
+        query["highlight"] = {
             "pre_tags": ["<mark>"],
             "post_tags": ["</mark>"],
             "order": "score",
@@ -447,7 +361,66 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
                     "min_term_freq": 1,
                 }
             },
-        },
-    }
+        }
 
     return query
+
+
+def build_entity_query(
+    group_name: str,
+    id_field: str,
+    name_field: str,
+    items: list,
+    id_accessor: Callable,
+    name_accessor: Callable,
+) -> Optional[dict]:
+    should_queries = []
+
+    for idx, item in enumerate(items):
+        entity_queries = []
+        entity_id = id_accessor(item)
+        entity_name = name_accessor(item)
+
+        if entity_id is not None:
+            entity_queries.append(
+                {
+                    "constant_score": {
+                        "_name": name_value(group_name, idx, "id", entity_id),
+                        "filter": {"term": {id_field: entity_id}},
+                        "boost": 2,
+                    }
+                }
+            )
+
+        if entity_name is not None:
+            entity_queries.append(
+                {
+                    "constant_score": {
+                        "_name": name_value(group_name, idx, "name", entity_name),
+                        "filter": {"match_phrase": {name_field: {"query": entity_name, "slop": 3}}},
+                        "boost": 1,
+                    }
+                }
+            )
+
+        if entity_queries:
+            should_queries.append(
+                {
+                    "dis_max": {
+                        "_name": name_entity(group_name, idx),
+                        "tie_breaker": 0,
+                        "queries": entity_queries,
+                    },
+                }
+            )
+
+    if should_queries:
+        return {
+            "bool": {
+                "_name": name_group(group_name),
+                "minimum_should_match": 1,
+                "should": should_queries,
+            }
+        }
+
+    return None
