@@ -13,12 +13,7 @@ MODEL (
                                               'erratum', 'grant', 'letter', 'libguides', 'other', 'paratext', 'peer-review',
                                               'preprint', 'reference-entry', 'report', 'retraction', 'review', 'standard',
                                               'supplementary-materials'), blocking := false),
-    not_empty_string(column := container_title, blocking := false),
-    not_empty_string(column := volume, blocking := false),
-    not_empty_string(column := issue, blocking := false),
-    not_empty_string(column := page, blocking := false),
-    not_empty_string(column := publisher, blocking := false),
-    not_empty_string(column := publisher_location, blocking := false)
+    not_empty_string(column := publication_venue, blocking := false)
   )
 );
 

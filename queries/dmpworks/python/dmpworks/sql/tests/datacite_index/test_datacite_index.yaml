@@ -1,17 +1,37 @@
 test_datacite_index_datacite_index:
   model: datacite_index.datacite_index
   inputs:
-    datacite.works:
+    datacite_index.works:
       rows:
         - doi: "10.9999/test.0001"
           title: "Title 1"
           abstract: "Abstract 1"
           publication_date: "2024-01-01"
+          publication_venue: "Zenodo"
+          authors:
+            - first_initial: "I"
+              given_name: "Isaac"
+              middle_initials: null
+              middle_names: null
+              surname: "Newton"
+              full: "Isaac Newton"
+              orcid: "0000-0000-0000-0001"
         - doi: "10.9999/test.0002"
           title: "Title 2"
           abstract: "Abstract 2"
           publication_date: "2025-01-01"
+          publication_venue: "Zenodo"
+          authors:
+            - first_initial: "A"
+              given_name: "Albert"
+              middle_initials: null
+              middle_names: null
+              surname: "Einstein"
+              full: "Albert Einstein"
+              orcid: "0000-0000-0000-001X"
         - doi: "10.9999/test.0003"
+          publication_venue: null
+          authors: [ ]
     datacite_index.types:
       rows:
         - doi: "10.9999/test.0001"
@@ -24,48 +44,32 @@ test_datacite_index_datacite_index:
           updated_date: "2024-02-01 00:00:00"
         - doi: "10.9999/test.0002"
           updated_date: "2025-02-01 00:00:00"
-    datacite_index.affiliation_rors:
+    datacite_index.institutions:
       rows:
         - doi: "10.9999/test.0001"
-          affiliation_rors: ["027ka1x80"]
+          institutions:
+            - name: "National Aeronautics and Space Administration"
+              ror: "027ka1x80"
         - doi: "10.9999/test.0002"
-          affiliation_rors: ["01e41cf67"]
-    datacite_index.affiliation_names:
-      rows:
-        - doi: "10.9999/test.0001"
-          affiliation_names: ["National Aeronautics and Space Administration"]
-        - doi: "10.9999/test.0002"
-          affiliation_names: ["Los Alamos National Laboratory"]
-    datacite_index.author_names:
-      rows:
-        - doi: "10.9999/test.0001"
-          author_names: ["Isaac Newton"]
-        - doi: "10.9999/test.0002"
-          author_names: ["Albert Einstein"]
-    datacite_index.author_orcids:
-      rows:
-        - doi: "10.9999/test.0001"
-          author_orcids: ["0000-0000-0000-0001"]
-        - doi: "10.9999/test.0002"
-          author_orcids: ["0000-0000-0000-001X"]
+          institutions:
+            - name: "Los Alamos National Laboratory"
+              ror: "01e41cf67"
     datacite_index.award_ids:
       rows:
         - doi: "10.9999/test.0001"
-          award_ids: ["1"]
+          award_ids: [ "1" ]
         - doi: "10.9999/test.0002"
-          award_ids: ["2"]
-    datacite_index.funder_ids:
+          award_ids: [ "2" ]
+    datacite_index.funders:
       rows:
         - doi: "10.9999/test.0001"
-          funder_ids: ["021nxhr62"]
+          funders:
+            - name: "National Science Foundation"
+              ror: "021nxhr62"
         - doi: "10.9999/test.0002"
-          funder_ids: ["021nxhr62"]
-    datacite_index.funder_names:
-      rows:
-        - doi: "10.9999/test.0001"
-          funder_names: ["National Science Foundation"]
-        - doi: "10.9999/test.0002"
-          funder_names: ["National Science Foundation"]
+          funders:
+            - name: "National Science Foundation"
+              ror: "021nxhr62"
   outputs:
     query:
       rows:
@@ -75,38 +79,61 @@ test_datacite_index_datacite_index:
           type: "article"
           publication_date: "2024-01-01"
           updated_date: "2024-02-01 00:00:00"
-          affiliation_rors: ["027ka1x80"]
-          affiliation_names: ["National Aeronautics and Space Administration"]
-          author_names: ["Isaac Newton"]
-          author_orcids: ["0000-0000-0000-0001"]
-          award_ids: ["1"]
-          funder_ids: ["021nxhr62"]
-          funder_names: ["National Science Foundation"]
+          publication_venue: "Zenodo"
+          institutions:
+            - name: "National Aeronautics and Space Administration"
+              ror: "027ka1x80"
+          authors:
+            - first_initial: "I"
+              given_name: "Isaac"
+              middle_initials: null
+              middle_names: null
+              surname: "Newton"
+              full: "Isaac Newton"
+              orcid: "0000-0000-0000-0001"
+          funders:
+            - name: "National Science Foundation"
+              ror: "021nxhr62"
+          award_ids: [ "1" ]
+          source:
+            name: "DataCite"
+            url: "https://commons.datacite.org/doi.org/10.9999/test.0001"
         - doi: "10.9999/test.0002"
           title: "Title 2"
           abstract: "Abstract 2"
           type: "dataset"
           publication_date: "2025-01-01"
+          publication_venue: "Zenodo"
           updated_date: "2025-02-01 00:00:00"
-          affiliation_rors: ["01e41cf67"]
-          affiliation_names: ["Los Alamos National Laboratory"]
-          author_names: ["Albert Einstein"]
-          author_orcids: ["0000-0000-0000-001X"]
-          award_ids: ["2"]
-          funder_ids: ["021nxhr62"]
-          funder_names: ["National Science Foundation"]
+          institutions:
+            - name: "Los Alamos National Laboratory"
+              ror: "01e41cf67"
+          authors:
+            - first_initial: "A"
+              given_name: "Albert"
+              middle_initials: null
+              middle_names: null
+              surname: "Einstein"
+              full: "Albert Einstein"
+              orcid: "0000-0000-0000-001X"
+          funders:
+            - name: "National Science Foundation"
+              ror: "021nxhr62"
+          award_ids: [ "2" ]
+          source:
+            name: "DataCite"
+            url: "https://commons.datacite.org/doi.org/10.9999/test.0002"
         - doi: "10.9999/test.0003"
           title: null
           abstract: null
           type: "other"
           publication_date: null
           updated_date: null
-          affiliation_rors: []
-          affiliation_names: []
-          author_names: []
-          author_orcids: []
-          award_ids: []
-          funder_ids: []
-          funder_names: []
-
-
+          publication_venue: null
+          institutions: [ ]
+          authors: [ ]
+          funders: [ ]
+          award_ids: [ ]
+          source:
+            name: "DataCite"
+            url: "https://commons.datacite.org/doi.org/10.9999/test.0003"

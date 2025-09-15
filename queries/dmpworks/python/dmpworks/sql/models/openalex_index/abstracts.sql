@@ -8,7 +8,10 @@ MODEL (
   name openalex_index.abstracts,
   dialect duckdb,
   kind FULL,
-  enabled @VAR('include_abstracts')
+  audits (
+    unique_values(columns := (doi))
+  ),
+  enabled true
 );
 
 PRAGMA threads=CAST(@VAR('openalex_index_abstracts_threads') AS INT64);

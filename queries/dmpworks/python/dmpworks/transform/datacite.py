@@ -7,7 +7,6 @@ import polars as pl
 from dmpworks.transform.pipeline import process_files_parallel
 from dmpworks.transform.transforms import (
     extract_orcid,
-    make_page,
     normalise_identifier,
     remove_markup,
     replace_with_null,
@@ -79,15 +78,9 @@ SCHEMA: SchemaDefinition = {
             "container": pl.Struct(
                 {
                     "title": pl.String,
-                    "volume": pl.String,
-                    "issue": pl.String,
-                    "firstPage": pl.String,
-                    "lastPage": pl.String,
                 }
             ),
-            "publisher": pl.Struct({"name": pl.String}),
             "creators": pl.List(CREATOR_OR_CONTRIBUTOR),
-            # "contributors": pl.List(CREATOR_OR_CONTRIBUTOR),
             "fundingReferences": pl.List(
                 pl.Struct(
                     {
@@ -99,6 +92,11 @@ SCHEMA: SchemaDefinition = {
                     }
                 )
             ),
+            "publisher": pl.Struct(
+                {
+                    "name": pl.String,
+                }
+            ),
             "relatedIdentifiers": pl.List(  # https://support.datacite.org/docs/connecting-to-works
                 pl.Struct(
                     {"relationType": pl.String, "relatedIdentifier": pl.String, "relatedIdentifierType": pl.String}
@@ -107,6 +105,56 @@ SCHEMA: SchemaDefinition = {
         }
     ),
 }
+
+
+def process_author_name(given_name: pl.Expr, family_name: pl.Expr, name: pl.Expr) -> pl.Expr:
+    return (
+        pl.when(name.str.strip_chars().str.len_bytes() > 0)
+        .then(pe.parse_name(name))
+        .when((given_name.str.strip_chars().str.len_bytes() > 0) | (family_name.str.strip_chars().str.len_bytes() > 0))
+        .then(
+            pe.parse_name(
+                pl.concat_str(
+                    [given_name.str.strip_chars(), family_name.str.strip_chars()],
+                    separator=" ",
+                    ignore_nulls=True,
+                )
+            )
+        )
+        .otherwise(
+            pl.struct(
+                first_initial=pl.lit(None, dtype=pl.Utf8),
+                given_name=pl.lit(None, dtype=pl.Utf8),
+                middle_initials=pl.lit(None, dtype=pl.Utf8),
+                middle_names=pl.lit(None, dtype=pl.Utf8),
+                surname=pl.lit(None, dtype=pl.Utf8),
+                full=pl.lit(None, dtype=pl.Utf8),
+            )
+        )
+    )
+
+
+def process_orcid(expr: pl.Expr) -> pl.Expr:
+    name_identifiers = pe.parse_datacite_name_identifiers(
+        pl.coalesce(
+            expr,
+            pl.lit("", dtype=pl.Utf8),
+        )
+    )
+    first_match = (
+        pl.coalesce(name_identifiers, pl.lit([], dtype=NAME_IDENTIFIERS_SCHEMA))
+        .list.filter(pl.element().struct.field("nameIdentifierScheme").str.contains("(?i)orc"))
+        .list.first()
+    )
+    name_identifier = (
+        pl.when(first_match.is_not_null())
+        .then(
+            first_match.struct.field("nameIdentifier"),
+        )
+        .otherwise(pl.lit(None))
+    )
+
+    return extract_orcid(name_identifier)
 
 
 def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
@@ -132,59 +180,84 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         .struct.field("updated")
         .str.strptime(pl.Datetime, format="%Y-%m-%dT%H:%M:%SZ"),
         # E.g. 2025-01-01T00:00:01Z
-        container_title=pl.col("attributes").struct.field("container").struct.field("title"),
-        volume=pl.col("attributes").struct.field("container").struct.field("volume"),
-        issue=pl.col("attributes").struct.field("container").struct.field("issue"),
-        page=make_page(
-            pl.col("attributes").struct.field("container").struct.field("firstPage"),
-            pl.col("attributes").struct.field("container").struct.field("lastPage"),
-        ),
-        publisher=pl.col("attributes").struct.field("publisher").struct.field("name"),
-        publisher_location=None,
+        publication_venue=pl.col("attributes").struct.field("publisher").struct.field("name"),
+        authors=pl.col("attributes").struct.field("creators")
+        # Get all non institutional authors
+        .list.eval(pl.element().filter(pl.element().struct.field("nameType") == "Personal"))
+        .list.eval(
+            pl.struct(
+                [
+                    process_orcid(pl.element().struct.field("nameIdentifiers")).alias("orcid"),
+                    process_author_name(
+                        pl.element().struct.field("givenName"),
+                        pl.element().struct.field("familyName"),
+                        pl.element().struct.field("name"),
+                    ).struct.unnest(),
+                ]
+            )
+        )
+        .list.eval(
+            pl.element().filter(
+                pl.any_horizontal(
+                    [
+                        pl.element().struct.field(col).is_not_null()
+                        for col in [
+                            "orcid",
+                            "first_initial",
+                            "given_name",
+                            "middle_initials",
+                            "middle_names",
+                            "surname",
+                            "full",
+                        ]
+                    ]
+                )
+            )
+        )
+        .list.drop_nulls(),
+        funders=pl.col("attributes")
+        .struct.field("fundingReferences")
+        .list.eval(
+            pl.struct(
+                funder_identifier=normalise_identifier(pl.element().struct.field("funderIdentifier")),
+                funder_identifier_type=pl.element().struct.field("funderIdentifierType"),
+                funder_name=pl.element().struct.field("funderName"),
+                award_number=pl.element().struct.field("awardNumber"),
+                award_uri=pl.element().struct.field("awardUri"),
+            )
+        )
+        .list.eval(
+            pl.element().filter(
+                pl.any_horizontal(
+                    [
+                        pl.element().struct.field(col).is_not_null()
+                        for col in [
+                            "funder_identifier",
+                            "funder_identifier_type",
+                            "funder_name",
+                            "award_number",
+                            "award_uri",
+                        ]
+                    ]
+                )
+            )
+        )
+        .list.drop_nulls(),
     ).with_columns(
         title=replace_with_null(pl.col("title"), [""]),
         abstract=replace_with_null(pl.col("abstract"), ["", ":unav", "Cover title."]),
     )
 
-    # TODO: author order?
-    exploded_authors = (
+    institutions = (
         lz_cached.select(work_doi=pl.col("id"), creators=pl.col("attributes").struct.field("creators"))
         .explode("creators")
         .unnest("creators")
         .select(
             pl.col("work_doi"),
-            given_name=pl.col("givenName"),
-            family_name=pl.col("familyName"),
-            name=pl.col("name"),
             name_type=pl.col("nameType"),
             affiliation=pe.parse_datacite_affiliations(pl.col("affiliation")),
-            name_identifiers=pe.parse_datacite_name_identifiers(pl.col("nameIdentifiers")),
         )
-    )
-
-    # Build authors and clean their ORCID IDs
-    works_authors = (
-        exploded_authors.filter(pl.col("name_type") == "Personal")
-        .select(
-            pl.col("work_doi"),
-            pl.col("given_name"),
-            pl.col("family_name"),
-            pl.col("name"),
-            orcid=extract_orcid(
-                pl.col("name_identifiers")
-                .list.eval(
-                    pl.element().filter(pl.element().struct.field("nameIdentifierScheme").str.contains("(?i)orc"))
-                )
-                .list.first()
-                .struct.field("nameIdentifier")
-            ),
-        )
-        .filter(~pl.all_horizontal([pl.col(col).is_null() for col in ["given_name", "family_name", "name", "orcid"]]))
-    )
-
-    # Build works_affiliations using affiliation identifiers and organisation author name identifiers
-    affiliations = (
-        exploded_authors.select(pl.col("work_doi"), affiliation=pl.col("affiliation"))
+        .filter(pl.col("name_type") == "Personal")
         .explode("affiliation")
         .unnest("affiliation")
         .select(
@@ -193,66 +266,32 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
             affiliation_identifier_scheme=pl.col("affiliationIdentifierScheme"),
             name=pl.col("name"),
             scheme_uri=pl.col("schemeUri"),
-            source=pl.lit("PersonalAuthorAffiliation"),
         )
-    )
-    organisational_authors = (
-        exploded_authors.filter(pl.col("name_type") == "Organizational")
-        .select(pl.col("work_doi"), pl.col("name"), name_identifiers=pl.col("name_identifiers"))
-        .explode("name_identifiers")
-        .unnest("name_identifiers")
-        .select(
-            pl.col("work_doi"),
-            affiliation_identifier=normalise_identifier(pl.col("nameIdentifier")),
-            affiliation_identifier_scheme=pl.col("nameIdentifierScheme"),
-            name=pl.col("name"),
-            scheme_uri=pl.col("schemeUri"),
-            source=pl.lit("OrganisationalAuthor"),
-        )
-    )
-    works_affiliations = (
-        pl.concat([affiliations, organisational_authors])
-        .with_columns(name=replace_with_null(pl.col("name"), ["", "none", ":unkn"]))
         .filter(
-            ~pl.all_horizontal(
+            pl.any_horizontal(
                 [
-                    pl.col(col).is_null()
-                    for col in ["affiliation_identifier", "affiliation_identifier_scheme", "name", "scheme_uri"]
+                    pl.col(field).is_not_null()
+                    for field in ["affiliation_identifier", "affiliation_identifier_scheme", "name", "scheme_uri"]
                 ]
             )
         )
-        .unique()
+        .unique(maintain_order=True)
     )
-
-    # Build funders
-    works_funders = (
-        lz_cached.select(
-            work_doi=pl.col("id"), fundingReferences=pl.col("attributes").struct.field("fundingReferences")
-        )
-        .explode("fundingReferences")
-        .unnest("fundingReferences")
-        .select(
-            pl.col("work_doi"),
-            funder_identifier=normalise_identifier(pl.col("funderIdentifier")),
-            funder_identifier_type=pl.col("funderIdentifierType"),
-            funder_name=pl.col("funderName"),
-            award_number=pl.col("awardNumber"),
-            award_uri=pl.col("awardUri"),
-        )
-        .filter(
-            ~pl.all_horizontal(
-                [
-                    pl.col(col).is_null()
-                    for col in [
-                        "funder_identifier",
-                        "funder_identifier_type",
-                        "funder_name",
-                        "award_number",
-                        "award_uri",
-                    ]
-                ]
+    institutions_by_work = (
+        institutions.with_columns(
+            inst=pl.struct(
+                pl.col("affiliation_identifier"),
+                pl.col("affiliation_identifier_scheme"),
+                pl.col("name"),
+                pl.col("scheme_uri"),
             )
         )
+        .group_by("work_doi")
+        .agg(institutions=pl.col("inst").unique(maintain_order=True))
+    )
+    inst_dtype = institutions_by_work.collect_schema()["institutions"]
+    datacite_works = works.join(institutions_by_work, left_on="doi", right_on="work_doi", how="left").with_columns(
+        institutions=pl.col("institutions").fill_null(pl.lit([]).cast(inst_dtype))
     )
 
     # Build relations
@@ -277,10 +316,7 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
     )
 
     return [
-        ("datacite_works", works),
-        ("datacite_works_authors", works_authors),
-        ("datacite_works_affiliations", works_affiliations),
-        ("datacite_works_funders", works_funders),
+        ("datacite_works", datacite_works),
         ("datacite_works_relations", works_relations),
     ]
 

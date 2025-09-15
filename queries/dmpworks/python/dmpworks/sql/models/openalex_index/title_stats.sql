@@ -13,7 +13,11 @@
 MODEL (
   name openalex_index.title_stats,
   dialect duckdb,
-  kind FULL
+  kind FULL,
+  audits (
+    unique_values(columns := (id, doi))
+  ),
+  enabled true
 );
 
 PRAGMA threads=CAST(@VAR('default_threads') AS INT64);

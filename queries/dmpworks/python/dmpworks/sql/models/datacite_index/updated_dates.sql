@@ -7,7 +7,11 @@
 MODEL (
   name datacite_index.updated_dates,
   dialect duckdb,
-  kind FULL
+  kind FULL,
+  audits (
+    unique_values(columns := (doi))
+  ),
+  enabled true,
 );
 
 PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
@@ -18,7 +22,7 @@ SELECT
   MAX(updated_date) AS updated_date
 FROM (
   SELECT doi, updated_date
-  FROM datacite.works
+  FROM datacite_index.works
   WHERE updated_date IS NOT NULL
 
   UNION ALL
