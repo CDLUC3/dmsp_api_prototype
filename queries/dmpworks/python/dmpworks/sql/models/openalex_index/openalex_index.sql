@@ -28,13 +28,10 @@ SELECT
   COALESCE(openalex_index.types.type, 'other') AS type,
   openalex_index.publication_dates.publication_date,
   openalex_index.updated_dates.updated_date,
-  COALESCE(openalex_index.affiliation_rors.affiliation_rors, []) AS affiliation_rors,
-  COALESCE(openalex_index.affiliation_names.affiliation_names, []) AS affiliation_names,
-  COALESCE(openalex_index.author_names.author_names, []) AS author_names,
-  COALESCE(openalex_index.author_orcids.author_orcids, []) AS author_orcids,
+  openalex.works.institutions,
+  openalex.works.authors,
+  COALESCE(openalex_index.funders.funders, []) AS funders,
   COALESCE(openalex_index.award_ids.award_ids, []) AS award_ids,
-  COALESCE(openalex_index.funder_ids.funder_ids, []) AS funder_ids,
-  COALESCE(openalex_index.funder_names.funder_names, []) AS funder_names
 FROM dois
 LEFT JOIN openalex_index.titles ON dois.doi = openalex_index.titles.doi
 {% if var('include_abstracts') %}
@@ -43,12 +40,8 @@ LEFT JOIN openalex_index.abstracts ON dois.doi = openalex_index.abstracts.doi
 LEFT JOIN openalex_index.types ON dois.doi = openalex_index.types.doi
 LEFT JOIN openalex_index.publication_dates ON dois.doi = openalex_index.publication_dates.doi
 LEFT JOIN openalex_index.updated_dates ON dois.doi = openalex_index.updated_dates.doi
-LEFT JOIN openalex_index.affiliation_names ON dois.doi = openalex_index.affiliation_names.doi
-LEFT JOIN openalex_index.affiliation_rors ON dois.doi = openalex_index.affiliation_rors.doi
-LEFT JOIN openalex_index.author_names ON dois.doi = openalex_index.author_names.doi
-LEFT JOIN openalex_index.author_orcids ON dois.doi = openalex_index.author_orcids.doi
 LEFT JOIN openalex_index.award_ids ON dois.doi = openalex_index.award_ids.doi
-LEFT JOIN openalex_index.funder_ids ON dois.doi = openalex_index.funder_ids.doi
-LEFT JOIN openalex_index.funder_names ON dois.doi = openalex_index.funder_names.doi;
+LEFT JOIN openalex_index.funders ON dois.doi = openalex_index.funders.doi
+-- TODO: join with openalex works
 
 JINJA_END;
