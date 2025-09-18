@@ -7,7 +7,6 @@ import polars as pl
 from dmpworks.transform.pipeline import process_files_parallel
 from dmpworks.transform.transforms import (
     extract_orcid,
-    make_page,
     normalise_identifier,
     remove_markup,
     replace_with_null,
@@ -79,15 +78,9 @@ SCHEMA: SchemaDefinition = {
             "container": pl.Struct(
                 {
                     "title": pl.String,
-                    # "volume": pl.String,
-                    # "issue": pl.String,
-                    # "firstPage": pl.String,
-                    # "lastPage": pl.String,
                 }
             ),
-            # "publisher": pl.Struct({"name": pl.String}),
             "creators": pl.List(CREATOR_OR_CONTRIBUTOR),
-            # "contributors": pl.List(CREATOR_OR_CONTRIBUTOR),
             "fundingReferences": pl.List(
                 pl.Struct(
                     {
@@ -107,6 +100,56 @@ SCHEMA: SchemaDefinition = {
         }
     ),
 }
+
+
+def process_author_name(given_name: pl.Expr, family_name: pl.Expr, name: pl.Expr) -> pl.Expr:
+    return (
+        pl.when(name.str.strip_chars().str.len_bytes() > 0)
+        .then(pe.parse_name(name))
+        .when((given_name.str.strip_chars().str.len_bytes() > 0) | (family_name.str.strip_chars().str.len_bytes() > 0))
+        .then(
+            pe.parse_name(
+                pl.concat_str(
+                    [given_name.str.strip_chars(), family_name.str.strip_chars()],
+                    separator=" ",
+                    ignore_nulls=True,
+                )
+            )
+        )
+        .otherwise(
+            pl.struct(
+                first_initial=pl.lit(None, dtype=pl.Utf8),
+                given_name=pl.lit(None, dtype=pl.Utf8),
+                middle_initials=pl.lit(None, dtype=pl.Utf8),
+                middle_names=pl.lit(None, dtype=pl.Utf8),
+                surname=pl.lit(None, dtype=pl.Utf8),
+                full=pl.lit(None, dtype=pl.Utf8),
+            )
+        )
+    )
+
+
+def process_orcid(expr: pl.Expr) -> pl.Expr:
+    name_identifiers = pe.parse_datacite_name_identifiers(
+        pl.coalesce(
+            expr,
+            pl.lit("", dtype=pl.Utf8),
+        )
+    )
+    first_match = (
+        pl.coalesce(name_identifiers, pl.lit([], dtype=NAME_IDENTIFIERS_SCHEMA))
+        .list.filter(pl.element().struct.field("nameIdentifierScheme").str.contains("(?i)orc"))
+        .list.first()
+    )
+    name_identifier = (
+        pl.when(first_match.is_not_null())
+        .then(
+            first_match.struct.field("nameIdentifier"),
+        )
+        .otherwise(pl.lit(None))
+    )
+
+    return extract_orcid(name_identifier)
 
 
 def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
@@ -135,40 +178,17 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         container_title=pl.col("attributes").struct.field("container").struct.field("title"),
         authors=pl.col("attributes").struct.field("creators")
         # Get all non institutional authors
-        # TODO: process names with name parser
         .list.eval(pl.element().filter(pl.element().struct.field("nameType") == "Personal"))
-        # .list.eval(
-        #     pl.struct(
-        #         given_name=pl.element().struct.field("givenName"),
-        #         family_name=pl.element().struct.field("familyName"),
-        #         name=pl.element().struct.field("name"),
-        #         orcid=extract_orcid(
-        #             pe.parse_datacite_name_identifiers(pl.element().struct.field("nameIdentifiers"))
-        #             .list.eval(
-        #                 pl.when(pl.element().struct.field("nameIdentifierScheme").str.contains("(?i)orc"))
-        #                 .then(pl.element().struct.field("nameIdentifier"))
-        #                 .otherwise(None)
-        #             )
-        #             .list.drop_nulls()
-        #             .list.first()
-        #         ),
-        #     )
-        # )
         .list.eval(
             pl.struct(
-                given_name=pl.element().struct.field("givenName"),
-                family_name=pl.element().struct.field("familyName"),
-                name=pl.element().struct.field("name"),
-                orcid=extract_orcid(
-                    pe.parse_datacite_name_identifiers(pl.lit("[]"))
-                    .list.eval(
-                        pl.when(pl.element().struct.field("nameIdentifierScheme").str.contains("(?i)orc"))
-                        .then(pl.element().struct.field("nameIdentifier"))
-                        .otherwise(None)
-                    )
-                    .list.drop_nulls()
-                    .list.first()
-                ),
+                [
+                    process_orcid(pl.element().struct.field("nameIdentifiers")).alias("orcid"),
+                    process_author_name(
+                        pl.element().struct.field("givenName"),
+                        pl.element().struct.field("familyName"),
+                        pl.element().struct.field("name"),
+                    ).struct.unnest(),
+                ]
             )
         )
         .list.eval(
@@ -176,7 +196,15 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
                 pl.any_horizontal(
                     [
                         pl.element().struct.field(col).is_not_null()
-                        for col in ["given_name", "family_name", "name", "orcid"]
+                        for col in [
+                            "orcid",
+                            "first_initial",
+                            "given_name",
+                            "middle_initials",
+                            "middle_names",
+                            "surname",
+                            "full",
+                        ]
                     ]
                 )
             )
