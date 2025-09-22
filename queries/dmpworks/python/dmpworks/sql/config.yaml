@@ -34,7 +34,6 @@ variables:
   openalex_index_abstracts_threads: 32
   openalex_index_titles_threads: 32
   openalex_index_openalex_index_threads: 32
-  include_abstracts: true
 
 default_gateway: duckdb
 

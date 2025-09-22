@@ -1,7 +1,7 @@
 test_datacite_index_types:
   model: datacite_index.types
   inputs:
-    datacite.works:
+    datacite_index.works:
       rows:
         - doi: "10.9999/test.0001"
           type: "Audiovisual"

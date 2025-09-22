@@ -1,7 +1,7 @@
 test_datacite_index_updated_dates:
   model: datacite_index.updated_dates
   inputs:
-    datacite.works:
+    datacite_index.works:
       rows:
         - doi: "10.9999/test.0001"
           updated_date: "2025-01-01 00:00:00"
@@ -24,4 +24,3 @@ test_datacite_index_updated_dates:
           updated_date: "2025-02-01 00:00:00"
         - doi: "10.9999/test.0002"
           updated_date: "2018-01-01 00:00:00"
-

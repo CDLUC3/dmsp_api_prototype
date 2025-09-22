@@ -8,7 +8,11 @@
 MODEL (
   name datacite_index.award_ids,
   dialect duckdb,
-  kind FULL
+  kind FULL,
+  audits (
+    unique_values(columns := (doi))
+  ),
+  enabled true
 );
 
 PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
@@ -18,16 +22,16 @@ SELECT
   @array_agg_distinct(award_id) AS award_ids,
 FROM (
   -- DataCite
-  SELECT work_doi AS doi, award_number AS award_id
-  FROM datacite.works_funders
-  WHERE award_number IS NOT NULL
+  SELECT doi, funder.award_number AS award_id
+  FROM datacite_index.works, UNNEST(funders) AS item(funder)
+  WHERE funder.award_number IS NOT NULL
 
   UNION ALL
 
   -- OpenAlex
-  SELECT doi, award_id
-  FROM datacite.works dw
-  INNER JOIN openalex.works_funders owf ON dw.doi = owf.work_doi
-  WHERE award_id IS NOT NULL
+  SELECT dw.doi, fund.award_id
+  FROM datacite_index.works dw
+  INNER JOIN openalex.works ow ON dw.doi = ow.doi, UNNEST(ow.grants) AS item(fund)
+  WHERE fund.award_id IS NOT NULL
 )
 GROUP BY doi;

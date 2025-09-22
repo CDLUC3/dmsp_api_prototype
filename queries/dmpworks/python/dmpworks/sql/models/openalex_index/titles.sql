@@ -7,7 +7,11 @@
 MODEL (
   name openalex_index.titles,
   dialect duckdb,
-  kind FULL
+  kind FULL,
+  audits (
+    unique_values(columns := (doi))
+  ),
+  enabled true
 );
 
 PRAGMA threads=CAST(@VAR('openalex_index_titles_threads') AS INT64);

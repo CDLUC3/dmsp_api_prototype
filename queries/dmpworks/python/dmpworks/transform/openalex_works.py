@@ -5,7 +5,7 @@ import pathlib
 import dmpworks.polars_expr_plugin as pe
 import polars as pl
 from dmpworks.transform.pipeline import process_files_parallel
-from dmpworks.transform.transforms import clean_string, make_page, normalise_identifier
+from dmpworks.transform.transforms import clean_string, normalise_identifier
 from dmpworks.transform.utils_file import read_jsonls
 from polars._typing import SchemaDefinition
 
@@ -70,14 +70,6 @@ WORKS_SCHEMA: SchemaDefinition = {
             )
         }
     ),
-    "biblio": pl.Struct(  # https://docs.openalex.org/api-entities/works/work-object#biblio
-        {
-            "volume": pl.String,
-            "issue": pl.String,
-            "first_page": pl.String,
-            "last_page": pl.String,
-        }
-    ),
 }
 
 
@@ -99,78 +91,104 @@ def transform_works(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         type=pl.col("type"),
         publication_date=pl.col("publication_date"),  # e.g. 2014-06-04
         updated_date=pl.col("updated_date"),  # e.g. 025-02-27T06:49:42.321119
-        container_title=pl.col("primary_location").struct.field("source").struct.field("display_name"),
-        volume=pl.col("biblio").struct.field("volume"),
-        issue=pl.col("biblio").struct.field("issue"),
-        page=make_page(
-            pl.col("biblio").struct.field("first_page"),
-            pl.col("biblio").struct.field("last_page"),
-        ),
-        publisher=pl.col("primary_location").struct.field("source").struct.field("publisher"),
-        publisher_location=None,
+        publication_venue=pl.col("primary_location").struct.field("source").struct.field("display_name"),
+        authors=pl.col("authorships")
+        .list.eval(
+            pl.struct(
+                [
+                    normalise_identifier(pl.element().struct.field("author").struct.field("id")).alias("author_id"),
+                    pe.parse_name(pl.element().struct.field("author").struct.field("display_name")).struct.unnest(),
+                    normalise_identifier(pl.element().struct.field("author").struct.field("orcid")).alias("orcid"),
+                ]
+            )
+        )
+        .list.eval(
+            pl.element().filter(
+                pl.any_horizontal(
+                    [
+                        pl.element().struct.field(field).is_not_null()
+                        for field in [
+                            "author_id",
+                            "first_initial",
+                            "given_name",
+                            "middle_initials",
+                            "middle_names",
+                            "surname",
+                            "full",
+                            "orcid",
+                        ]
+                    ]
+                )
+            )
+        )
+        .list.drop_nulls(),
+        grants=pl.col("grants")
+        .list.eval(
+            pl.struct(
+                funder_id=normalise_identifier(pl.element().struct.field("funder")),
+                funder_display_name=pl.element().struct.field("funder_display_name"),
+                award_id=pl.element().struct.field("award_id"),
+            )
+        )
+        .list.eval(
+            pl.element().filter(
+                pl.any_horizontal(
+                    [
+                        pl.element().struct.field(field).is_not_null()
+                        for field in [
+                            "funder_id",
+                            "funder_display_name",
+                            "award_id",
+                        ]
+                    ]
+                )
+            )
+        )
+        .list.drop_nulls(),
     )
 
-    exploded_authors = (
+    institutions = (
         lz_cached.select(
             work_id=normalise_identifier(pl.col("id")),
-            work_doi=normalise_identifier(pl.col("doi")),
             authorships=pl.col("authorships"),
         )
         .explode("authorships")
         .unnest("authorships")
-    )
-    works_authors = exploded_authors.select(
-        pl.col("work_id"),
-        pl.col("work_doi"),
-        author_id=normalise_identifier(pl.col("author").struct.field("id")),
-        display_name=pl.col("author").struct.field("display_name"),
-        orcid=normalise_identifier(pl.col("author").struct.field("orcid")),
-    ).unique()
-    # TODO: author order?
-    # TODO: alternate author names?
-
-    works_affiliations = (
-        exploded_authors.select(
-            pl.col("work_id"),
-            pl.col("work_doi"),
-            institutions=pl.col("institutions"),
-        )
         .explode("institutions")
         .unnest("institutions")
         .select(
             pl.col("work_id"),
-            pl.col("work_doi"),
             institution_id=normalise_identifier(pl.col("id")),
             display_name=pl.col("display_name"),
             type=pl.col("type"),
             ror=normalise_identifier(pl.col("ror")),
         )
-        .unique()
+        .filter(
+            pl.any_horizontal(
+                [pl.col(field).is_not_null() for field in ["institution_id", "display_name", "type", "ror"]]
+            )
+        )
+        .unique(maintain_order=True)
     )
-
-    works_funders = (
-        lz_cached.select(
-            work_id=normalise_identifier(pl.col("id")),
-            work_doi=normalise_identifier(pl.col("doi")),
-            grants=pl.col("grants"),
+    institutions_by_work = (
+        institutions.with_columns(
+            inst=pl.struct(
+                pl.col("institution_id"),
+                pl.col("display_name"),
+                pl.col("type"),
+                pl.col("ror"),
+            )
         )
-        .explode("grants")
-        .unnest("grants")
-        .select(
-            pl.col("work_id"),
-            pl.col("work_doi"),
-            funder_id=normalise_identifier(pl.col("funder")),
-            funder_display_name=pl.col("funder_display_name"),
-            award_id=pl.col("award_id"),
-        )
-        .unique()
+        .group_by("work_id")
+        .agg(institutions=pl.col("inst").unique(maintain_order=True))
+    )
+    inst_dtype = institutions_by_work.collect_schema()["institutions"]
+    openalex_works = works.join(institutions_by_work, left_on="id", right_on="work_id", how="left").with_columns(
+        institutions=pl.col("institutions").fill_null(pl.lit([]).cast(inst_dtype))
     )
 
     return [
-        ("openalex_works", works),
-        ("openalex_works_authors", works_authors),
-        ("openalex_works_affiliations", works_affiliations),
-        ("openalex_works_funders", works_funders),
+        ("openalex_works", openalex_works),
     ]
 
 

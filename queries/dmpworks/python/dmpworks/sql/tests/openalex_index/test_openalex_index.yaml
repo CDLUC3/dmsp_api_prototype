@@ -5,12 +5,74 @@ test_openalex_index_openalex_index:
       rows:
         - id: "W0000000001"
           doi: "10.9999/test.0001"
+          is_primary_doi: true
         - id: "W0000000002"
           doi: "10.9999/test.0002"
+          is_primary_doi: true
         - id: "W0000000003"
           doi: "10.9999/test.0003"
+          is_primary_doi: false
         - id: "W0000000004"
           doi: "10.9999/test.0003"
+          is_primary_doi: true
+    openalex.works:
+      rows:
+        - id: "W0000000001"
+          doi: "10.9999/test.0001"
+          type: "article"
+          publication_date: "2024-01-01"
+          publication_venue: "Physics"
+          institutions:
+            - name: "National Aeronautics and Space Administration"
+              ror: "027ka1x80"
+          authors:
+            - first_initial: "I"
+              given_name: "Isaac"
+              middle_initials: null
+              middle_names: null
+              surname: "Newton"
+              full: "Isaac Newton"
+              orcid: "0000-0000-0000-0001"
+        - id: "W0000000002"
+          doi: "10.9999/test.0002"
+          type: "dataset"
+          publication_date: "2025-01-01"
+          publication_venue: "Physics"
+          institutions:
+            - name: "Los Alamos National Laboratory"
+              ror: "01e41cf67"
+          authors:
+            - first_initial: "A"
+              given_name: "Albert"
+              middle_initials: null
+              middle_names: null
+              surname: "Einstein"
+              full: "Albert Einstein"
+              orcid: "0000-0000-0000-001X"
+        - id: "W0000000003"
+          doi: "10.9999/test.0003"
+          type: "dataset"
+          publication_date: "2025-01-02"
+          publication_venue: null
+          institutions: [ ]
+          authors: [ ]
+        - id: "W0000000004"
+          doi: "10.9999/test.0003"
+          type: null
+          publication_date: "2025-01-03"
+          publication_venue: null
+          institutions:
+            - name: "Los Alamos National Laboratory"
+              ror: "01e41cf67"
+          authors:
+            - first_initial: "A"
+              given_name: "Albert"
+              middle_initials: null
+              middle_names: null
+              surname: "Einstein"
+              full: "Albert Einstein"
+              orcid: "0000-0000-0000-001X"
+
     openalex_index.titles:
       rows:
         - doi: "10.9999/test.0001"
@@ -23,66 +85,35 @@ test_openalex_index_openalex_index:
           abstract: "Abstract 1"
         - doi: "10.9999/test.0002"
           abstract: "Abstract 2"
-    openalex_index.types:
-      rows:
-        - doi: "10.9999/test.0001"
-          type: "article"
-        - doi: "10.9999/test.0002"
-          type: "dataset"
-    openalex_index.publication_dates:
-      rows:
-        - doi: "10.9999/test.0001"
-          publication_date: "2024-01-01"
-        - doi: "10.9999/test.0002"
-          publication_date: "2025-01-01"
     openalex_index.updated_dates:
       rows:
         - doi: "10.9999/test.0001"
           updated_date: "2024-02-01 00:00:00"
         - doi: "10.9999/test.0002"
           updated_date: "2025-02-01 00:00:00"
-    openalex_index.affiliation_rors:
+    openalex_index.funders:
       rows:
-        - doi: "10.9999/test.0001"
-          affiliation_rors: ["027ka1x80"]
-        - doi: "10.9999/test.0002"
-          affiliation_rors: ["01e41cf67"]
-    openalex_index.affiliation_names:
-      rows:
-        - doi: "10.9999/test.0001"
-          affiliation_names: ["National Aeronautics and Space Administration"]
-        - doi: "10.9999/test.0002"
-          affiliation_names: ["Los Alamos National Laboratory"]
-    openalex_index.author_names:
-      rows:
-        - doi: "10.9999/test.0001"
-          author_names: ["Isaac Newton"]
-        - doi: "10.9999/test.0002"
-          author_names: ["Albert Einstein"]
-    openalex_index.author_orcids:
-      rows:
-        - doi: "10.9999/test.0001"
-          author_orcids: ["0000-0000-0000-0001"]
-        - doi: "10.9999/test.0002"
-          author_orcids: ["0000-0000-0000-001X"]
+        - id: "W0000000001"
+          doi: "10.9999/test.0001"
+          funders:
+            - name: "National Science Foundation"
+              ror: "021nxhr62"
+        - id: "W0000000002"
+          doi: "10.9999/test.0002"
+          funders:
+            - name: "National Science Foundation"
+              ror: "021nxhr62"
+        - id: "W0000000004"
+          doi: "10.9999/test.0003"
+          funders:
+            - name: "National Science Foundation"
+              ror: "021nxhr62"
     openalex_index.award_ids:
       rows:
         - doi: "10.9999/test.0001"
-          award_ids: ["1"]
+          award_ids: [ "1" ]
         - doi: "10.9999/test.0002"
-          award_ids: ["2"]
-    openalex_index.funder_ids:
-      rows:
-        - doi: "10.9999/test.0001"
-          funder_ids: ["021nxhr62"]
-        - doi: "10.9999/test.0002"
-          funder_ids: ["021nxhr62"]
-    openalex_index.funder_names:
-      rows:
-        - doi: "10.9999/test.0001"
-          funder_names: ["National Science Foundation"]
-        - doi: "10.9999/test.0002"
-          funder_names: ["National Science Foundation"]
+          award_ids: [ "2" ]
   outputs:
     query:
       rows:
@@ -92,38 +123,74 @@ test_openalex_index_openalex_index:
           type: "article"
           publication_date: "2024-01-01"
           updated_date: "2024-02-01 00:00:00"
-          affiliation_rors: ["027ka1x80"]
-          affiliation_names: ["National Aeronautics and Space Administration"]
-          author_names: ["Isaac Newton"]
-          author_orcids: ["0000-0000-0000-0001"]
-          award_ids: ["1"]
-          funder_ids: ["021nxhr62"]
-          funder_names: ["National Science Foundation"]
+          publication_venue: "Physics"
+          institutions:
+            - name: "National Aeronautics and Space Administration"
+              ror: "027ka1x80"
+          authors:
+            - first_initial: "I"
+              given_name: "Isaac"
+              middle_initials: null
+              middle_names: null
+              surname: "Newton"
+              full: "Isaac Newton"
+              orcid: "0000-0000-0000-0001"
+          funders:
+            - name: "National Science Foundation"
+              ror: "021nxhr62"
+          award_ids: [ "1" ]
+          source:
+            name: "OpenAlex"
+            url: "https://openalex.org/works/W0000000001"
         - doi: "10.9999/test.0002"
           title: "Title 2"
           abstract: "Abstract 2"
           type: "dataset"
           publication_date: "2025-01-01"
           updated_date: "2025-02-01 00:00:00"
-          affiliation_rors: ["01e41cf67"]
-          affiliation_names: ["Los Alamos National Laboratory"]
-          author_names: ["Albert Einstein"]
-          author_orcids: ["0000-0000-0000-001X"]
-          award_ids: ["2"]
-          funder_ids: ["021nxhr62"]
-          funder_names: ["National Science Foundation"]
+          publication_venue: "Physics"
+          institutions:
+            - name: "Los Alamos National Laboratory"
+              ror: "01e41cf67"
+          authors:
+            - first_initial: "A"
+              given_name: "Albert"
+              middle_initials: null
+              middle_names: null
+              surname: "Einstein"
+              full: "Albert Einstein"
+              orcid: "0000-0000-0000-001X"
+          funders:
+            - name: "National Science Foundation"
+              ror: "021nxhr62"
+          award_ids: [ "2" ]
+          source:
+            name: "OpenAlex"
+            url: "https://openalex.org/works/W0000000002"
         - doi: "10.9999/test.0003"
           title: null
           abstract: null
           type: "other"
-          publication_date: null
+          publication_date: "2025-01-03"
           updated_date: null
-          affiliation_rors: []
-          affiliation_names: []
-          author_names: []
-          author_orcids: []
-          award_ids: []
-          funder_ids: []
-          funder_names: []
+          publication_venue: null
+          institutions:
+            - name: "Los Alamos National Laboratory"
+              ror: "01e41cf67"
+          authors:
+            - first_initial: "A"
+              given_name: "Albert"
+              middle_initials: null
+              middle_names: null
+              surname: "Einstein"
+              full: "Albert Einstein"
+              orcid: "0000-0000-0000-001X"
+          funders:
+            - name: "National Science Foundation"
+              ror: "021nxhr62"
+          award_ids: [ ]
+          source:
+            name: "OpenAlex"
+            url: "https://openalex.org/works/W0000000004"
 
 

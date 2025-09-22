@@ -15,12 +15,7 @@ MODEL (
                                              'Model', 'Other', 'OutputManagementPlan', 'PeerReview', 'PhysicalObject',
                                              'Preprint', 'Project', 'Report', 'Service', 'Software', 'Sound', 'Standard',
                                              'StudyRegistration', 'Text', 'Workflow'), blocking := false),
-    not_empty_string(column := container_title, blocking := false),
-    not_empty_string(column := volume, blocking := false),
-    not_empty_string(column := issue, blocking := false),
-    not_empty_string(column := page, blocking := false),
-    not_empty_string(column := publisher, blocking := false),
-    not_empty_string(column := publisher_location, blocking := false)
+    not_empty_string(column := publication_venue, blocking := false),
   )
 );
 

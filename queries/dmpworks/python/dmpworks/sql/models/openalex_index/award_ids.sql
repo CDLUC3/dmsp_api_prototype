@@ -10,7 +10,11 @@
 MODEL (
   name openalex_index.award_ids,
   dialect duckdb,
-  kind FULL
+  kind FULL,
+  audits (
+    unique_values(columns := (doi))
+  ),
+  enabled true
 );
 
 PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
@@ -20,10 +24,10 @@ SELECT
   @array_agg_distinct(award_id) AS award_ids
 FROM (
   -- OpenAlex
-  SELECT owm.id, owm.doi, award_id
+  SELECT owm.id, owm.doi, grnt.award_id
   FROM openalex_index.works_metadata AS owm
-  INNER JOIN openalex.works_funders ON owm.id = work_id
-  WHERE award_id IS NOT NULL
+  INNER JOIN openalex.works works ON owm.id = works.id, UNNEST(works.grants) AS item(grnt)
+  WHERE grnt.award_id IS NOT NULL
 
   UNION ALL
 

@@ -8,7 +8,11 @@
 MODEL (
   name datacite_index.types,
   dialect duckdb,
-  kind FULL
+  kind FULL,
+  audits (
+    unique_values(columns := (doi))
+  ),
+  enabled true
 );
 
 PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
@@ -56,5 +60,5 @@ WITH type_map AS (
 SELECT
   doi,
   type_map.normalized_type AS type
-FROM datacite.works dw
+FROM datacite_index.works dw
 INNER JOIN type_map ON dw.type = type_map.original_type;
