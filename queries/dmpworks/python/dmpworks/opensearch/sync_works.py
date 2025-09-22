@@ -18,13 +18,11 @@ COLUMNS = [
     "type",
     "publication_date",
     "updated_date",
-    "affiliation_rors",
-    "affiliation_names",
-    "author_names",
-    "author_orcids",
+    "publication_venue",
+    "institutions",
+    "authors",
+    "funders",
     "award_ids",
-    "funder_ids",
-    "funder_names",
     "source",
 ]
 
