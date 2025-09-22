@@ -15,8 +15,6 @@ MODEL (
                                              'Model', 'Other', 'OutputManagementPlan', 'PeerReview', 'PhysicalObject',
                                              'Preprint', 'Project', 'Report', 'Service', 'Software', 'Sound', 'Standard',
                                              'StudyRegistration', 'Text', 'Workflow'), blocking := false),
-    -- publication date
-    -- update date
     not_empty_string(column := publication_venue, blocking := false),
   )
 );
