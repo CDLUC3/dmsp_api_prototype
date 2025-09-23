@@ -77,6 +77,7 @@ def dmp_works_search(
                                 project_end_buffer_years=project_end_buffer_years,
                                 max_concurrent_searches=max_concurrent_searches,
                                 max_concurrent_shard_requests=max_concurrent_shard_requests,
+                                include_named_queries_score=include_named_queries_score,
                             )
                             write_works(works, len(batch))
                             batch = []
@@ -245,11 +246,10 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
         )
 
     # Authors
-    # Combines author_orcids and author surnames into a single feature
     authors = build_entity_query(
         "authors",
-        "author_orcids",
-        "author_names",
+        "authors.orcid",
+        "authors.full",
         dmp.authors,
         lambda author: author.orcid,
         lambda author: author.surname,
@@ -258,11 +258,10 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
         should.append(authors)
 
     # Institutions
-    # Combines both affiliation_rors and affiliation_names into a single feature
     institutions = build_entity_query(
         "institutions",
-        "affiliation_rors",
-        "affiliation_names",
+        "institutions.ror",
+        "institutions.name",
         dmp.institutions,
         lambda inst: inst.ror,
         lambda inst: inst.name,
@@ -271,13 +270,12 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
         should.append(institutions)
 
     # Funders
-    # Combines both funder_ids and funder_names into a single feature
     funders = build_entity_query(
         "funders",
-        "funder_ids",
-        "funder_names",
+        "funders.ror",
+        "funders.name",
         dmp.funding,
-        lambda fund: fund.funder.id,
+        lambda fund: fund.funder.ror,
         lambda fund: fund.funder.name,
     )
     if funders is not None:
@@ -367,14 +365,14 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
 
 
 def build_entity_query(
-    group_name: str,
+    path: str,
     id_field: str,
     name_field: str,
     items: list,
     id_accessor: Callable,
     name_accessor: Callable,
 ) -> Optional[dict]:
-    should_queries = []
+    query = None
 
     for idx, item in enumerate(items):
         entity_queries = []
@@ -385,7 +383,7 @@ def build_entity_query(
             entity_queries.append(
                 {
                     "constant_score": {
-                        "_name": name_value(group_name, idx, "id", entity_id),
+                        "_name": name_value(path, idx, "id", entity_id),
                         "filter": {"term": {id_field: entity_id}},
                         "boost": 2,
                     }
@@ -396,7 +394,7 @@ def build_entity_query(
             entity_queries.append(
                 {
                     "constant_score": {
-                        "_name": name_value(group_name, idx, "name", entity_name),
+                        "_name": name_value(path, idx, "name", entity_name),
                         "filter": {"match_phrase": {name_field: {"query": entity_name, "slop": 3}}},
                         "boost": 1,
                     }
@@ -404,23 +402,22 @@ def build_entity_query(
             )
 
         if entity_queries:
-            should_queries.append(
-                {
-                    "dis_max": {
-                        "_name": name_entity(group_name, idx),
-                        "tie_breaker": 0,
-                        "queries": entity_queries,
-                    },
-                }
-            )
-
-    if should_queries:
-        return {
-            "bool": {
-                "_name": name_group(group_name),
-                "minimum_should_match": 1,
-                "should": should_queries,
+            query = {
+                "dis_max": {
+                    "_name": name_entity(path, idx),
+                    "tie_breaker": 0,
+                    "queries": entity_queries,
+                },
             }
+
+    if query:
+        return {
+            "nested": {
+                "_name": name_group(path),
+                "path": path,
+                "query": query,
+                "inner_hits": {"name": path},
+            },
         }
 
     return None

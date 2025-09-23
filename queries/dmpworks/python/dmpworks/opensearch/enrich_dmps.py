@@ -71,8 +71,8 @@ def enrich_dmps(
                 for fund in dmp.funding:
                     # Parse Award IDs, which can be found in both funding_opportunity_id
                     # and award_id
-                    award_ids = parse_award_text(fund.funder.id, fund.funding_opportunity_id)
-                    award_ids.extend(parse_award_text(fund.funder.id, fund.award_id))
+                    award_ids = parse_award_text(fund.funder.ror, fund.funding_opportunity_id)
+                    award_ids.extend(parse_award_text(fund.funder.ror, fund.award_id))
                     award_ids = set(award_ids)
 
                     # Fetch additional data for each award ID

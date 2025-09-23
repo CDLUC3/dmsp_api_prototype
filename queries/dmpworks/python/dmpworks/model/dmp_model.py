@@ -8,6 +8,7 @@ import pendulum
 from pydantic import BaseModel, field_serializer, field_validator
 
 from dmpworks.funders.award_id import AwardID
+from dmpworks.model.common import Author, Funder, Institution
 
 
 class DMPModel(BaseModel):
@@ -50,31 +51,11 @@ class DMPModel(BaseModel):
         return v.to_date_string()
 
 
-class Funder(BaseModel):
-    name: Optional[str]
-    id: Optional[str]
-
-
 class FundingItem(BaseModel):
     funder: Optional[Funder]
     funding_opportunity_id: Optional[str]
     status: Optional[str]
     award_id: Optional[str]
-
-
-class Institution(BaseModel):
-    name: Optional[str]
-    ror: Optional[str]
-
-
-class Author(BaseModel):
-    orcid: Optional[str]
-    first_initial: Optional[str]
-    given_name: Optional[str]
-    middle_initials: Optional[str]
-    middle_names: Optional[str]
-    surname: Optional[str]
-    full: Optional[str]
 
 
 class ExternalData(BaseModel):

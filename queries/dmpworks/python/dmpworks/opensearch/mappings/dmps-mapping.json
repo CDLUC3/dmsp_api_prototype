@@ -64,10 +64,6 @@
       "institutions": {
         "type": "nested",
         "properties": {
-          "ror": {
-            "type": "keyword",
-            "normalizer": "lowercase"
-          },
           "name": {
             "type": "text",
             "analyzer": "icu_analyzer",
@@ -77,6 +73,10 @@
                 "normalizer": "name_normalizer"
               }
             }
+          },
+          "ror": {
+            "type": "keyword",
+            "normalizer": "lowercase"
           }
         }
       },
@@ -155,10 +155,6 @@
           "funder": {
             "type": "nested",
             "properties": {
-              "id": {
-                "type": "keyword",
-                "normalizer": "lowercase"
-              },
               "name": {
                 "type": "text",
                 "analyzer": "icu_analyzer",
@@ -168,6 +164,10 @@
                     "normalizer": "name_normalizer"
                   }
                 }
+              },
+              "ror": {
+                "type": "keyword",
+                "normalizer": "lowercase"
               }
             }
           },
@@ -197,10 +197,6 @@
               "funder": {
                 "type": "object",
                 "properties": {
-                  "id": {
-                    "type": "keyword",
-                    "normalizer": "lowercase"
-                  },
                   "name": {
                     "type": "text",
                     "analyzer": "icu_analyzer",
@@ -210,6 +206,10 @@
                         "normalizer": "name_normalizer"
                       }
                     }
+                  },
+                  "ror": {
+                    "type": "keyword",
+                    "normalizer": "lowercase"
                   }
                 }
               },

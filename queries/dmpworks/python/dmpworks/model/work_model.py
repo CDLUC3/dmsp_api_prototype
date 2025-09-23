@@ -5,6 +5,8 @@ from typing import Optional
 import pendulum
 from pydantic import BaseModel, field_serializer, field_validator
 
+from dmpworks.model.common import Author, Funder, Institution, Source
+
 
 class WorkModel(BaseModel):
     model_config = {
@@ -12,19 +14,17 @@ class WorkModel(BaseModel):
     }
 
     doi: str
-    publication_date: pendulum.Date
-    updated_date: pendulum.DateTime
-    source: str
-    type: str
     title: Optional[str] = None
     abstract: Optional[str] = None
-    affiliation_rors: list[str]
-    affiliation_names: list[str]
-    author_names: list[str]
-    author_orcids: list[str]
+    type: str
+    publication_date: pendulum.Date
+    updated_date: pendulum.DateTime
+    publication_venue: Optional[str] = None
+    institutions: list[Institution]
+    authors: list[Author]
+    funders: list[Funder]
     award_ids: list[str]
-    funder_ids: list[str]
-    funder_names: list[str]
+    source: Source
 
     @cached_property
     def funder_ids_set(self) -> frozenset[str]:
