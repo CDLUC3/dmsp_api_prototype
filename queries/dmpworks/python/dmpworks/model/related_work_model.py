@@ -12,17 +12,19 @@ class DoiMatch(BaseModel):
     model_config = {
         "alias_generator": to_camel,
         "arbitrary_types_allowed": True,
+        "populate_by_name": True,
     }
 
     found: bool
     score: float
-    url: Optional[str] = None
+    urls: List[str]
 
 
 class ContentMatch(BaseModel):
     model_config = {
         "alias_generator": to_camel,
         "arbitrary_types_allowed": True,
+        "populate_by_name": True,
     }
 
     score: float
@@ -34,6 +36,7 @@ class ItemMatch(BaseModel):
     model_config = {
         "alias_generator": to_camel,
         "arbitrary_types_allowed": True,
+        "populate_by_name": True,
     }
 
     index: int
@@ -45,6 +48,7 @@ class RelatedWork(BaseModel):
     model_config = {
         "alias_generator": to_camel,
         "arbitrary_types_allowed": True,
+        "populate_by_name": True,
     }
 
     dmp_doi: str

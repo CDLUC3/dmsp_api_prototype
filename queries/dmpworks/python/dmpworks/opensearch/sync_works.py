@@ -22,7 +22,7 @@ COLUMNS = [
     "institutions",
     "authors",
     "funders",
-    "award_ids",
+    "awards",
     "source",
 ]
 

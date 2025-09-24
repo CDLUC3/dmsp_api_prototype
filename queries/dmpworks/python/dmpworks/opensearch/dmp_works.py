@@ -1,5 +1,3 @@
-import dataclasses
-import json
 import logging
 import pathlib
 from typing import Callable, Optional
@@ -8,10 +6,9 @@ import jsonlines
 from opensearchpy import OpenSearch
 from tqdm import tqdm
 
-from dmpworks.model.dmp_model import DMPModel
+from dmpworks.model.dmp_model import Award, DMPModel
 from dmpworks.model.related_work_model import ContentMatch, DoiMatch, ItemMatch, RelatedWork
 from dmpworks.model.work_model import WorkModel
-from dmpworks.opensearch.explanations import explain_match, Group
 from dmpworks.opensearch.utils import make_opensearch_client, OpenSearchClientConfig, yield_dmps
 from dmpworks.utils import timed
 
@@ -151,36 +148,37 @@ def search_dmp_works(
     return collate_results(dmp, hits)
 
 
-def to_item_matches(inner_hits: dict, hit_name: str) -> list[ItemMatch]:
-    matches = []
-    hits = inner_hits.get(hit_name, {}).get("hits", [])
-    for hit in hits:
-        offset = hit.get("_nested", {}).get("offset")
-        score = hit.get("_score")
-        # TODO: could just label with field name for these inner hits?
-        fields = hit.get("matched_queries", [])
-        matches.append(
-            ItemMatch(
-                index=offset,
-                score=score,
-                fields=fields,
-            )
-        )
-    return matches
-
-
 def collate_results(dmp: DMPModel, hits: list[dict]) -> list[RelatedWork]:
     results: list[RelatedWork] = []
     for hit in hits:
+        work_doi = hit.get("_id")
         score: float = hit.get("_score", 0.0)
         work = WorkModel.model_validate(hit.get("_source", {}), by_name=True, by_alias=False)
         matched_queries = hit.get("matched_queries")
         highlights = hit.get("highlight")
-        explanation = explain_match(dmp, work, matched_queries, highlights)
-        doi_match = DoiMatch(found=True, score=1, url="")
-        content_match = ContentMatch(score=1, title_highlight="", abstract_highlights=[])
 
-        # Process inner hits
+        # Construct DOI match
+        doi_found = "funded_dois" in matched_queries
+        urls = set()
+        if doi_found:
+            for award in dmp.external_data.awards:
+                for doi in award.funded_dois:
+                    if doi == work_doi and award.award_url is not None:
+                        urls.add(award.award_url)
+        doi_match = DoiMatch(
+            found=doi_found,
+            score=matched_queries.get("funded_dois", 0.0),
+            urls=list(urls),
+        )
+
+        # Construct content match (based on title and abstract)
+        content_match = ContentMatch(
+            score=matched_queries.get("content", 0.0),
+            title_highlight=highlights.get("title"),
+            abstract_highlights=highlights.get("abstract", []),
+        )
+
+        # Construct matches based on inner hits
         inner_hits = hit.get("inner_hits", {})
         author_matches = to_item_matches(inner_hits, "authors")
         institution_matches = to_item_matches(inner_hits, "institutions")
@@ -203,21 +201,21 @@ def collate_results(dmp: DMPModel, hits: list[dict]) -> list[RelatedWork]:
     return results
 
 
-################
-# Query builder
-################
-
-
-def name_group(group: str) -> str:
-    return json.dumps({"g": group, "lvl": "group"}, separators=(",", ":"))
-
-
-def name_entity(group: str, idx: int) -> str:
-    return json.dumps({"g": group, "lvl": "entity", "i": idx}, separators=(",", ":"))
-
-
-def name_value(group: str, idx: int, key: str, value: str) -> str:
-    return json.dumps({"g": group, "lvl": "value", "i": idx, "k": key, "v": value}, separators=(",", ":"))
+def to_item_matches(inner_hits: dict, hit_name: str) -> list[ItemMatch]:
+    matches = []
+    hits = inner_hits.get(hit_name, {}).get("hits", {}).get("hits", [])
+    for hit in hits:
+        offset = hit.get("_nested", {}).get("offset")
+        score = hit.get("_score")
+        fields = [field.replace(f"{hit_name}.", "") for field in hit.get("matched_queries", [])]
+        matches.append(
+            ItemMatch(
+                index=offset,
+                score=score,
+                fields=fields,
+            )
+        )
+    return matches
 
 
 def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) -> dict:
@@ -228,47 +226,12 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
         should.append(
             {
                 "constant_score": {
-                    "_name": name_group("funded_dois"),
+                    "_name": "funded_dois",
                     "boost": 15,
                     "filter": {
                         "ids": {"values": dmp.funded_dois},
                     },
                 }
-            }
-        )
-
-    # Award IDs
-    award_queries = []
-    group = "awards"
-    for idx, award in enumerate(dmp.external_data.awards):
-        queries = []
-        for award_id in award.award_id.all_variants:
-            queries.append(
-                {
-                    "constant_score": {
-                        "_name": name_value(group, idx, "award_id", award_id),
-                        "filter": {"term": {"award_ids": award_id}},
-                        "boost": 10,
-                    }
-                }
-            )
-        award_queries.append(
-            {
-                "dis_max": {
-                    "_name": name_entity(group, idx),
-                    "tie_breaker": 0,
-                    "queries": queries,
-                }
-            }
-        )
-    if len(award_queries):
-        should.append(
-            {
-                "bool": {
-                    "_name": name_group(group),
-                    "minimum_should_match": 1,
-                    "should": award_queries,
-                },
             }
         )
 
@@ -308,6 +271,14 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
     if funders is not None:
         should.append(funders)
 
+    # Awards
+    awards = build_awards_query(
+        "awards",
+        dmp.external_data.awards,
+    )
+    if awards is not None:
+        should.append(awards)
+
     # Title and abstract
     has_text = dmp.title is not None or dmp.abstract is not None
     content: str = " ".join([text for text in [dmp.title, dmp.abstract] if text is not None and text != ""])
@@ -315,7 +286,7 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
         should.append(
             {
                 "more_like_this": {
-                    "_name": name_group("content"),
+                    "_name": "content",
                     "fields": ["title", "abstract"],
                     "like": content,
                     "min_term_freq": 1,
@@ -399,7 +370,7 @@ def build_entity_query(
     id_accessor: Callable,
     name_accessor: Callable,
 ) -> Optional[dict]:
-    query = None
+    should_queries = []
 
     for idx, item in enumerate(items):
         entity_queries = []
@@ -410,7 +381,7 @@ def build_entity_query(
             entity_queries.append(
                 {
                     "constant_score": {
-                        "_name": name_value(path, idx, "id", entity_id),
+                        "_name": id_field,
                         "filter": {"term": {id_field: entity_id}},
                         "boost": 2,
                     }
@@ -421,28 +392,81 @@ def build_entity_query(
             entity_queries.append(
                 {
                     "constant_score": {
-                        "_name": name_value(path, idx, "name", entity_name),
+                        "_name": name_field,
                         "filter": {"match_phrase": {name_field: {"query": entity_name, "slop": 3}}},
                         "boost": 1,
                     }
                 }
             )
 
-        if entity_queries:
-            query = {
-                "dis_max": {
-                    "_name": name_entity(path, idx),
-                    "tie_breaker": 0,
-                    "queries": entity_queries,
-                },
-            }
+        if len(entity_queries) > 1:
+            should_queries.append(
+                {
+                    "dis_max": {
+                        "tie_breaker": 0,
+                        "queries": entity_queries,
+                    },
+                }
+            )
+        elif len(entity_queries) == 1:
+            should_queries.append(entity_queries[0])
 
-    if query:
+    if should_queries:
         return {
             "nested": {
-                "_name": name_group(path),
                 "path": path,
-                "query": query,
+                "query": {
+                    "bool": {
+                        "minimum_should_match": 1,
+                        "should": should_queries,
+                    }
+                },
+                "inner_hits": {"name": path},
+            },
+        }
+
+    return None
+
+
+def build_awards_query(
+    path: str,
+    awards: list[Award],
+) -> Optional[dict]:
+    """The dis_max ensures that all the variants of a single award only contribute
+    a maximum score of 10."""
+
+    award_queries = []
+    for award in awards:
+        queries = []
+        for award_id in award.award_id.all_variants:
+            queries.append(
+                {
+                    "constant_score": {
+                        "_name": "awards.award_id",
+                        "filter": {"term": {"awards.award_id": award_id}},
+                        "boost": 10,
+                    }
+                }
+            )
+        award_queries.append(
+            {
+                "dis_max": {
+                    "tie_breaker": 0,
+                    "queries": queries,
+                }
+            }
+        )
+
+    if len(award_queries):
+        return {
+            "nested": {
+                "path": path,
+                "query": {
+                    "bool": {
+                        "minimum_should_match": 1,
+                        "should": award_queries,
+                    }
+                },
                 "inner_hits": {"name": path},
             },
         }

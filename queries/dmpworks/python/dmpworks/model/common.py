@@ -45,6 +45,15 @@ class Funder(BaseModel):
     ror: Optional[str]
 
 
+class Award(BaseModel):
+    model_config = {
+        "alias_generator": to_camel,
+        "populate_by_name": True,
+    }
+
+    award_id: str
+
+
 class Source(BaseModel):
     model_config = {
         "alias_generator": to_camel,

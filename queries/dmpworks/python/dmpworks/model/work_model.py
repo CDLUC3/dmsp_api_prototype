@@ -6,13 +6,14 @@ import json
 import pendulum
 from pydantic import BaseModel, computed_field, field_serializer, field_validator
 
-from dmpworks.model.common import Author, Funder, Institution, Source, to_camel
+from dmpworks.model.common import Author, Award, Funder, Institution, Source, to_camel
 
 
 class WorkModel(BaseModel):
     model_config = {
         "alias_generator": to_camel,
         "arbitrary_types_allowed": True,
+        "populate_by_name": True,
     }
 
     doi: str
@@ -25,7 +26,7 @@ class WorkModel(BaseModel):
     institutions: list[Institution]
     authors: list[Author]
     funders: list[Funder]
-    awards: list[str]
+    awards: list[Award]
     source: Source
 
     @computed_field

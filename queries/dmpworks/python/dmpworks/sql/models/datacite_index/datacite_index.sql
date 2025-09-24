@@ -27,11 +27,11 @@ SELECT
   COALESCE(datacite_index.institutions.institutions, []) AS institutions,
   dw.authors,
   COALESCE(datacite_index.funders.funders, []) AS funders,
-  COALESCE(datacite_index.award_ids.award_ids, []) AS award_ids,
+  COALESCE(datacite_index.awards.awards, []) AS awards,
   {name := 'DataCite', url := 'https://commons.datacite.org/doi.org/' || dw.doi} AS source
 FROM datacite_index.works dw
 LEFT JOIN datacite_index.types ON dw.doi = datacite_index.types.doi
 LEFT JOIN datacite_index.updated_dates ON dw.doi = datacite_index.updated_dates.doi
 LEFT JOIN datacite_index.institutions ON dw.doi = datacite_index.institutions.doi
 LEFT JOIN datacite_index.funders ON dw.doi = datacite_index.funders.doi
-LEFT JOIN datacite_index.award_ids ON dw.doi = datacite_index.award_ids.doi
+LEFT JOIN datacite_index.awards ON dw.doi = datacite_index.awards.doi

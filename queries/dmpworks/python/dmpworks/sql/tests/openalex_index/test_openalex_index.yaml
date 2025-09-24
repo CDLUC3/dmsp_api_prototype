@@ -108,12 +108,15 @@ test_openalex_index_openalex_index:
           funders:
             - name: "National Science Foundation"
               ror: "021nxhr62"
-    openalex_index.award_ids:
+    openalex_index.awards:
       rows:
         - doi: "10.9999/test.0001"
-          award_ids: [ "1" ]
+          awards:
+            - award_id: "1"
         - doi: "10.9999/test.0002"
-          award_ids: [ "2" ]
+          awards:
+            - award_id: "2"
+
   outputs:
     query:
       rows:
@@ -138,7 +141,8 @@ test_openalex_index_openalex_index:
           funders:
             - name: "National Science Foundation"
               ror: "021nxhr62"
-          award_ids: [ "1" ]
+          awards:
+            - award_id: "1"
           source:
             name: "OpenAlex"
             url: "https://openalex.org/works/W0000000001"
@@ -163,7 +167,8 @@ test_openalex_index_openalex_index:
           funders:
             - name: "National Science Foundation"
               ror: "021nxhr62"
-          award_ids: [ "2" ]
+          awards:
+            - award_id: "2"
           source:
             name: "OpenAlex"
             url: "https://openalex.org/works/W0000000002"
@@ -188,7 +193,7 @@ test_openalex_index_openalex_index:
           funders:
             - name: "National Science Foundation"
               ror: "021nxhr62"
-          award_ids: [ ]
+          awards: [ ]
           source:
             name: "OpenAlex"
             url: "https://openalex.org/works/W0000000004"

@@ -167,9 +167,14 @@
           }
         }
       },
-      "award_ids": {
-        "type": "keyword",
-        "normalizer": "lowercase"
+      "awards": {
+        "type": "nested",
+        "properties": {
+          "award_id": {
+            "type": "keyword",
+            "normalizer": "lowercase"
+          }
+        }
       },
       "source": {
         "type": "object",
