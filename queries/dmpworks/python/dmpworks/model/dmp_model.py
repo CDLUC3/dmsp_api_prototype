@@ -8,12 +8,14 @@ import pendulum
 from pydantic import BaseModel, field_serializer, field_validator
 
 from dmpworks.funders.award_id import AwardID
-from dmpworks.model.common import Author, Funder, Institution
+from dmpworks.model.common import Author, Funder, Institution, to_camel
 
 
 class DMPModel(BaseModel):
     model_config = {
         "arbitrary_types_allowed": True,
+        "alias_generator": to_camel,
+        "populate_by_name": True,
     }
 
     doi: str
@@ -59,7 +61,11 @@ class FundingItem(BaseModel):
 
 
 class ExternalData(BaseModel):
-    model_config = {"arbitrary_types_allowed": True}
+    model_config = {
+        "arbitrary_types_allowed": True,
+        "alias_generator": to_camel,
+        "populate_by_name": True,
+    }
 
     updated: pendulum.DateTime
     awards: list[Award]
@@ -79,7 +85,11 @@ class ExternalData(BaseModel):
 
 
 class Award(BaseModel):
-    model_config = {"arbitrary_types_allowed": True}
+    model_config = {
+        "arbitrary_types_allowed": True,
+        "alias_generator": to_camel,
+        "populate_by_name": True,
+    }
 
     funder: Optional[Funder]
     award_id: Optional[AwardID]

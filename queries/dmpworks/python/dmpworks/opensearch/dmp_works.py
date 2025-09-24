@@ -9,6 +9,7 @@ from opensearchpy import OpenSearch
 from tqdm import tqdm
 
 from dmpworks.model.dmp_model import DMPModel
+from dmpworks.model.related_work_model import ContentMatch, DoiMatch, ItemMatch, RelatedWork
 from dmpworks.model.work_model import WorkModel
 from dmpworks.opensearch.explanations import explain_match, Group
 from dmpworks.opensearch.utils import make_opensearch_client, OpenSearchClientConfig, yield_dmps
@@ -38,9 +39,15 @@ def dmp_works_search(
     if parallel_search and include_named_queries_score:
         log.warning("Unable to use include_named_queries_score with msearch, query scores will not be returned.")
 
-    def write_works(works: list[DMPWorksSearchResult], count: int):
+    def write_works(works: list[RelatedWork], count: int):
         for work in works:
-            writer.write(work.to_dict())
+            writer.write(
+                # Convert fields to CamelCase for database
+                work.model_dump(
+                    by_alias=True,
+                    mode="json",
+                )
+            )
         pbar.update(count)
 
     with tqdm(total=0, desc="Find DMP work matches with OpenSearch", unit="doc") as pbar:
@@ -77,7 +84,6 @@ def dmp_works_search(
                                 project_end_buffer_years=project_end_buffer_years,
                                 max_concurrent_searches=max_concurrent_searches,
                                 max_concurrent_shard_requests=max_concurrent_shard_requests,
-                                include_named_queries_score=include_named_queries_score,
                             )
                             write_works(works, len(batch))
                             batch = []
@@ -95,24 +101,6 @@ def dmp_works_search(
                     write_works(works, len(batch))
 
 
-@dataclasses.dataclass
-class DMPWorksSearchResult:
-    dmp_doi: str
-    work_doi: str
-    score: float
-    work: WorkModel
-    explanations: dict[str, Group]
-
-    def to_dict(self) -> dict:
-        return {
-            "dmp_doi": self.dmp_doi,
-            "work_doi": self.work_doi,
-            "score": self.score,
-            "work": self.work.model_dump(),
-            "explanations": {name: group.to_dict() for name, group in self.explanations.items()},
-        }
-
-
 def msearch_dmp_works(
     client: OpenSearch,
     index_name: str,
@@ -121,7 +109,7 @@ def msearch_dmp_works(
     project_end_buffer_years: int = 3,
     max_concurrent_searches: int = 125,
     max_concurrent_shard_requests: int = 12,
-) -> list[DMPWorksSearchResult]:
+) -> list[RelatedWork]:
     # Execute searches
     body = []
     for dmp in dmps:
@@ -152,7 +140,7 @@ def search_dmp_works(
     max_results: int = 100,
     project_end_buffer_years: int = 3,
     include_named_queries_score: bool = False,
-) -> list[DMPWorksSearchResult]:
+) -> list[RelatedWork]:
     body = build_query(dmp, max_results, project_end_buffer_years)
     response = client.search(
         body=body,
@@ -163,16 +151,55 @@ def search_dmp_works(
     return collate_results(dmp, hits)
 
 
-def collate_results(dmp: DMPModel, hits: list[dict]) -> list[DMPWorksSearchResult]:
-    results: list[DMPWorksSearchResult] = []
+def to_item_matches(inner_hits: dict, hit_name: str) -> list[ItemMatch]:
+    matches = []
+    hits = inner_hits.get(hit_name, {}).get("hits", [])
     for hit in hits:
-        work_doi: str = hit.get("_id")
+        offset = hit.get("_nested", {}).get("offset")
+        score = hit.get("_score")
+        # TODO: could just label with field name for these inner hits?
+        fields = hit.get("matched_queries", [])
+        matches.append(
+            ItemMatch(
+                index=offset,
+                score=score,
+                fields=fields,
+            )
+        )
+    return matches
+
+
+def collate_results(dmp: DMPModel, hits: list[dict]) -> list[RelatedWork]:
+    results: list[RelatedWork] = []
+    for hit in hits:
         score: float = hit.get("_score", 0.0)
-        work = WorkModel.model_validate(hit.get("_source", {}))
+        work = WorkModel.model_validate(hit.get("_source", {}), by_name=True, by_alias=False)
         matched_queries = hit.get("matched_queries")
         highlights = hit.get("highlight")
         explanation = explain_match(dmp, work, matched_queries, highlights)
-        results.append(DMPWorksSearchResult(dmp.doi, work_doi, score, work, explanation))
+        doi_match = DoiMatch(found=True, score=1, url="")
+        content_match = ContentMatch(score=1, title_highlight="", abstract_highlights=[])
+
+        # Process inner hits
+        inner_hits = hit.get("inner_hits", {})
+        author_matches = to_item_matches(inner_hits, "authors")
+        institution_matches = to_item_matches(inner_hits, "institutions")
+        funder_matches = to_item_matches(inner_hits, "funders")
+        award_matches = to_item_matches(inner_hits, "awards")
+
+        results.append(
+            RelatedWork(
+                dmp_doi=dmp.doi,
+                work=work,
+                score=score,
+                doi_match=doi_match,
+                content_match=content_match,
+                author_matches=author_matches,
+                institution_matches=institution_matches,
+                funder_matches=funder_matches,
+                award_matches=award_matches,
+            )
+        )
     return results
 
 
