@@ -43,8 +43,8 @@ class AwardID(ABC):
         raise NotImplementedError("Please implement")
 
     @abstractmethod
-    def funded_dois_source(self) -> dict:
-        """Returns the data about the source of the funded DOIs"""
+    def award_url(self) -> Optional[str]:
+        """Returns the URL for the award"""
         raise NotImplementedError("Please implement")
 
     @cached_property

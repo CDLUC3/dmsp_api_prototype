@@ -93,17 +93,10 @@ class NIHAwardID(AwardID):
 
         return "".join(parts)
 
-    def funded_dois_source(self) -> dict:
-        awards = [self]
-        awards.extend(self.related_awards)
-        for award in self.related_awards:
-            if award.appl_id is not None:
-                return dict(
-                    parent_award_id=self.identifier_string(),
-                    award_id=award.identifier_string(),
-                    award_url=f"https://reporter.nih.gov/project-details/{award.appl_id}",
-                )
-        return {}
+    def award_url(self) -> Optional[str]:
+        if self.appl_id is not None:
+            return f"https://reporter.nih.gov/project-details/{self.appl_id}"
+        return None
 
     def generate_variants(self) -> list[str]:
         all_award_ids = [self] + self.related_awards

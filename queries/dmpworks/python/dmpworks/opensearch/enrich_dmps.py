@@ -78,7 +78,7 @@ def enrich_dmps(
                     # Fetch additional data for each award ID
                     for award_id in award_ids:
                         dois = fetch_funded_dois(award_id, email=email)
-                        awards.append(Award(funder=fund.funder, award_id=award_id, funded_dois=dois, award_url=""))
+                        awards.append(Award(funder=fund.funder, award_id=award_id, funded_dois=dois))
 
                 log.debug(f"Save additional metadata for DMP: {dmp.doi}")
                 external_data = ExternalData(updated=pendulum.now(tz="UTC"), awards=awards).model_dump()

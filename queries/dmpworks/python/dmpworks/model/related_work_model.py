@@ -17,7 +17,19 @@ class DoiMatch(BaseModel):
 
     found: bool
     score: float
-    urls: List[str]
+    sources: List[DoiMatchSource]
+
+
+class DoiMatchSource(BaseModel):
+    model_config = {
+        "alias_generator": to_camel,
+        "arbitrary_types_allowed": True,
+        "populate_by_name": True,
+    }
+
+    parent_award_id: Optional[str]
+    award_id: str
+    award_url: str
 
 
 class ContentMatch(BaseModel):

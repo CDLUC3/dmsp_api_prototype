@@ -1,13 +1,15 @@
 import logging
+import math
 import pathlib
 from typing import Callable, Optional
 
 import jsonlines
+import pendulum
 from opensearchpy import OpenSearch
 from tqdm import tqdm
 
 from dmpworks.model.dmp_model import Award, DMPModel
-from dmpworks.model.related_work_model import ContentMatch, DoiMatch, ItemMatch, RelatedWork
+from dmpworks.model.related_work_model import ContentMatch, DoiMatch, DoiMatchSource, ItemMatch, RelatedWork
 from dmpworks.model.work_model import WorkModel
 from dmpworks.opensearch.utils import make_opensearch_client, OpenSearchClientConfig, yield_dmps
 from dmpworks.utils import timed
@@ -148,34 +150,52 @@ def search_dmp_works(
     return collate_results(dmp, hits)
 
 
+def parse_matched_queries(matched_queries: list[str] | dict[str, float]) -> dict[str, float]:
+    if isinstance(matched_queries, list):
+        return {key: math.nan for key in matched_queries}
+    return matched_queries
+
+
 def collate_results(dmp: DMPModel, hits: list[dict]) -> list[RelatedWork]:
     results: list[RelatedWork] = []
     for hit in hits:
         work_doi = hit.get("_id")
         score: float = hit.get("_score", 0.0)
         work = WorkModel.model_validate(hit.get("_source", {}), by_name=True, by_alias=False)
-        matched_queries = hit.get("matched_queries")
-        highlights = hit.get("highlight")
+        matched_queries = parse_matched_queries(hit.get("matched_queries", []))
+        highlights = hit.get("highlight", {})
 
         # Construct DOI match
         doi_found = "funded_dois" in matched_queries
-        urls = set()
+        sources = []
         if doi_found:
             for award in dmp.external_data.awards:
-                for doi in award.funded_dois:
-                    if doi == work_doi and award.award_url is not None:
-                        urls.add(award.award_url)
+                if work_doi in award.funded_dois:
+                    parent = award.award_id
+                    awards = [parent] + award.award_id.related_awards
+                    for child in awards:
+                        if child.award_url() is not None:
+                            parent_award_id = parent.identifier_string() if parent != child else None
+                            sources.append(
+                                DoiMatchSource(
+                                    parent_award_id=parent_award_id,
+                                    award_id=child.identifier_string(),
+                                    award_url=child.award_url(),
+                                )
+                            )
         doi_match = DoiMatch(
             found=doi_found,
             score=matched_queries.get("funded_dois", 0.0),
-            urls=list(urls),
+            sources=sources,
         )
 
         # Construct content match (based on title and abstract)
+        title_highlights = highlights.get("title", [])
+        abstract_highlights = highlights.get("abstract", [])
         content_match = ContentMatch(
             score=matched_queries.get("content", 0.0),
-            title_highlight=highlights.get("title"),
-            abstract_highlights=highlights.get("abstract", []),
+            title_highlight=title_highlights[0] if title_highlights else None,
+            abstract_highlights=abstract_highlights,
         )
 
         # Construct matches based on inner hits
@@ -207,7 +227,8 @@ def to_item_matches(inner_hits: dict, hit_name: str) -> list[ItemMatch]:
     for hit in hits:
         offset = hit.get("_nested", {}).get("offset")
         score = hit.get("_score")
-        fields = [field.replace(f"{hit_name}.", "") for field in hit.get("matched_queries", [])]
+        matched_queries = parse_matched_queries(hit.get("matched_queries", []))
+        fields = [field.replace(f"{hit_name}.", "") for field in matched_queries.keys()]
         matches.append(
             ItemMatch(
                 index=offset,
@@ -307,7 +328,7 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
             },
         }
     ]
-    if dmp.project_start is not None:
+    if dmp.project_start is not None and dmp.project_start >= pendulum.date(1990, 1, 1):
         gte = dmp.project_start.format("YYYY-MM-DD")
         lte = dmp.project_end.add(years=project_end_buffer_years).format("YYYY-MM-DD")
         filters.append(
@@ -342,6 +363,7 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
                 "title": {
                     "type": "fvh",
                     "number_of_fragments": 0,
+                    "fragment_size": 0,
                 },
                 "abstract": {
                     "type": "fvh",

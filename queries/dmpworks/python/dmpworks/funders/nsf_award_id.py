@@ -58,14 +58,10 @@ class NSFAwardID(AwardID):
 
         return str(self.award_id)
 
-    def funded_dois_source(self) -> dict:
+    def award_url(self) -> Optional[str]:
         if self.award_id is not None:
-            return dict(
-                parent_award_id=self.identifier_string(),
-                award_id=self.identifier_string(),
-                award_url=f"https://www.nsf.gov/awardsearch/showAward?AWD_ID={self.award_id}&HistoricalAwards=false",
-            )
-        return {}
+            return f"https://www.nsf.gov/awardsearch/showAward?AWD_ID={self.award_id}&HistoricalAwards=false"
+        return None
 
     @staticmethod
     def parse(text: Optional[str]) -> Optional[NSFAwardID]:
