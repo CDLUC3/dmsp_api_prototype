@@ -192,10 +192,12 @@ def collate_results(dmp: DMPModel, hits: list[dict]) -> list[RelatedWork]:
         # Construct content match (based on title and abstract)
         title_highlights = highlights.get("title", [])
         abstract_highlights = highlights.get("abstract", [])
+        content_score = matched_queries.get("content", 0.0)
+        content_matched = "content" in matched_queries
         content_match = ContentMatch(
-            score=matched_queries.get("content", 0.0),
-            title_highlight=title_highlights[0] if title_highlights else None,
-            abstract_highlights=abstract_highlights,
+            score=content_score,
+            title_highlight=title_highlights[0] if title_highlights and content_matched else None,
+            abstract_highlights=abstract_highlights if content_matched else [],
         )
 
         # Construct matches based on inner hits
