@@ -1,30 +1,51 @@
 import datetime
+import hashlib
 from functools import cached_property
 from typing import Optional
-
+import json
 import pendulum
-from pydantic import BaseModel, field_serializer, field_validator
+from pydantic import BaseModel, computed_field, field_serializer, field_validator
+
+from dmpworks.model.common import Author, Award, Funder, Institution, Source, to_camel
 
 
 class WorkModel(BaseModel):
     model_config = {
+        "alias_generator": to_camel,
         "arbitrary_types_allowed": True,
+        "populate_by_name": True,
     }
 
     doi: str
-    publication_date: pendulum.Date
-    updated_date: pendulum.DateTime
-    source: str
-    type: str
     title: Optional[str] = None
     abstract: Optional[str] = None
-    affiliation_rors: list[str]
-    affiliation_names: list[str]
-    author_names: list[str]
-    author_orcids: list[str]
-    award_ids: list[str]
-    funder_ids: list[str]
-    funder_names: list[str]
+    type: str
+    publication_date: pendulum.Date
+    updated_date: pendulum.DateTime
+    publication_venue: Optional[str] = None
+    institutions: list[Institution]
+    authors: list[Author]
+    funders: list[Funder]
+    awards: list[Award]
+    source: Source
+
+    @computed_field
+    def hash(self) -> str:
+        """Generate a stable MD5 Hash of the work based on its content
+
+        Exclude doi and updated_date. Fields that we are not using could
+        trigger a change in updated_date.
+        """
+        data = self.model_dump(
+            exclude={"doi", "updated_date", "hash"},
+            by_alias=True,
+            mode="json",
+        )
+
+        # Maintain stable key order: sort_keys=True
+        # No whitespace: separators=(",", ":")
+        payload = json.dumps(data, sort_keys=True, separators=(",", ":"))
+        return hashlib.md5(payload.encode("utf-8")).hexdigest()
 
     @cached_property
     def funder_ids_set(self) -> frozenset[str]:

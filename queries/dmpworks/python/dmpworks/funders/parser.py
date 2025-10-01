@@ -72,10 +72,7 @@ def fetch_funded_dois(
     # Fetch NSF award info
     elif isinstance(award_id, NSFAwardID):
         log.debug(f"NSFAwardID fetch works for {canonical_id} with award_id={award_id.award_id}")
-        results = nsf_fetch_award_publication_dois(
-            award_id.award_id,
-            email=email,
-        )
+        results = nsf_fetch_award_publication_dois(award_id.award_id, email=email)
         log.debug(f"Discovered {len(results)} associated works")
         works.extend(results)
 

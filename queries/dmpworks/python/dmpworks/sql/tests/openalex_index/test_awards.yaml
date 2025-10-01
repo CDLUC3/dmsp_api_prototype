@@ -1,5 +1,5 @@
-test_openalex_index_award_ids:
-  model: openalex_index.award_ids
+test_openalex_index_awards:
+  model: openalex_index.awards
   inputs:
     openalex_index.works_metadata:
       rows:
@@ -38,7 +38,11 @@ test_openalex_index_award_ids:
     query:
       rows:
         - doi: "10.9999/test.0001"
-          award_ids: [ "1", "3" ]
+          awards:
+            - award_id: "1"
+            - award_id: "3"
         - doi: "10.9999/test.0002"
-          award_ids: [ "2", "4" ]
+          awards:
+            - award_id: "2"
+            - award_id: "4"
 

@@ -56,55 +56,138 @@
       "updated_date": {
         "type": "date"
       },
+      "publication_venue": {
+        "type": "keyword",
+        "normalizer": "lowercase"
+      },
+      "institutions": {
+        "type": "nested",
+        "properties": {
+          "name": {
+            "type": "text",
+            "analyzer": "icu_analyzer",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "normalizer": "name_normalizer"
+              }
+            }
+          },
+          "ror": {
+            "type": "keyword",
+            "normalizer": "lowercase"
+          }
+        }
+      },
+      "authors": {
+        "type": "nested",
+        "properties": {
+          "orcid": {
+            "type": "keyword",
+            "normalizer": "lowercase"
+          },
+          "first_initial": {
+            "type": "text",
+            "analyzer": "icu_analyzer",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "normalizer": "name_normalizer"
+              }
+            }
+          },
+          "given_name": {
+            "type": "text",
+            "analyzer": "icu_analyzer",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "normalizer": "name_normalizer"
+              }
+            }
+          },
+          "middle_initials": {
+            "type": "text",
+            "analyzer": "icu_analyzer",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "normalizer": "name_normalizer"
+              }
+            }
+          },
+          "middle_names": {
+            "type": "text",
+            "analyzer": "icu_analyzer",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "normalizer": "name_normalizer"
+              }
+            }
+          },
+          "surname": {
+            "type": "text",
+            "analyzer": "icu_analyzer",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "normalizer": "name_normalizer"
+              }
+            }
+          },
+          "full": {
+            "type": "text",
+            "analyzer": "icu_analyzer",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "normalizer": "name_normalizer"
+              }
+            }
+          }
+        }
+      },
+      "funders": {
+        "type": "nested",
+        "properties": {
+          "name": {
+            "type": "text",
+            "analyzer": "icu_analyzer",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "normalizer": "name_normalizer"
+              }
+            }
+          },
+          "ror": {
+            "type": "keyword",
+            "normalizer": "lowercase"
+          }
+        }
+      },
+      "awards": {
+        "type": "nested",
+        "properties": {
+          "award_id": {
+            "type": "keyword",
+            "normalizer": "lowercase"
+          }
+        }
+      },
       "source": {
-        "type": "keyword",
-        "normalizer": "lowercase"
-      },
-      "affiliation_rors": {
-        "type": "keyword",
-        "normalizer": "lowercase"
-      },
-      "affiliation_names": {
-        "type": "text",
-        "analyzer": "icu_analyzer",
-        "fields": {
-          "keyword": {
+        "type": "object",
+        "properties": {
+          "name": {
             "type": "keyword",
-            "normalizer": "name_normalizer"
+            "normalizer": "lowercase"
+          },
+          "url": {
+            "type": "keyword",
+            "normalizer": "lowercase"
           }
         }
-      },
-      "author_orcids": {
-        "type": "keyword",
-        "normalizer": "lowercase"
-      },
-      "author_names": {
-        "type": "text",
-        "analyzer": "icu_analyzer",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "normalizer": "name_normalizer"
-          }
-        }
-      },
-      "funder_ids": {
-        "type": "keyword",
-        "normalizer": "lowercase"
-      },
-      "funder_names": {
-        "type": "text",
-        "analyzer": "icu_analyzer",
-        "fields": {
-          "keyword": {
-            "type": "keyword",
-            "normalizer": "name_normalizer"
-          }
-        }
-      },
-      "award_ids": {
-        "type": "keyword",
-        "normalizer": "lowercase"
       }
     }
   }

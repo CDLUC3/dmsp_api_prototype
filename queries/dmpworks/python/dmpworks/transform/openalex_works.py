@@ -96,9 +96,8 @@ def transform_works(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         .list.eval(
             pl.struct(
                 [
-                    normalise_identifier(pl.element().struct.field("author").struct.field("id")).alias("author_id"),
-                    pe.parse_name(pl.element().struct.field("author").struct.field("display_name")).struct.unnest(),
                     normalise_identifier(pl.element().struct.field("author").struct.field("orcid")).alias("orcid"),
+                    pe.parse_name(pl.element().struct.field("author").struct.field("display_name")).struct.unnest(),
                 ]
             )
         )
@@ -108,14 +107,13 @@ def transform_works(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
                     [
                         pl.element().struct.field(field).is_not_null()
                         for field in [
-                            "author_id",
+                            "orcid",
                             "first_initial",
                             "given_name",
                             "middle_initials",
                             "middle_names",
                             "surname",
                             "full",
-                            "orcid",
                         ]
                     ]
                 )
@@ -158,24 +156,16 @@ def transform_works(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         .unnest("institutions")
         .select(
             pl.col("work_id"),
-            institution_id=normalise_identifier(pl.col("id")),
-            display_name=pl.col("display_name"),
-            type=pl.col("type"),
+            name=pl.col("display_name"),
             ror=normalise_identifier(pl.col("ror")),
         )
-        .filter(
-            pl.any_horizontal(
-                [pl.col(field).is_not_null() for field in ["institution_id", "display_name", "type", "ror"]]
-            )
-        )
+        .filter(pl.any_horizontal([pl.col(field).is_not_null() for field in ["name", "ror"]]))
         .unique(maintain_order=True)
     )
     institutions_by_work = (
         institutions.with_columns(
             inst=pl.struct(
-                pl.col("institution_id"),
-                pl.col("display_name"),
-                pl.col("type"),
+                pl.col("name"),
                 pl.col("ror"),
             )
         )

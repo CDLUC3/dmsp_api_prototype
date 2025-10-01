@@ -21,6 +21,7 @@
 
 ## Related Works
 ### Added
+- Refactor related works pipeline to use objects rather than lists of strings for authors, institutions, funders and awards.
 - Dockerfile to be able to run dmpworks in AWS Batch.
 - Commands for running DataCite, OpenAlex Funders and OpenAlex Works pipelines in AWS Batch.
 - Migrated from argparse to cyclopts for building the CLI.

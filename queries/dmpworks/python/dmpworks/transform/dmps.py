@@ -135,8 +135,8 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         institutions=pl.col("institutions")
         .list.eval(
             pl.struct(
-                ror=clean_string(pl.element().struct.field("ror")),
                 name=clean_string(pl.element().struct.field("name")),
+                ror=clean_string(pl.element().struct.field("ror")),
             )
         )
         .list.eval(
@@ -179,10 +179,10 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         .list.eval(
             pl.struct(
                 funder=pl.struct(
-                    id=normalise_identifier(pl.element().struct.field("funder").struct.field("id")),
                     name=clean_string(
                         pl.element().struct.field("funder").struct.field("name"),
                     ),
+                    ror=normalise_identifier(pl.element().struct.field("funder").struct.field("id")),
                 ),
                 status=pl.element().struct.field("status"),
                 funding_opportunity_id=replace_with_null(
@@ -198,7 +198,7 @@ def transform(lz: pl.LazyFrame) -> list[tuple[str, pl.LazyFrame]]:
         .list.eval(
             pl.element().filter(
                 pl.any_horizontal(
-                    [pl.element().struct.field("funder").struct.field(field).is_not_null() for field in ["id", "name"]]
+                    [pl.element().struct.field("funder").struct.field(field).is_not_null() for field in ["ror", "name"]]
                     + [
                         pl.element().struct.field(field).is_not_null()
                         for field in ["funder", "status", "funding_opportunity_id", "award_id"]

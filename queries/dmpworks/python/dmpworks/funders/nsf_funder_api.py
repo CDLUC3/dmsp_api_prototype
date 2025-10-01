@@ -17,14 +17,15 @@ log = logging.getLogger(__name__)
 
 def nsf_fetch_award_publication_dois(
     award_id: str,
-    threshold: float = 95,
+    crossref_threshold: float = 95,
+    datacite_threshold: float = 99,
     email: Optional[str] = None,
 ) -> list[dict]:
     """Fetch publications associated with an NSF award ID.
 
     :param award_id: the NSF award ID.
-    :param threshold: when no DOI is specified, Crossref Metadata and DataCite are queried the minimum threshold to
-    for title matching.
+    :param crossref_threshold: the minimum title matching threshold when no DOI is specified and Crossref Metadata is queried.
+    :param datacite_threshold: the minimum title matching threshold when no DOI is specified and DataCite is queried.
     :param email: email to supply to Crossref Metadata API.
     :return: a list of works.
     """
@@ -58,13 +59,13 @@ def nsf_fetch_award_publication_dois(
                 doi = find_crossref_doi(
                     title,
                     journal,
-                    threshold=threshold,
+                    threshold=crossref_threshold,
                     email=email,
                 )
 
             # If DOI is still None, then try DataCite
             if doi is None:
-                doi = find_datacite_doi(title, threshold=threshold)
+                doi = find_datacite_doi(title, threshold=datacite_threshold)
 
             ref["doi"] = doi
 
