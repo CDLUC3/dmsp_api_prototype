@@ -14,8 +14,8 @@ log = logging.getLogger(__name__)
 COLUMNS = [
     "doi",
     "title",
-    "abstract",
-    "type",
+    "abstract_text",
+    "work_type",
     "publication_date",
     "updated_date",
     "publication_venue",

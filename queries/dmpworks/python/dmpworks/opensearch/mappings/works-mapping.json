@@ -41,12 +41,12 @@
         "analyzer": "icu_analyzer",
         "term_vector": "with_positions_offsets"
       },
-      "abstract": {
+      "abstract_text": {
         "type": "text",
         "analyzer": "icu_analyzer",
         "term_vector": "with_positions_offsets"
       },
-      "type": {
+      "work_type": {
         "type": "keyword",
         "normalizer": "lowercase"
       },

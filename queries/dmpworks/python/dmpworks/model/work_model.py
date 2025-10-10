@@ -18,8 +18,8 @@ class WorkModel(BaseModel):
 
     doi: str
     title: Optional[str] = None
-    abstract: Optional[str] = None
-    type: str
+    abstract_text: Optional[str] = None
+    work_type: str
     publication_date: pendulum.Date
     updated_date: pendulum.DateTime
     publication_venue: Optional[str] = None

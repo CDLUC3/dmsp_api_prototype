@@ -122,8 +122,8 @@ test_openalex_index_openalex_index:
       rows:
         - doi: "10.9999/test.0001"
           title: "Title 1"
-          abstract: "Abstract 1"
-          type: "article"
+          abstract_text: "Abstract 1"
+          work_type: "ARTICLE"
           publication_date: "2024-01-01"
           updated_date: "2024-02-01 00:00:00"
           publication_venue: "Physics"
@@ -148,8 +148,8 @@ test_openalex_index_openalex_index:
             url: "https://openalex.org/works/W0000000001"
         - doi: "10.9999/test.0002"
           title: "Title 2"
-          abstract: "Abstract 2"
-          type: "dataset"
+          abstract_text: "Abstract 2"
+          work_type: "DATASET"
           publication_date: "2025-01-01"
           updated_date: "2025-02-01 00:00:00"
           publication_venue: "Physics"
@@ -174,8 +174,8 @@ test_openalex_index_openalex_index:
             url: "https://openalex.org/works/W0000000002"
         - doi: "10.9999/test.0003"
           title: null
-          abstract: null
-          type: "other"
+          abstract_text: null
+          work_type: "OTHER"
           publication_date: "2025-01-03"
           updated_date: null
           publication_venue: null
