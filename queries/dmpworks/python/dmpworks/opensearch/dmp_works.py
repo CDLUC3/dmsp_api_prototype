@@ -191,7 +191,7 @@ def collate_results(dmp: DMPModel, hits: list[dict]) -> list[RelatedWork]:
 
         # Construct content match (based on title and abstract)
         title_highlights = highlights.get("title", [])
-        abstract_highlights = highlights.get("abstract", [])
+        abstract_highlights = highlights.get("abstract_text", [])
         content_score = matched_queries.get("content", 0.0)
         content_matched = "content" in matched_queries
         content_match = ContentMatch(
@@ -310,7 +310,7 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
             {
                 "more_like_this": {
                     "_name": "content",
-                    "fields": ["title", "abstract"],
+                    "fields": ["title", "abstract_text"],
                     "like": content,
                     "min_term_freq": 1,
                 }
@@ -318,13 +318,13 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
         )
 
     # Final query and filter based on date range
-    # also remove DMPs from search results (output-management-plan type)
+    # also remove DMPs from search results (OUTPUT_MANAGEMENT_PLAN)
     filters = [
         {
             "bool": {
                 "must_not": {
                     "term": {
-                        "type": "output-management-plan",
+                        "work_type": "OUTPUT_MANAGEMENT_PLAN",
                     }
                 }
             },
@@ -367,7 +367,7 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
                     "number_of_fragments": 0,
                     "fragment_size": 0,
                 },
-                "abstract": {
+                "abstract_text": {
                     "type": "fvh",
                     "fragment_size": 160,
                     "number_of_fragments": 2,
@@ -376,7 +376,7 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
             },
             "highlight_query": {
                 "more_like_this": {
-                    "fields": ["title", "abstract"],
+                    "fields": ["title", "abstract_text"],
                     "like": content,
                     "min_term_freq": 1,
                 }

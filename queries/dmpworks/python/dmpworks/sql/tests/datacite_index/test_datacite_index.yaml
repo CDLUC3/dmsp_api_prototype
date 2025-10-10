@@ -35,9 +35,9 @@ test_datacite_index_datacite_index:
     datacite_index.types:
       rows:
         - doi: "10.9999/test.0001"
-          type: "article"
+          type: "ARTICLE"
         - doi: "10.9999/test.0002"
-          type: "dataset"
+          type: "DATASET"
     datacite_index.updated_dates:
       rows:
         - doi: "10.9999/test.0001"
@@ -77,8 +77,8 @@ test_datacite_index_datacite_index:
       rows:
         - doi: "10.9999/test.0001"
           title: "Title 1"
-          abstract: "Abstract 1"
-          type: "article"
+          abstract_text: "Abstract 1"
+          work_type: "ARTICLE"
           publication_date: "2024-01-01"
           updated_date: "2024-02-01 00:00:00"
           publication_venue: "Zenodo"
@@ -103,8 +103,8 @@ test_datacite_index_datacite_index:
             url: "https://commons.datacite.org/doi.org/10.9999/test.0001"
         - doi: "10.9999/test.0002"
           title: "Title 2"
-          abstract: "Abstract 2"
-          type: "dataset"
+          abstract_text: "Abstract 2"
+          work_type: "DATASET"
           publication_date: "2025-01-01"
           publication_venue: "Zenodo"
           updated_date: "2025-02-01 00:00:00"
@@ -129,8 +129,8 @@ test_datacite_index_datacite_index:
             url: "https://commons.datacite.org/doi.org/10.9999/test.0002"
         - doi: "10.9999/test.0003"
           title: null
-          abstract: null
-          type: "other"
+          abstract_text: null
+          work_type: "OTHER"
           publication_date: null
           updated_date: null
           publication_venue: null

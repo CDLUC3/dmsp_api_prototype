@@ -20,8 +20,8 @@ PRAGMA threads=CAST(@VAR('openalex_index_openalex_index_threads') AS INT64);
 SELECT
   works.doi,
   openalex_index.titles.title,
-  openalex_index.abstracts.abstract,
-  COALESCE(works.type, 'other') AS type,
+  openalex_index.abstracts.abstract AS abstract_text,
+  COALESCE(UPPER(REPLACE(works.type, '-', '_')), 'OTHER') AS work_type,
   works.publication_date,
   openalex_index.updated_dates.updated_date,
   works.publication_venue,
