@@ -5,6 +5,7 @@ from dmpworks.opensearch.cli import app as opensearch_app
 
 from dmpworks.sql.cli import app as sqlmesh_app
 from dmpworks.transform.cli import app as transform_app
+from dmpworks.dmsp.cli import app as dmsp_app
 
 cli = App(name="dmpworks", help="DMP Tool Related Works Command Line Tool.")
 
@@ -12,6 +13,7 @@ cli.command(opensearch_app)
 cli.command(batch_app)
 cli.command(sqlmesh_app)
 cli.command(transform_app)
+cli.command(dmsp_app)
 
 
 def main() -> None:

@@ -11,6 +11,7 @@ from dmpworks.opensearch.index import create_index, update_mapping
 from dmpworks.opensearch.sync_dmps import sync_dmps
 from dmpworks.opensearch.sync_works import sync_works
 from dmpworks.opensearch.utils import (
+    Date,
     make_opensearch_client,
     OpenSearchClientConfig,
     OpenSearchSyncConfig,
@@ -194,6 +195,10 @@ def dmp_works_search_cmd(
     max_concurrent_searches: int = 125,
     max_concurrent_shard_requests: int = 12,
     client_config: Optional[OpenSearchClientConfig] = None,
+    dmp_inst_name: Optional[str] = None,
+    dmp_inst_ror: Optional[str] = None,
+    start_date: Date = None,
+    end_date: Date = None,
     log_level: LogLevel = "INFO",
 ):
     """Enrich DMPs in OpenSearch, including fetching publications that can be
@@ -238,6 +243,10 @@ def dmp_works_search_cmd(
         include_named_queries_score=include_named_queries_score,
         max_concurrent_searches=max_concurrent_searches,
         max_concurrent_shard_requests=max_concurrent_shard_requests,
+        dmp_inst_name=dmp_inst_name,
+        dmp_inst_ror=dmp_inst_ror,
+        start_date=start_date,
+        end_date=end_date,
     )
 
 
