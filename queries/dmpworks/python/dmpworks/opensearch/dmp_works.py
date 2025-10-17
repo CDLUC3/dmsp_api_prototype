@@ -1,3 +1,4 @@
+import json
 import logging
 import math
 import pathlib
@@ -31,9 +32,55 @@ def dmp_works_search(
     include_named_queries_score: bool = False,
     max_concurrent_searches: int = 125,
     max_concurrent_shard_requests: int = 12,
+    dmp_inst_name: Optional[str] = None,
+    dmp_inst_ror: Optional[str] = None,
+    start_date: Optional[pendulum.Date] = None,
+    end_date: Optional[pendulum.Date] = None,
 ):
     client = make_opensearch_client(client_config)
-    query = {"query": {"match_all": {}}}
+    institutions = None
+    if dmp_inst_name or dmp_inst_ror:
+        institutions = build_entity_query(
+            "institutions",
+            "institutions.ror",
+            "institutions.name",
+            [{"name": dmp_inst_name, "ror": dmp_inst_ror}],
+            lambda inst: inst.get("ror"),
+            lambda inst: inst.get("name"),
+        )
+
+    filters = []
+    project_start_dict = {}
+    if start_date is not None:
+        project_start_dict["gte"] = start_date.format("YYYY-MM-DD")
+    if end_date is not None:
+        project_start_dict["lte"] = end_date.format("YYYY-MM-DD")
+
+    if len(project_start_dict):
+        filters.append(
+            {
+                "range": {
+                    "project_start": project_start_dict,
+                }
+            }
+        )
+
+    # Build final query
+    query = {"query": {}}
+    bool_components = {}
+
+    if institutions is not None:
+        bool_components["must"] = [institutions]
+
+    if filters:
+        bool_components["filter"] = filters
+
+    if bool_components:
+        query["query"]["bool"] = bool_components
+    else:
+        query["query"]["match_all"] = {}
+
+    print(json.dumps(query))
 
     if parallel_search and include_named_queries_score:
         log.warning("Unable to use include_named_queries_score with msearch, query scores will not be returned.")
@@ -127,7 +174,8 @@ def msearch_dmp_works(
     for i, response in enumerate(responses["responses"]):
         dmp = dmps[i]
         hits = response.get("hits", {}).get("hits", [])
-        results.extend(collate_results(dmp, hits))
+        max_score = response.get("hits", {}).get("max_score")
+        results.extend(collate_results(dmp, hits, max_score))
 
     return results
 
@@ -147,7 +195,8 @@ def search_dmp_works(
         include_named_queries_score=include_named_queries_score,
     )
     hits = response.get("hits", {}).get("hits", [])
-    return collate_results(dmp, hits)
+    max_score = response.get("hits", {}).get("max_score")
+    return collate_results(dmp, hits, max_score)
 
 
 def parse_matched_queries(matched_queries: list[str] | dict[str, float]) -> dict[str, float]:
@@ -156,7 +205,7 @@ def parse_matched_queries(matched_queries: list[str] | dict[str, float]) -> dict
     return matched_queries
 
 
-def collate_results(dmp: DMPModel, hits: list[dict]) -> list[RelatedWork]:
+def collate_results(dmp: DMPModel, hits: list[dict], max_score: float) -> list[RelatedWork]:
     results: list[RelatedWork] = []
     for hit in hits:
         work_doi = hit.get("_id")
@@ -212,6 +261,7 @@ def collate_results(dmp: DMPModel, hits: list[dict]) -> list[RelatedWork]:
                 dmp_doi=dmp.doi,
                 work=work,
                 score=score,
+                score_max=max_score,
                 doi_match=doi_match,
                 content_match=content_match,
                 author_matches=author_matches,
@@ -242,11 +292,12 @@ def to_item_matches(inner_hits: dict, hit_name: str) -> list[ItemMatch]:
 
 
 def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) -> dict:
+    must = []
     should = []
 
     # Funded DOIs
     if dmp.funded_dois:
-        should.append(
+        must.append(
             {
                 "constant_score": {
                     "_name": "funded_dois",
@@ -268,7 +319,7 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
         lambda author: author.surname,
     )
     if authors is not None:
-        should.append(authors)
+        must.append(authors)
 
     # Institutions
     institutions = build_entity_query(
@@ -300,7 +351,7 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
         dmp.external_data.awards,
     )
     if awards is not None:
-        should.append(awards)
+        must.append(awards)
 
     # Title and abstract
     has_text = dmp.title is not None or dmp.abstract is not None
@@ -348,9 +399,16 @@ def build_query(dmp: DMPModel, max_results: int, project_end_buffer_years: int) 
         "size": max_results,
         "query": {
             "bool": {
+                "must": [
+                    {
+                        "bool": {
+                            "should": must,
+                            "minimum_should_match": 1,
+                        }
+                    }
+                ],
                 "should": should,
                 "filter": filters,
-                "minimum_should_match": 1,
             },
         },
     }
