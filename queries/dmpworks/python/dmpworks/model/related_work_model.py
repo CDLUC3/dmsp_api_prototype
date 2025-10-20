@@ -66,6 +66,7 @@ class RelatedWork(BaseModel):
     dmp_doi: str
     work: WorkModel
     score: float
+    score_max: float
     doi_match: DoiMatch
     content_match: ContentMatch
     author_matches: List[ItemMatch] = []
