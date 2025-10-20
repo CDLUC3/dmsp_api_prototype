@@ -19,8 +19,8 @@ PRAGMA threads=CAST(@VAR('default_threads') AS INT64);
 SELECT
   dw.doi,
   dw.title,
-  dw.abstract,
-  COALESCE(datacite_index.types.type, 'other') AS type,
+  dw.abstract AS abstract_text,
+  COALESCE(datacite_index.types.type, 'OTHER') AS work_type,
   dw.publication_date,
   datacite_index.updated_dates.updated_date,
   dw.publication_venue,
