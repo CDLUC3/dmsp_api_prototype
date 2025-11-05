@@ -1,6 +1,8 @@
 ## v1.4.5
 ### Updated
-- Updated Ruby version and all dependencies in all gems 
+- Updated Ruby version to 3.3 in all gems and also updated their dependencies
+- Updated Lambda Layers
+- Updated all Lambdas to use Ruby 3.3
 
 ### Removed
 - Removed obsolete Lambda functions in API directory: get_affiliations, get_affiliation, put_dmps_downloads, get_dmps_downloads
