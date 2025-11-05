@@ -48,7 +48,7 @@ Resources:
     Properties:
       CodeUri: './'
       Handler: 'app.Functions::Citer.process'
-      Runtime: 'ruby3.2'
+      Runtime: 'ruby3.3'
       # Depending on the DMP ID, there may be a lot of citations so we timeout after 5 minutes
       Timeout: 300
       Architectures:

@@ -48,7 +48,7 @@ Resources:
     Properties:
       CodeUri: './'
       Handler: 'app.Functions::EzidPublisher.process'
-      Runtime: 'ruby3.2'
+      Runtime: 'ruby3.3'
       Timeout: 30
       Architectures:
         - 'x86_64'

@@ -22,6 +22,9 @@ require 'aws-sdk-s3'
 require 'fileutils'
 require 'uc3-sam-sceptre'
 
+# Had to add this to get around SSL issues on OSX
+Aws.use_bundled_cert!
+
 if ARGV.length >= 3
   DEFAULT_REGION = 'us-west-2'
 
