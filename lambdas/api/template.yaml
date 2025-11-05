@@ -641,59 +641,6 @@ Resources:
       # Explicit retention time
       RetentionInDays: !Ref LogRetentionDays
 
-  # Get DMP metadata files
-  GetDownloadsDmpsFunction:
-    Type: 'AWS::Serverless::Function'
-    Properties:
-      CodeUri: 'get_dmps_downloads/dist/'
-      Handler: 'index.handler'
-      Runtime: 'nodejs20.x'
-      Timeout: 30
-      Architectures:
-        - 'arm64'
-      Layers:
-        - !Ref DMPToolCloudFormationLayerArn
-        - !Ref DMPToolCognitoLayerArn
-        - !Ref DMPToolLoggerLayerArn
-        - !Ref DMPToolS3LayerArn
-      Policies:
-        - !Ref S3FileExchangeBucketPolicy
-        - !Ref CognitoPolicy
-        - !Ref CloudFormationPolicy
-      DeadLetterQueue:
-        Type: 'SQS'
-        TargetArn: !Ref DeadLetterQueueArn
-      Environment:
-        Variables:
-          LOG_LEVEL: 'debug'
-          NODE_ENV: !Ref NodeEnv
-          COGNITO_USER_POOL_EXP_NAME: !Ref CognitoUserPoolExportName
-          S3_BUCKET_EXP_NAME: !Ref S3FileExchangeBucketExportName
-          CORS_ORIGIN: !If
-            - IsDev
-            - "*"
-            - !Sub "https://${DomainName}"
-      Events:
-        GetDownloadsDmps:
-          # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
-          Type: 'Api'
-          Properties:
-            RestApiId: !Ref DmpHubRestApi
-            Path: '/dmps/downloads'
-            Method: 'get'
-            RequestParameters:
-              - 'method.request.header.Authorization'
-            Auth:
-              Authorizer: 'DmpHubCognitoAuthorizer'
-              AuthorizationScopes:
-                - !Sub 'https://auth.${DomainName}/${Env}.data-transfer'
-    Metadata:
-      BuildMethod: 'esbuild'
-      BuildProperties:
-        Minify: true
-        Target: 'es2020'
-        Sourcemap: false
-
   GetDownloadsDmps:
     Type: 'AWS::Logs::LogGroup'
     Properties:
@@ -917,66 +864,6 @@ Resources:
     Type: 'AWS::Logs::LogGroup'
     Properties:
       LogGroupName: !Sub "/aws/lambda/${PutDmpFunction}"
-      # Explicit retention time
-      RetentionInDays: !Ref LogRetentionDays
-
-  # Get DMP metadata files
-  PutUploadsDmpsFunction:
-    Type: 'AWS::Serverless::Function'
-    Properties:
-      CodeUri: 'put_dmps_uploads/dist/'
-      Handler: 'index.handler'
-      Runtime: 'nodejs20.x'
-      Timeout: 30
-      Architectures:
-        - 'arm64'
-      Layers:
-        - !Ref DMPToolCloudFormationLayerArn
-        - !Ref DMPToolCognitoLayerArn
-        - !Ref DMPToolLoggerLayerArn
-        - !Ref DMPToolS3LayerArn
-      Policies:
-        - !Ref S3FileExchangeBucketPolicy
-        - !Ref CognitoPolicy
-        - !Ref CloudFormationPolicy
-      DeadLetterQueue:
-        Type: 'SQS'
-        TargetArn: !Ref DeadLetterQueueArn
-      Environment:
-        Variables:
-          LOG_LEVEL: 'debug'
-          NODE_ENV: !Ref NodeEnv
-          COGNITO_USER_POOL_EXP_NAME: !Ref CognitoUserPoolExportName
-          S3_BUCKET_EXP_NAME: !Ref S3FileExchangeBucketExportName
-          CORS_ORIGIN: !If
-            - IsDev
-            - "*"
-            - !Sub "https://${DomainName}"
-      Events:
-        PutUploadsDmps:
-          # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
-          Type: 'Api'
-          Properties:
-            RestApiId: !Ref DmpHubRestApi
-            Path: '/dmps/uploads'
-            Method: 'put'
-            RequestParameters:
-              - 'method.request.header.Authorization'
-            Auth:
-              Authorizer: 'DmpHubCognitoAuthorizer'
-              AuthorizationScopes:
-                - !Sub 'https://auth.${DomainName}/${Env}.data-transfer'
-    Metadata:
-      BuildMethod: 'esbuild'
-      BuildProperties:
-        Minify: true
-        Target: 'es2020'
-        Sourcemap: false
-
-  PutUploadsDmps:
-    Type: 'AWS::Logs::LogGroup'
-    Properties:
-      LogGroupName: !Sub "/aws/lambda/${PutUploadsDmpsFunction}"
       # Explicit retention time
       RetentionInDays: !Ref LogRetentionDays
 
