@@ -1,3 +1,14 @@
+## v1.4.5
+### Updated
+- Updated Ruby version and all dependencies in all gems 
+
+### Removed
+- Removed obsolete Lambda functions in API directory: get_affiliations, get_affiliation, put_dmps_downloads, get_dmps_downloads
+- Removed obsolete Lambda harvester functions for: ror, datacite and harvestable_dmps
+- Removed obsolete Lambda indexer functions for: external_data
+- Removed obsolete nodeJS based Lambda layers
+
+## v1.4.4
 ### Added
 - DmpExtractor nodeJS Lambda function
 - General and Database Lambda Layers for nodeJS

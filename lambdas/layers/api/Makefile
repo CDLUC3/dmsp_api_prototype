@@ -1,5 +1,5 @@
-export RUBY_VERSION=3.2.2
-export TARGET_RUBY_GEM_DIR=3.2.0
+export RUBY_VERSION=3.3.9
+export TARGET_RUBY_GEM_DIR=3.3.0
 
 build-ApiLayerVersion:
 	mkdir -p "$(ARTIFACTS_DIR)/ruby"

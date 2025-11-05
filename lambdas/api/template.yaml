@@ -346,7 +346,7 @@ Resources:
     Properties:
       CodeUri: 'delete_dmp/'
       Handler: 'app.Functions::DeleteDmp.process'
-      Runtime: 'ruby3.2'
+      Runtime: 'ruby3.3'
       Timeout: 15
       Architectures:
         - 'x86_64'
@@ -404,7 +404,7 @@ Resources:
     Properties:
       CodeUri: 'get_awards_crossref/'
       Handler: 'app.Functions::GetAwardsCrossref.process'
-      Runtime: 'ruby3.2'
+      Runtime: 'ruby3.3'
       Timeout: 30
       Architectures:
         - 'x86_64'
@@ -452,7 +452,7 @@ Resources:
     Properties:
       CodeUri: 'get_awards_nih/'
       Handler: 'app.Functions::GetAwardsNih.process'
-      Runtime: 'ruby3.2'
+      Runtime: 'ruby3.3'
       Timeout: 5
       Architectures:
         - 'x86_64'
@@ -500,7 +500,7 @@ Resources:
     Properties:
       CodeUri: 'get_awards_nsf/'
       Handler: 'app.Functions::GetAwardsNsf.process'
-      Runtime: 'ruby3.2'
+      Runtime: 'ruby3.3'
       Timeout: 5
       Architectures:
         - 'x86_64'
@@ -548,7 +548,7 @@ Resources:
     Properties:
       CodeUri: 'get_dmps'
       Handler: 'app.Functions::GetDmps.process'
-      Runtime: 'ruby3.2'
+      Runtime: 'ruby3.3'
       Timeout: 30
       Architectures:
         - 'x86_64'
@@ -599,7 +599,7 @@ Resources:
     Properties:
       CodeUri: 'get_dmp/'
       Handler: 'app.Functions::GetDmp.process'
-      Runtime: 'ruby3.2'
+      Runtime: 'ruby3.3'
       Timeout: 5
       Architectures:
         - 'x86_64'
@@ -647,7 +647,7 @@ Resources:
     Properties:
       CodeUri: 'post_citations/'
       Handler: 'app.Functions::PostCitations.process'
-      Runtime: 'ruby3.2'
+      Runtime: 'ruby3.3'
       Timeout: 60
       Architectures:
         - 'x86_64'
@@ -697,7 +697,7 @@ Resources:
     Properties:
       CodeUri: 'post_dmps/'
       Handler: 'app.Functions::PostDmps.process'
-      Runtime: 'ruby3.2'
+      Runtime: 'ruby3.3'
       Timeout: 15
       Architectures:
         - 'x86_64'
@@ -754,7 +754,7 @@ Resources:
     Properties:
       CodeUri: 'post_narratives/'
       Handler: 'app.Functions::PostNarratives.process'
-      Runtime: 'ruby3.2'
+      Runtime: 'ruby3.3'
       Timeout: 15
       Architectures:
         - 'x86_64'
@@ -808,7 +808,7 @@ Resources:
     Properties:
       CodeUri: 'put_dmp/'
       Handler: 'app.Functions::PutDmp.process'
-      Runtime: 'ruby3.2'
+      Runtime: 'ruby3.3'
       Timeout: 30
       Architectures:
         - 'x86_64'
@@ -865,7 +865,7 @@ Resources:
     Properties:
       CodeUri: 'validate_dmp/'
       Handler: 'app.Functions::ValidateDmp.process'
-      Runtime: 'ruby3.2'
+      Runtime: 'ruby3.3'
       Timeout: 5
       Architectures:
         - 'x86_64'
