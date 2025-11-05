@@ -641,13 +641,6 @@ Resources:
       # Explicit retention time
       RetentionInDays: !Ref LogRetentionDays
 
-  GetDownloadsDmps:
-    Type: 'AWS::Logs::LogGroup'
-    Properties:
-      LogGroupName: !Sub "/aws/lambda/${GetDownloadsDmpsFunction}"
-      # Explicit retention time
-      RetentionInDays: !Ref LogRetentionDays
-
   # Get Citations for the DOIs
   PostCitationsFunction:
     Type: 'AWS::Serverless::Function'
@@ -1006,11 +999,6 @@ Outputs:
     Value: !GetAtt PostCitationsFunction.Arn
   PostNarrativeFunctionArn:
     Value: !GetAtt PostNarrativesFunction.Arn
-
-  GetDownloadsDmpsFunctionArn:
-    Value: !GetAtt GetDownloadsDmpsFunction.Arn
-  PutUploadsDmpsFunctionArn:
-    Value: !GetAtt PutUploadsDmpsFunction.Arn
 
   ApiBaseUrl:
     Value: !Sub "https://${DmpHubRestApi}.execute-api.${AWS::Region}.amazonaws.com/v0/"
