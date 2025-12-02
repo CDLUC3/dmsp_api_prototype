@@ -3,6 +3,8 @@
 - Updated Ruby version to 3.3 in all gems and also updated their dependencies
 - Updated Lambda Layers
 - Updated all Lambdas to use Ruby 3.3
+- Updated landing page and swagger dependencies
+- Upgraded to Swagger 5.30.3
 
 ### Removed
 - Removed obsolete Lambda functions in API directory: get_affiliations, get_affiliation, put_dmps_downloads, get_dmps_downloads
