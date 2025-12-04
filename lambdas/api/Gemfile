@@ -1,0 +1,10 @@
+# frozen_string_literal: true
+
+source 'https://rubygems.org'
+
+ruby '>= 3.3'
+
+gem 'aws-sdk-cloudformation'
+gem 'aws-sdk-s3'
+gem 'fileutils'
+gem 'uc3-sam-sceptre'

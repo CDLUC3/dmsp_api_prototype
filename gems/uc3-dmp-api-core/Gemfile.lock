@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    uc3-dmp-api-core (0.0.24)
+    uc3-dmp-api-core (0.0.31)
       aws-sdk-sns (~> 1.60)
       aws-sdk-ssm (~> 1.150)
       json (~> 2.6)
@@ -11,38 +11,40 @@ GEM
   remote: https://rubygems.org/
   specs:
     ast (2.4.3)
-    aws-eventstream (1.3.2)
-    aws-partitions (1.1083.0)
-    aws-sdk-core (3.222.1)
+    aws-eventstream (1.4.0)
+    aws-partitions (1.1180.0)
+    aws-sdk-core (3.236.0)
       aws-eventstream (~> 1, >= 1.3.0)
       aws-partitions (~> 1, >= 1.992.0)
       aws-sigv4 (~> 1.9)
       base64
+      bigdecimal
       jmespath (~> 1, >= 1.6.1)
       logger
-    aws-sdk-sns (1.97.0)
-      aws-sdk-core (~> 3, >= 3.216.0)
+    aws-sdk-sns (1.108.0)
+      aws-sdk-core (~> 3, >= 3.234.0)
       aws-sigv4 (~> 1.5)
-    aws-sdk-ssm (1.192.0)
-      aws-sdk-core (~> 3, >= 3.216.0)
+    aws-sdk-ssm (1.205.0)
+      aws-sdk-core (~> 3, >= 3.234.0)
       aws-sigv4 (~> 1.5)
-    aws-sigv4 (1.11.0)
+    aws-sigv4 (1.12.1)
       aws-eventstream (~> 1, >= 1.0.2)
-    base64 (0.2.0)
+    base64 (0.3.0)
+    bigdecimal (3.3.1)
     byebug (11.1.3)
-    diff-lcs (1.6.1)
+    diff-lcs (1.6.2)
     jmespath (1.6.2)
-    json (2.10.2)
+    json (2.15.2)
     logger (1.7.0)
-    parallel (1.26.3)
-    parser (3.3.7.4)
+    parallel (1.27.0)
+    parser (3.3.10.0)
       ast (~> 2.4.1)
       racc
-    prism (1.4.0)
+    prism (1.6.0)
     racc (1.8.1)
     rainbow (3.1.1)
-    regexp_parser (2.10.0)
-    rexml (3.4.1)
+    regexp_parser (2.11.3)
+    rexml (3.4.4)
     rspec (3.9.0)
       rspec-core (~> 3.9.0)
       rspec-expectations (~> 3.9.0)
@@ -66,7 +68,7 @@ GEM
       rubocop-ast (>= 1.28.0, < 2.0)
       ruby-progressbar (~> 1.7)
       unicode-display_width (>= 2.4.0, < 3.0)
-    rubocop-ast (1.44.0)
+    rubocop-ast (1.47.1)
       parser (>= 3.3.7.2)
       prism (~> 1.4)
     rubocop-capybara (2.21.0)
@@ -80,6 +82,7 @@ GEM
 PLATFORMS
   arm64-darwin-21
   arm64-darwin-22
+  arm64-darwin-24
 
 DEPENDENCIES
   byebug (= 11.1.3)
@@ -89,4 +92,4 @@ DEPENDENCIES
   uc3-dmp-api-core!
 
 BUNDLED WITH
-   2.5.13
+   2.6.9
