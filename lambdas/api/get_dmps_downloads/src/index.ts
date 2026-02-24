@@ -36,7 +36,7 @@ export const handler: Handler = async (event: APIGatewayEvent, context: Context)
         logger.warn(client, 'Unauthorized access. Caller does not have necessary permissions')
         return { statusCode: 403, body: JSON.stringify({ message: MSG_UNAUTHORIZED }) };
       }
-      logger.debug(undefined, `Generating presignedURLs for ${client.name}`);
+      logger.debug({}, `Generating presignedURLs for ${client.name}`);
 
       // List and filter S3 objects by `[clientName]-dmps-` prefix
       const presignedUrls = {};
@@ -44,7 +44,7 @@ export const handler: Handler = async (event: APIGatewayEvent, context: Context)
 
       // If there are no files available for download then return a 404
       if (!s3Objects || !Array.isArray(s3Objects)) {
-        logger.info(undefined, 'No DMP metadata files available');
+        logger.info({}, 'No DMP metadata files available');
         return { statusCode: 404, body: JSON.stringify({ message: 'No files found'}) };
       }
       logger.debug({ s3Objects }, `Detected ${s3Objects.length} DMP metadata files`);

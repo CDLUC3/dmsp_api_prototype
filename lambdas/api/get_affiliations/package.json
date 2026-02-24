@@ -12,10 +12,13 @@
   "scripts": {
     "build": "rm -rf dist && esbuild ./src/* --entry-names=[dir]/[name]/index --bundle --minify --sourcemap --platform=node --target=node22.2 --outdir=dist"
   },
+  "overrides": {
+    "minimatch": "10.2.1"
+  },
   "dependencies": {
-    "aws-sdk": "^2.1664.0"
+    "aws-sdk": "^2.1693.0"
   },
   "devDependencies": {
-    "esbuild": "^0.23.0"
+    "esbuild": "^0.27.3"
   }
 }
