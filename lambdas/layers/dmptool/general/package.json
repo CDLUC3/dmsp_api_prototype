@@ -8,8 +8,12 @@
   },
   "author": "briri",
   "license": "MIT",
+  "overrides": {
+    "minimatch": "10.2.1"
+  },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.145",
+    "@types/node": "^25.3.0",
     "typescript": "^5.7.2"
   }
 }

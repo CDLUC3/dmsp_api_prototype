@@ -42,7 +42,7 @@ export const handler: Handler = async (event: APIGatewayEvent, context: Context)
         logger.warn(client, 'Unauthorized access. Caller does not have necessary permissions')
         return { statusCode: 403, body: JSON.stringify({ message: MSG_UNAUTHORIZED }) };
       }
-      logger.debug(undefined, `Generating presignedURLs for ${client.name}`);
+      logger.debug({}, `Generating presignedURLs for ${client.name}`);
 
       // Ensure that the filename is prefixed with the client name `[clientName]-`
       fileName = fileName.toLowerCase();
