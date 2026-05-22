@@ -29,4 +29,7 @@ esbuild.build({
     ],
 })
     .then(() => console.log('⚡ Build complete! Ready for CloudFront.'))
-    .catch(() => process.exit(1));
+    .catch((e) => {
+      console.log('Build failed', e)
+      process.exit(1)
+    });

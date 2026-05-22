@@ -1,3 +1,15 @@
+# Setup
+
+Make sure you have the following installed:
+- Ruby 3.3+
+- Node 22+
+
+Create an `src/tmp.js` file and add your application name and URL. 
+```
+export const DMPTOOL_NAME = 'My Application';
+export const DMPTOOL_URL = 'https://example.com/';
+```
+
 # Building
 
 To build and deploy the landing stage code, you must be logged into AWS and have your credentials setup locally. Then run `ruby build_deploy.rb <env>`.
