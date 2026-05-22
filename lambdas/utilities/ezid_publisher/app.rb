@@ -194,6 +194,8 @@ module Functions
           { json: facility, type: 'Sponsor' }
         end
         contributors = contributors.flatten.compact.uniq
+        # Remove any contributors that have no name defined. The DataCite schema requires a name
+        contributors = contributors.reject { |contrib| contrib['name'].nil? || contrib['name'].blank?  }
 
         fundings = dmp.fetch('project', []).first&.fetch('funding', [])
         fundings = fundings.map do |fund|
