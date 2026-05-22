@@ -25,11 +25,13 @@ module Uc3DmpExternalApi
         opts = _options(body:, basic_auth:, additional_headers:, timeout:, logger:)
         resp = HTTParty.send(method.to_sym, uri, opts)
 
-        unless [200, 201].include?(resp.code)
-          msg = "status: #{resp&.code}, body: #{resp&.body}"
-          raise ExternalApiError, "#{format(MSG_ERROR_FROM_EXTERNAL_API, url:)} - #{msg}"
+        if [200, 201].include?(resp.code.to_i)
+          return resp.body.nil? || resp.body.empty? ? nil : _process_response(resp:)
+        else
+          logger&.warn(message: "#{format(MSG_ERROR_FROM_EXTERNAL_API, url:)} - HTTP status code #{resp.code}")
+          return nil
         end
-        resp.body.nil? || resp.body.empty? ? nil : _process_response(resp:)
+        
       rescue JSON::ParserError
         raise ExternalApiError, format(MSG_UNABLE_TO_PARSE, url:)
       rescue HTTParty::Error => e

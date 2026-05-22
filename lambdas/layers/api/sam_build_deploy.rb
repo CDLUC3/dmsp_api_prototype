@@ -22,6 +22,9 @@ require 'aws-sdk-s3'
 require 'fileutils'
 require 'uc3-sam-sceptre'
 
+# Had to add this to get around SSL issues on OSX
+Aws.use_bundled_cert!
+
 if ARGV.length >= 3
   DEFAULT_REGION = 'us-west-2'
 
@@ -58,7 +61,7 @@ if ARGV.length >= 3
   @ssm_params = %w[]
 
   # List any Lambdas that use this Layer so they are auto rebuilt/deployed or deleted after this Lambda is
-  @dependent_lambdas = Dir['../../api-dmphub']
+  @dependent_lambdas = Dir['../../api']
   #
   # DON'T FORGET TO: Add an entry to the Sceptre config for lambda-iam.yaml and lambda-vpc.yaml for this Layer!
   # ----------------

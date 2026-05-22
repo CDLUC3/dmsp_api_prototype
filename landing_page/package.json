@@ -17,12 +17,6 @@
   "scripts": {
     "build": "mkdir -p build && cp -r public/ build/ && cp src/assets/orcid.svg build/ && node build.js"
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
   "browserslist": {
     "production": [
       ">0.2%",

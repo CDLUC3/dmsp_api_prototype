@@ -1,0 +1,3 @@
+CREATE OR REPLACE MODEL {{ embedding_model_id }}
+  REMOTE WITH CONNECTION `us.vertex_ai`
+  OPTIONS (ENDPOINT = '{{ vertex_ai_model_id }}');

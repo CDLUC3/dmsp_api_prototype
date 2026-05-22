@@ -1,0 +1,102 @@
+[
+  {
+    "mode": "REPEATED",
+    "name": "repository_ids",
+    "type": "STRING"
+  },
+  {
+    "mode": "REPEATED",
+    "name": "grant_ids",
+    "type": "STRING"
+  },
+  {
+    "mode": "REPEATED",
+    "name": "funder_opportunity_ids",
+    "type": "STRING"
+  },
+  {
+    "mode": "REPEATED",
+    "name": "funders",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "project_start",
+    "type": "DATE"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "dmptool_id",
+    "type": "STRING"
+  },
+  {
+    "mode": "REPEATED",
+    "name": "affiliations",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "abstract",
+    "type": "STRING"
+  },
+  {
+    "mode": "REPEATED",
+    "name": "repositories",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "title",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "project_end",
+    "type": "DATE"
+  },
+  {
+    "mode": "REPEATED",
+    "name": "affiliation_ids",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "dmp_visibility",
+    "type": "STRING"
+  },
+  {
+    "mode": "REPEATED",
+    "name": "funder_ids",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "dmp_modified",
+    "type": "DATE"
+  },
+  {
+    "mode": "REPEATED",
+    "name": "people_ids",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "dmp_id",
+    "type": "STRING"
+  },
+  {
+    "mode": "REPEATED",
+    "name": "people",
+    "type": "STRING"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "dmp_doi_registered",
+    "type": "DATE"
+  },
+  {
+    "mode": "NULLABLE",
+    "name": "dmp_created",
+    "type": "DATE"
+  }
+]

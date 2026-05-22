@@ -7,6 +7,9 @@ require 'aws-sdk-s3'
 DEFAULT_REGION = 'us-west-2'
 GLOBAL_REGION = 'us-east-1'
 
+# Had to add this to get around SSL issues on OSX
+Aws.use_bundled_cert!
+
 if ARGV.length == 1
   # Setup AWS SDK clients
   resource_groups = Aws::ResourceGroups::Client.new(region: DEFAULT_REGION)
