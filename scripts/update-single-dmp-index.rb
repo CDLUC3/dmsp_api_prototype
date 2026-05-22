@@ -13,7 +13,7 @@ if ARGV.length == 2
     consistent_read: false
   })
   dmp = resp[:item].is_a?(Array) ? resp[:item].first : resp[:item]
-  puts "Couldn't load the full record for #{item}!" if dmp.nil?
+  puts "Couldn't load the full record for #{PK}!" if dmp.nil?
 
   unless dmp.nil?
     # Update an internal field that will trigger the dynamo stream update without altering any of the

@@ -14,6 +14,9 @@
     "esbuild-sass-plugin": "^3.7.0",
     "sass": "^1.99.0"
   },
+  "overrides": {
+    "postcss": "8.5.15"
+  },
   "scripts": {
     "build": "mkdir -p build && cp -r public/ build/ && cp src/assets/orcid.svg build/ && node build.js"
   },
