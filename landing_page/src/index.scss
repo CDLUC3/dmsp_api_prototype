@@ -1,5 +1,5 @@
+@use './components/responsive.scss';
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@500;600&display=swap');
-@import './components/responsive';
 
 body {
   margin: 0;
@@ -356,18 +356,13 @@ code {
   .c-orcid {
     display: inline-block;
     position: relative;
-    padding-inline-start: 1.2em;
-
-    &::before {
-      content: url('./assets/orcid.svg');
-      position: absolute;
-      left: 0;
-      width: 1em;
-      padding-top: 2px;
-      inset-block: 0;
-      inset-inline-start: 0;
-      margin-inline-end: 1em;
-    }
+  }
+  .c-orcid-logo {
+    width: 1em;
+    inset-block: 0;
+    inset-inline-start: 0;
+    margin-inline-end: 5px;
+    transform: translateY(2px);
   }
 
   // ***** Footer Component ***** //

@@ -4,7 +4,8 @@ import dmptoolLogo from '../../assets/dmptool_logo_u166.svg';
 
 export function DmptoolLink(props) {
   if (props.withLogo === 'true') {
-    const logo = <img src={dmptoolLogo} alt={`${DMPTOOL_NAME} logo`}/>;
+    const logoUri = `data:image/svg+xml;utf8,${encodeURIComponent(dmptoolLogo)}`;
+    const logo = <img src={logoUri} alt={`${DMPTOOL_NAME} logo`}/>;
 
     return (
       <Link href={DMPTOOL_URL} remote='true' label={logo}/>
