@@ -1,4 +1,5 @@
 import { Link } from '../link/link';
+import orcidLogo from '../../assets/orcid.svg';
 
 const ROLE_PREFIX_REGEX = /^https?:\/\/credit\.niso\.org\/contributor-roles\//i;
 const CURATION_ROLE = 'https://credit.niso.org/contributor-roles/data-curation'
@@ -50,15 +51,23 @@ function OrcidLink(props) {
     if ('contributor_id' in person || 'contact_id' in person) {
       let orcid = 'contributor_id' in person ? person.contributor_id : person.contact_id
       if ('identifier' in orcid) {
+        const logoUri = `data:image/svg+xml;utf8,${encodeURIComponent(orcidLogo)}`;
+        const label = orcid.identifier.replace(/https?:\/\/orcid.org\//i, '');
         if (orcid.identifier?.startsWith('http')) {
           return (
-            <Link href={orcid.identifier} label={orcid.identifier.replace(/https?:\/\/orcid.org\//i, '')}
-                  remote='true' index={idx + 'oid'} className="c-orcid" />
+            <div className="c-orcid">
+              <img src={logoUri} alt={`ORCID logo`} className="c-orcid-logo"/>
+              <Link href={orcid.identifier} label={label}
+                    remote='true' index={idx + 'oid'}/>
+            </div>
           );
         } else {
           return (
-            <Link href={`https://orcid.org/${orcid.identifier}`} label={orcid.identifier.replace(/https?:\/\/orcid.org\//i, '')}
-                    remote='true' index={idx + 'oid'} className="c-orcid" />
+            <div className="c-orcid">
+              <div src={logoUri} alt={`ORCID logo`} className="c-orcid-logo"/>
+              <Link href={`https://orcid.org/${orcid.identifier}`} label={label}
+                      remote='true' index={idx + 'oid'}/>
+            </div>
           );
         }
       }
