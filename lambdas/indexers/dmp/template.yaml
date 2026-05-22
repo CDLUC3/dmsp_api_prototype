@@ -56,7 +56,7 @@ Resources:
     Properties:
       CodeUri: './'
       Handler: 'app.Functions::DmpIndexer.process'
-      Runtime: 'ruby3.2'
+      Runtime: 'ruby3.3'
       Timeout: 600
       Architectures:
         - 'x86_64'

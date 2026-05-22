@@ -6,6 +6,9 @@ require 'uc3-sam-sceptre'
 
 DEFAULT_REGION = 'us-west-2'
 
+# Had to add this to get around SSL issues on OSX
+Aws.use_bundled_cert!
+
 # ------------------------------------------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------------------------
 # This Ruby script is meant to be used to run AWS SAM CLI commands and inject parameter values derived from:

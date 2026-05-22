@@ -1,6 +1,6 @@
 # DMSP Prototype - API
 
-This repository manages all of the Lambda functions that support the DMPHub API and the harvesters that search across various external data sources to find related works.
+This repository manages all of the Lambda functions that support the DMPHub API.
 
 This code base uses the Amazon Web Services (AWS) [Serverless Application Model (SAM) system](https://aws.amazon.com/serverless/sam/) to build and deploy the Lambda functions.
 
@@ -24,13 +24,9 @@ Directory structure:
   |     |
   |     api            # Lambdas that are kicked off by API requests
   |     |
-  |     harvesters     # Lambdas that are scheduled and collect data from other systems
-  |     |
-  |     indexers       # Lambdas that are kicked off by Dynamo stream to sync indices
+  |     indexers       # Lambda that is kicked off by Dynamo stream to sync indices
   |     |
   |     layers         # Lambda Layers that pull together shared code (e.g. gems)
-  |     |
-  |     |-- dmptool    # Layers written in NodeJS (all other subdirectories are Ruby based)
   |     |
   |     utilities      # Lambdas that are kicked off by calls to EventBridge
   |
@@ -68,7 +64,7 @@ To build out the API, you should navigate to the `lambdas/layers/api` directory 
 
 This will build and deploy a new LambdaLayer. Once it has been deployed, it will begin to build and deploy the API's Lambda functions.
 
-### Deploy the Indexer, Harvester and Utility functions
+### Deploy the Indexer and Utility functions
 To build out the Lamba functions that are triggered by DynamoDB table streams and EventBridge rules, you should navigate to the `lambdas/layers/baseline` directory and run the following script `ruby sam_build_deploy.rb [env] true true [log_level]`.
 
 This will build and deploy a new LambdaLayer. Once it has been deployed, it will begin to build and deploy each of the indexer, harvester and utitlity Lambda functions one at a time.
@@ -119,19 +115,12 @@ For information on updating the NodeJS Lambda Layers, please see the README in `
 __For all Lambdas:__
 You should then navigate to the `lambdas/api/` directory and run `ruby sam_build_deploy.rb [env] true true [log_level]`.
 
-**Modifying an Indexer, Harvester or Utility Lambda Function**
+**Modifying an Indexer or Utility Lambda Function**
 We recommend logging into the AWS console (dev account) and navigating to the Lambda function you want to modify. From there you can run tests and make small modifications until you have it working. This speeds up the development process since you are not waiting for the full SAM build/deploy cycle to finish for each minor change you make.
 
 Once you are happy with the changes, copy the final code from the console and paste it into the file in this repository!
 
 You should then run `ruby sam_build_deploy.rb [env] true true [log_level]`.
-
-**Updating dependencies (gem and JS)**
-You will need to update the versions of gems and JS packages managed by other parties (e.g. aws) on a fairly frequent basis. To do this you should:
-
-- Run `./update-dependencies [env] [publishGems?]` where env is the `dev`, `stg` or `prd` environment and `publishGems?` is a boolean indicating whether or not the Ruby gem versions should be incremented and published.
-
-Typically you will want to run this against `dev` 1st and publish the new gem files. Then when updating `stg` and `prd` you would not want to republish new gem files.
 
 **Modifying the DMP Landing page**
 The DMP ID landing page is a static React JS webspage that makes an API call to the API Gateway to fetch the JSON for the DMP ID. The JSON is then used to render the page.
