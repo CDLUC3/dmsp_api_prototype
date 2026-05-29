@@ -384,6 +384,7 @@ if ARGV.length == 3
               msg: 'saved our contributor change'
             )
             old_mod_tstamp = updated['dmp'].fetch('modified', old_mod_tstamp)
+            puts ""
 
             # Pause to allow the DmpIndexer and EzidPublisher to run
             puts Rainbow("    Giving DyanmoStream 5 secs to finish").yellow

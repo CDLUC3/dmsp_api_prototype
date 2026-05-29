@@ -1,3 +1,7 @@
+# IDE files
+.DS_Store
+.idea/
+
 *.gem
 *.rbc
 /.config
@@ -72,7 +76,9 @@ build-iPhoneSimulator/
 # Ignore Lambda bundles
 .bundle/
 
+# Ignore vendor files
 node_modules/
+lambdas/api/vendor/
 
 # Ignore Landing page node_modules and build artifacts
 landing_page/node_modules/
