@@ -2,23 +2,23 @@
 # yarn lockfile v1
 
 
-"@apidevtools/json-schema-ref-parser@^15.0.0", "@apidevtools/json-schema-ref-parser@^15.2.1":
-  version "15.2.2"
-  resolved "https://registry.yarnpkg.com/@apidevtools/json-schema-ref-parser/-/json-schema-ref-parser-15.2.2.tgz#2eb1efe8534c17125901c172e49485c7179835ce"
-  integrity sha512-54fvjSwWiBTdVviiUItOCeyxtPSBmCrSEjlOl8XFEDuYD3lXY1lOBWKim/WJ3i1EYzdGx6rSOjK5KRDMppLI4Q==
+"@apidevtools/json-schema-ref-parser@^15.3.2", "@apidevtools/json-schema-ref-parser@^15.3.4":
+  version "15.3.5"
+  resolved "https://registry.yarnpkg.com/@apidevtools/json-schema-ref-parser/-/json-schema-ref-parser-15.3.5.tgz#503726178d8d792eea7b195566272aaee6837e2f"
+  integrity sha512-orNOYXw3hYXxxisXMldjzjBzqqTLBPbwOtHg7ovBPvfBHDue1qM9YJENZ3W2BQuS+7z4ThogMbEzEsov57Itkg==
   dependencies:
     js-yaml "^4.1.1"
 
 "@openapi-contrib/json-schema-to-openapi-schema@^4.3.1":
-  version "4.3.1"
-  resolved "https://registry.yarnpkg.com/@openapi-contrib/json-schema-to-openapi-schema/-/json-schema-to-openapi-schema-4.3.1.tgz#cd53c29efa60fad09af156795d254c1803e481fa"
-  integrity sha512-u4tmT1g+XyBCI6yNR4uU7RIP6N6ohWy7lQAL5wQxgob3T4N0iqjv8hje9B41pNG4nzgk3ehyqsPK9uQvABJvUA==
+  version "4.3.2"
+  resolved "https://registry.yarnpkg.com/@openapi-contrib/json-schema-to-openapi-schema/-/json-schema-to-openapi-schema-4.3.2.tgz#548cc7828a3854d28095cf5c8d108bed3b3c1ae5"
+  integrity sha512-7gjAeOULZ3+20v8UjByHGpKnqXDOORXIpSckkt9F3AZ/+VOIX47isD1S9oWresOU2PK8bwFfqJGawc8ZjBNosg==
   dependencies:
-    "@apidevtools/json-schema-ref-parser" "^15.2.1"
-    json-schema-walker "^3.2.0"
+    "@apidevtools/json-schema-ref-parser" "^15.3.4"
+    json-schema-walker "^3.3.0"
     yargs "^18.0.0"
 
-ansi-regex@^6.0.1:
+ansi-regex@^6.2.2:
   version "6.2.2"
   resolved "https://registry.yarnpkg.com/ansi-regex/-/ansi-regex-6.2.2.tgz#60216eea464d864597ce2832000738a0589650c1"
   integrity sha512-Bq3SmSpyFHaWjPk8If9yc6svM8c56dB5BAtW4Qbw5jHTwwXXcTLoRMkpDJp6VL0XzlWaCHTXrkFURMYmD0sLqg==
@@ -30,7 +30,7 @@ ansi-styles@^6.2.1:
 
 argparse@^2.0.1:
   version "2.0.1"
-  resolved "https://registry.npmjs.org/argparse/-/argparse-2.0.1.tgz"
+  resolved "https://registry.yarnpkg.com/argparse/-/argparse-2.0.1.tgz#246f50f3ca78a3240f6c997e8a9bd1eac49e4b38"
   integrity sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==
 
 cliui@^9.0.1:
@@ -49,18 +49,18 @@ emoji-regex@^10.3.0:
 
 escalade@^3.1.1:
   version "3.2.0"
-  resolved "https://registry.npmjs.org/escalade/-/escalade-3.2.0.tgz"
+  resolved "https://registry.yarnpkg.com/escalade/-/escalade-3.2.0.tgz#011a3f69856ba189dffa7dc8fcce99d2a87903e5"
   integrity sha512-WUj2qlxaQtO4g6Pq5c29GTcWGDyd8itL8zTlipgECz3JesAiiOKotd8JU6otB3PACgG6xkJUyVhboMS+bje/jA==
 
 get-caller-file@^2.0.5:
   version "2.0.5"
-  resolved "https://registry.npmjs.org/get-caller-file/-/get-caller-file-2.0.5.tgz"
+  resolved "https://registry.yarnpkg.com/get-caller-file/-/get-caller-file-2.0.5.tgz#4f94412a82db32f36e3b0b9741f8a97feb031f7e"
   integrity sha512-DyFP3BM/3YHTQOCUL/w0OZHR0lpKeGrxotcHWcqNEdnltqFwXVfhEBQ94eIo34AfQpo0rGki4cyIiftY06h2Fg==
 
 get-east-asian-width@^1.0.0:
-  version "1.5.0"
-  resolved "https://registry.yarnpkg.com/get-east-asian-width/-/get-east-asian-width-1.5.0.tgz#ce7008fe345edcf5497a6f557cfa54bc318a9ce7"
-  integrity sha512-CQ+bEO+Tva/qlmw24dCejulK5pMzVnUOFOijVogd3KQs07HnRIgp8TGipvCCRT06xeYEbpbgwaCxglFyiuIcmA==
+  version "1.6.0"
+  resolved "https://registry.yarnpkg.com/get-east-asian-width/-/get-east-asian-width-1.6.0.tgz#216900f91df11a8b2c198c3e1d93d6c035a776b9"
+  integrity sha512-QRbvDIbx6YklUe6RxeTeleMR0yv3cYH6PsPZHcnVn7xv7zO1BHN8r0XETu8n6Ye3Q+ahtSarc3WgtNWmehIBfA==
 
 js-yaml@^4.1.1:
   version "4.1.1"
@@ -69,12 +69,12 @@ js-yaml@^4.1.1:
   dependencies:
     argparse "^2.0.1"
 
-json-schema-walker@^3.2.0:
-  version "3.2.0"
-  resolved "https://registry.yarnpkg.com/json-schema-walker/-/json-schema-walker-3.2.0.tgz#b8480a7374f1b09661fed74643d6e4ab27a9e4b6"
-  integrity sha512-a2ofwoUbmij0NIQQHp9oRxd9hZm5/uobeui+jCbdXtBHdr0ViokdzNzd3Do/VamObyXJVTDOc1t/7DuVTGwucQ==
+json-schema-walker@^3.3.0:
+  version "3.3.0"
+  resolved "https://registry.yarnpkg.com/json-schema-walker/-/json-schema-walker-3.3.0.tgz#340bb02d2e02c9449b3d7467162be10c39394e9a"
+  integrity sha512-M+M1fcDuMDm/vVajtm/1Zj+dyZqz1757bdu2qDknSm5xPIAm2TdUn/w1jd3Jgxb5DU2q5UR6CQQBrgy9eHYm4w==
   dependencies:
-    "@apidevtools/json-schema-ref-parser" "^15.0.0"
+    "@apidevtools/json-schema-ref-parser" "^15.3.2"
 
 string-width@^7.0.0, string-width@^7.2.0:
   version "7.2.0"
@@ -86,11 +86,11 @@ string-width@^7.0.0, string-width@^7.2.0:
     strip-ansi "^7.1.0"
 
 strip-ansi@^7.1.0:
-  version "7.1.2"
-  resolved "https://registry.yarnpkg.com/strip-ansi/-/strip-ansi-7.1.2.tgz#132875abde678c7ea8d691533f2e7e22bb744dba"
-  integrity sha512-gmBGslpoQJtgnMAvOVqGZpEz9dyoKTCzy2nfz/n8aIFhN/jCE/rCmcxabB6jOOHV+0WNnylOxaxBQPSvcWklhA==
+  version "7.2.0"
+  resolved "https://registry.yarnpkg.com/strip-ansi/-/strip-ansi-7.2.0.tgz#d22a269522836a627af8d04b5c3fd2c7fa3e32e3"
+  integrity sha512-yDPMNjp4WyfYBkHnjIRLfca1i6KMyGCtsVgoKe/z1+6vukgaENdgGBZt+ZmKPc4gavvEZ5OgHfHdrazhgNyG7w==
   dependencies:
-    ansi-regex "^6.0.1"
+    ansi-regex "^6.2.2"
 
 wrap-ansi@^9.0.0:
   version "9.0.2"
@@ -103,7 +103,7 @@ wrap-ansi@^9.0.0:
 
 y18n@^5.0.5:
   version "5.0.8"
-  resolved "https://registry.npmjs.org/y18n/-/y18n-5.0.8.tgz"
+  resolved "https://registry.yarnpkg.com/y18n/-/y18n-5.0.8.tgz#7f4934d0f7ca8c56f95314939ddcd2dd91ce1d55"
   integrity sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==
 
 yargs-parser@^22.0.0:
