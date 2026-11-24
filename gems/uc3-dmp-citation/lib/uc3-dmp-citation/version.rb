@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
 module Uc3DmpCitation
-  VERSION = '0.0.24'
+  VERSION = '0.0.27'
 end

@@ -20,7 +20,7 @@ Resources:
       Description: !Sub 'Core Lambda Layer for ${Env}'
       ContentUri: !Sub './'
       CompatibleRuntimes:
-        - 'ruby3.3'
+        - 'ruby3.4'
       RetentionPolicy: 'Delete'
     Metadata:
       BuildMethod: 'makefile'

@@ -1,5 +1,12 @@
 # Changelog for dmsp_api_prototype
 
+## November 23, 2026
+- Update all Lambdas to Ruby 3.4
+- Update all dependencies for the `landing_page` and redeployed
+- Updated gem dependencies for all gems in the `gems/` directory bumped versions and published
+- Updated gem dependencies in `/scripts` directory 
+- Updated gem dependencies in `/lambdas` directories deployed to AWS Lambda
+
 ## May 29 2026
 - Removed old Lambda harvester code. These were used by the pilot project to find related works in DataCite. The pilot is over and we have replaced with the dmptool-works-matching project.
 - Removed an old experimental Lambda function that indexed ROR data into DynamoDb to support typeahead functionality. It was never used.
