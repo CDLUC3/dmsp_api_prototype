@@ -17,7 +17,7 @@ Gem::Specification.new do |spec|
 
   spec.files         = Dir['lib/**/*'] + %w[README.md]
   spec.require_paths = ['lib']
-  spec.required_ruby_version = '>= 3.3'
+  spec.required_ruby_version = '>= 3.4'
 
   # Requirements for running RSpec
   spec.add_development_dependency('byebug', '11.1.3')

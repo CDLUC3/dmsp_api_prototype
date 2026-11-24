@@ -1,5 +1,5 @@
-export RUBY_VERSION=3.3.9
-export TARGET_RUBY_GEM_DIR=3.3.0
+export RUBY_VERSION=3.4.13
+export TARGET_RUBY_GEM_DIR=3.4.0
 
 build-ApiLayerVersion:
 	mkdir -p "$(ARTIFACTS_DIR)/ruby"
@@ -13,5 +13,5 @@ build-ApiLayerVersion:
 	bundle install
 
 	mkdir -p "$(ARTIFACTS_DIR)/ruby/gems"
-	cp -rf "$(ARTIFACTS_DIR)/ruby/$(TARGET_RUBY_GEM_DIR)/gems" "$(ARTIFACTS_DIR)/ruby/gems/$(TARGET_RUBY_GEM_DIR)"
+	cp -rf "$(ARTIFACTS_DIR)/ruby/$(TARGET_RUBY_GEM_DIR)/" "$(ARTIFACTS_DIR)/ruby/gems/$(TARGET_RUBY_GEM_DIR)"
 	rm -rf "$(ARTIFACTS_DIR)/ruby/$(TARGET_RUBY_GEM_DIR)"
